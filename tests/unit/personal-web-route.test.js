@@ -77,6 +77,12 @@ describe('single web entry in personal mode', () => {
         expect(await asset.text()).toBe('asset');
 
         const unauthenticated = await onRequest(createContext('/api/data'));
-        expect(unauthenticated.status).toBe(401);
+        expect(unauthenticated.status).toBe(200);
+        expect(await unauthenticated.json()).toEqual({
+            authenticated: false,
+            message: 'Not logged in',
+        });
+        const protectedSettings = await onRequest(createContext('/api/settings'));
+        expect(protectedSettings.status).toBe(401);
     });
 });
