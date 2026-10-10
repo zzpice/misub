@@ -67,7 +67,7 @@ const expectNoChineseOrKeys = (text) => {
 };
 
 describe('settings page English translations', () => {
-    it('renders BasicSettings access control copy in English', () => {
+    it('renders retained personal BasicSettings copy in English', () => {
         const wrapper = mount(BasicSettings, {
             props: {
                 settings: {
@@ -92,9 +92,8 @@ describe('settings page English translations', () => {
         });
 
         expect(wrapper.text()).toContain('Default display language');
-        expect(wrapper.text()).toContain('Web Access Control');
-        expect(wrapper.text()).toContain('Disguise strategy');
-        expect(wrapper.text()).toContain('Target URL');
+        expect(wrapper.text()).not.toContain('Web Access Control');
+        expect(wrapper.text()).not.toContain('Disguise strategy');
         expect(wrapper.text()).toContain('English');
     });
 
@@ -163,7 +162,7 @@ describe('settings page English translations', () => {
         expectNoChineseOrKeys(rules.text());
     });
 
-    it('renders SystemSettings storage backup external api and admin security copy in English', () => {
+    it('renders retained personal SystemSettings backup and reset copy in English', () => {
         const wrapper = mount(SystemSettings, {
             props: {
                 settings: {
@@ -177,15 +176,12 @@ describe('settings page English translations', () => {
             ...englishMountOptions(),
         });
 
-        expect(wrapper.text()).toContain('Data storage type');
-        expect(wrapper.text()).toContain('D1 database (recommended)');
-        expect(wrapper.text()).toContain('External management API');
-        expect(wrapper.text()).toContain('Bearer token');
-        expect(wrapper.text()).toContain('Generate random token');
         expect(wrapper.text()).toContain('Backup and restore');
         expect(wrapper.text()).toContain('Export backup');
-        expect(wrapper.text()).toContain('Administrator security settings');
-        expect(wrapper.text()).toContain('Change admin password');
+        expect(wrapper.text()).toContain('Factory reset');
+        expect(wrapper.text()).not.toContain('Data storage type');
+        expect(wrapper.text()).not.toContain('External management API');
+        expect(wrapper.text()).not.toContain('Change admin password');
         expectNoChineseOrKeys(wrapper.text());
     });
 });
