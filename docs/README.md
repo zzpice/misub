@@ -2,7 +2,7 @@
 
 本仓库是 zzpice 独立维护的个人版，当前部署以 [主说明](../README.md) 和
 [维护与恢复](PERSONAL-MAINTENANCE.md) 为准。保留的上游工程文档用于理解代码与兼容性，
-其中历史升级、公开分享、Cron 和外部管理 API 说明不代表本实例启用了这些功能。
+其中历史升级、公开分享、Cron 和外部管理 API 等内容仅供参考，**并非当前个人模式的可用功能或部署指引**。
 
 ## 核心文档
 
@@ -15,7 +15,7 @@
 ## API / 外部管理
 
 - [api-routes.md](api-routes.md) — 后端 /api 路由与 handler 映射。
-- [external-management-api.md](external-management-api.md) — 外部管理 API 使用说明。
+- [external-management-api.md](external-management-api.md) — 历史外部管理 API 资料（个人模式已禁用）。
 - [external-management-api.openapi.yaml](external-management-api.openapi.yaml) — 外部管理 API OpenAPI 规范。
 - [external-management-api-usage.md](external-management-api-usage.md) — 外部管理 API 用法示例。
 
