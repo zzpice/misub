@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createMemoryHistory } from 'vue-router';
 import { isChunkLoadError, shouldReloadForChunkError } from '../utils/chunk-reload.js';
 import { t } from '../i18n/index.js';
 
@@ -25,7 +25,7 @@ const SettingsView = () => import('../views/SettingsView.vue');
 
 const HomeView = () => import('../views/HomeView.vue'); // [NEW] Wrapper View
 
-let authContextResolver = () => ({ state: 'loading', loginPath: '/login' });
+let authContextResolver = () => ({ state: 'loading' });
 
 export function configureAuthGuard(resolver) {
     authContextResolver = typeof resolver === 'function' ? resolver : authContextResolver;
@@ -68,27 +68,13 @@ const routes = [
         component: SettingsView,
         meta: { titleKey: 'pageTitles.settings', requiresAuth: true },
     },
-    /* 
-    // [REMOVED] Static /login route. 
-    // Handled dynamically by Catch-All route (Entrance.vue) to support Custom Login Path.
-    {
-        path: '/login',
-        name: 'Login',
-        component: () => import('../components/modals/Login.vue'),
-        meta: { titleKey: 'pageTitles.login', isPublic: false } 
-    }, 
-    */
-    {
-        // Catch-all route for Custom Login Path or 404
-        path: '/:pathMatch(.*)*',
-        name: 'Entrance',
-        component: () => import('../views/Entrance.vue'),
-        meta: { title: 'MiSub', isPublic: true }, // Public, so Entrance.vue can decide what to render
-    },
+    // Unknown internal locations return to the root login/dashboard entry.
+    { path: '/:pathMatch(.*)*', redirect: '/' },
 ];
 
 const router = createRouter({
-    history: createWebHistory(),
+    // Internal sections have virtual paths; the browser address remains /.
+    history: createMemoryHistory(),
     routes,
     scrollBehavior(to, from, savedPosition) {
         if (savedPosition) {
@@ -120,8 +106,7 @@ router.beforeEach((to) => {
     if (context.state === 'loggedIn') return true;
 
     return {
-        path: context.loginPath || '/login',
-        query: { redirect: to.fullPath },
+        path: '/',
     };
 });
 
