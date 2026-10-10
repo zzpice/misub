@@ -21,7 +21,6 @@
 ├─ dist/                    # 构建产物（自动生成）
 ├─ node_modules/            # 依赖（自动生成）
 ├─ schema.sql               # D1 表结构
-├─ fix_d1_schema.sql        # D1 表结构修复脚本
 ├─ wrangler-cf-pages.toml   # Cloudflare Pages 配置参考
 ├─ package.json             # 脚本与依赖
 ├─ vite.config.js           # Vite 配置
@@ -82,7 +81,7 @@ src/components/
 
 ```
 functions/
-├─ [[path]].js              # Pages Functions 入口，负责路由分发与伪装逻辑
+├─ [[path]].js              # Pages Functions：单网页入口、API 与订阅请求分流
 ├─ storage-adapter.js       # KV/D1 存储适配层
 ├─ middleware/              # 中间件（CORS、认证、安全头）
 ├─ modules/                 # 核心模块（API、订阅、处理器）
@@ -96,7 +95,7 @@ functions/
     - 全局入口，拦截所有请求。
     - **历史伪装逻辑**：原有处理器仍存在，个人版后续计划删除，不作为新的部署指引。
     - **路由分发**：将 `/api/*` 分发给 API 路由，`/sub/*` 分发给订阅处理，`/cron` 分发给定时任务。
-    - **SPA 回退**：处理前端路由的 `index.html` 返回。
+    - **个人模式网页**：仅 `/` 返回应用 HTML；其他网页请求返回空正文 HTTP 403，不作 SPA 回退。
 
 - `functions/modules/api-router.js`：定义 API 路径到具体 Handlers 的映射，包含鉴权逻辑。
 - `functions/modules/subscription/main-handler.js`：处理 `/sub/*` 订阅请求的核心流程（获取、转换、缓存）。
@@ -167,7 +166,7 @@ functions/services/
 
 ### 2. 伪装与安全
 
-- 伪装逻辑位于 `functions/modules/handlers/disguise-handler.js`，在 `[[path]].js` 中被优先调用。
+- 个人模式不使用伪装网页；原伪装处理器仅是通用模式遗留代码，不参与个人模式入口。
 - 涉及敏感操作的 API 需在 `api-router.js` 中添加 `authMiddleware` 保护。
 
 ### 3. 公共资源
