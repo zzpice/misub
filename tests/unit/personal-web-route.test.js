@@ -34,7 +34,7 @@ function createContext(path, headers = {}) {
     return {
         request: new Request('https://misub.example' + path, { headers }),
         env,
-        next: async () => new Response('fallback'),
+        next: async () => new Response('asset'),
     };
 }
 
