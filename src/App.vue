@@ -13,11 +13,9 @@
     import { detectLegacyD1 } from './lib/api.js';
     import { useI18n } from './i18n/index.js';
     import { configureAuthGuard, translateRouteTitle } from './router/index.js';
-    import { readSessionPreference } from './utils/session-preference.js';
 
     // Lazy components
     const Login = defineAsyncComponent(() => import('./components/modals/Login.vue'));
-    const NotFound = defineAsyncComponent(() => import('./views/NotFound.vue'));
     const Toast = defineAsyncComponent(() => import('./components/ui/Toast.vue'));
     const Footer = defineAsyncComponent(() => import('./components/layout/Footer.vue'));
     const Dashboard = defineAsyncComponent(
@@ -52,21 +50,8 @@
     const isLoggedIn = computed(() => sessionState.value === 'loggedIn');
     const isPublicRoute = computed(() => route.meta.isPublic);
     const isSessionLoading = computed(() => sessionState.value === 'loading');
-    const loginPath = computed(() => {
-        const rawPath = sessionStore.subscriptionConfig?.customLoginPath;
-        if (typeof rawPath === 'string' && rawPath.trim()) {
-            const normalized = rawPath.trim().replace(/^\/+/, '');
-            if (normalized && normalized !== 'login') return `/${normalized}`;
-        }
-
-        const rememberedPath = readSessionPreference('misub:login-path');
-        if (rememberedPath && rememberedPath.startsWith('/')) return rememberedPath;
-        return '/login';
-    });
-
     configureAuthGuard(() => ({
         state: sessionState.value,
-        loginPath: loginPath.value,
     }));
 
     const showModernNavBar = computed(() => isLoggedIn.value && layoutMode.value === 'modern');
@@ -92,14 +77,6 @@
     const showLegacyD1MigrationModal = ref(false);
     const legacyD1Details = ref({ hasLegacySubscriptions: false, hasLegacyProfiles: false });
 
-    // Determine which login component to show (Custom Path -> NotFound, else -> Login)
-    const loginComponent = computed(() => {
-        const rawPath = sessionStore.subscriptionConfig?.customLoginPath;
-        const normalizedPath =
-            rawPath && typeof rawPath === 'string' ? rawPath.trim().replace(/^\/+/, '') : '';
-        // 只有当存在有效的自定义路径（非空且不等于默认 'login'）时才显示 NotFound
-        return normalizedPath && normalizedPath !== 'login' ? NotFound : Login;
-    });
 
     const isDefaultPassword = computed(() => {
         return (
@@ -174,10 +151,7 @@
 
     const redirectUnauthenticatedRoute = () => {
         if (sessionState.value !== 'loggedOut' || !route.meta?.requiresAuth) return;
-        if (route.path === loginPath.value) return;
-        router
-            .replace({ path: loginPath.value, query: { redirect: route.fullPath } })
-            .catch(() => {});
+        router.replace('/').catch(() => {});
     };
 
     const handleUnauthorized = async () => {
@@ -187,7 +161,7 @@
         redirectUnauthenticatedRoute();
     };
 
-    watch([sessionState, () => route.fullPath, loginPath], redirectUnauthenticatedRoute, {
+    watch([sessionState, () => route.fullPath], redirectUnauthenticatedRoute, {
         immediate: true,
     });
 </script>
@@ -295,7 +269,7 @@
 
             <!-- LOGIN VIEW (Not logged in, not public) -->
             <template v-else>
-                <component :is="loginComponent" :login="login" />
+                <Login :login="login" />
             </template>
         </main>
 
