@@ -27,6 +27,8 @@ import {
     securityHeadersMiddleware,
 } from './middleware/cors.js';
 import { handleDisguiseRequest } from './modules/handlers/disguise-handler.js';
+import { isPersonalMode } from './modules/personal-mode.js';
+import { classifyPersonalRequest } from './modules/personal-web-route.js';
 import { createDisguiseResponse } from './modules/disguise-page.js';
 
 // 静态导入核心依赖以优化冷加载
@@ -167,6 +169,13 @@ export async function onRequest(context) {
         const handleRequest = async () => {
             const settings = (await SettingsCache.get(env)) || {};
             const config = migrateConfigSettings({ ...defaultSettings, ...settings });
+            const personalRoute = isPersonalMode(env)
+                ? classifyPersonalRequest(url.pathname, config)
+                : null;
+            // Reject non-root documents at the server, never by a Vue-only 404 or redirect.
+            if (personalRoute === 'forbidden') {
+                return new Response(null, { status: 403 });
+            }
 
             if (request.headers.get(INTERNAL_SPA_FETCH_HEADER) === '1') {
                 return applyNoStoreToHtmlResponse(await fetchStaticAsset(request, env, next));
@@ -213,6 +222,12 @@ export async function onRequest(context) {
 
                 return await handleCronTrigger(env);
             } else {
+                if (personalRoute === 'root') {
+                    return applyNoStoreToHtmlResponse(await fetchSpaEntry(request, env, next));
+                }
+                if (personalRoute === 'asset') {
+                    return applyNoStoreToHtmlResponse(await fetchStaticAsset(request, env, next));
+                }
                 const isLocalhost = ['localhost', '127.0.0.1'].includes(url.hostname);
 
                 // 本地 wrangler pages dev 调试兜底：优先返回静态资源，避免函数逻辑影响 SPA 首屏
