@@ -1,32 +1,12 @@
 <script setup>
-    import { computed } from 'vue';
-    import { useSessionStore } from '../../stores/session.js';
     import { useI18n } from '../../i18n/index.js';
 
-    const props = defineProps({
-        to: {
-            type: String,
-            default: '',
-        },
-    });
-
-    const sessionStore = useSessionStore();
     const { t } = useI18n();
-
-    const loginPath = computed(() => {
-        if (props.to) {
-            return props.to;
-        }
-        const rawPath = sessionStore.subscriptionConfig?.customLoginPath;
-        const normalizedPath =
-            rawPath && typeof rawPath === 'string' ? rawPath.trim().replace(/^\/+/, '') : '';
-        return normalizedPath ? `/${normalizedPath}` : '/login';
-    });
 </script>
 
 <template>
     <router-link
-        :to="loginPath"
+        to="/"
         class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:text-indigo-400 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 misub-radius-md transition-colors"
         :title="t('actions.login')"
         :aria-label="t('actions.login')"
