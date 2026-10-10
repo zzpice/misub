@@ -1,159 +1,52 @@
-import { flushPromises, mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextTick } from 'vue';
+import { mount } from '@vue/test-utils';
+import { describe, expect, it } from 'vitest';
 import TransformCard from '../../src/components/settings/sections/ServiceSettings/TransformCard.vue';
+import { createI18n } from '../../src/i18n/index.js';
 
-vi.mock('../../src/lib/api.js', () => ({
-    testSubconverterBackend: vi.fn(),
-}));
-
-const { testSubconverterBackend } = await import('../../src/lib/api.js');
-
-function createSettings(overrides = {}) {
-    return {
-        transformConfigMode: 'preset',
-        transformConfig: '',
-        builtinSkipCertVerify: false,
-        builtinEnableUdp: false,
-        ruleLevel: 'std',
-        subconverter: {
-            engineMode: 'external',
-            defaultBackend: 'api.v1.mk',
-            defaultOptions: {
-                udp: true,
-                emoji: true,
-                scv: true,
-                tfo: false,
-                sort: false,
-                list: false,
-            },
-            ...(overrides.subconverter || {}),
+function mountCard(settings) {
+    return mount(TransformCard, {
+        props: { settings },
+        global: {
+            plugins: [createI18n({ initialLocale: 'en-US' })],
+            stubs: { TransformSelector: true, RuleTemplateManager: true },
         },
-        ...overrides,
+    });
+}
+
+function settingsWithHistoricalBackend() {
+    return {
+        transformConfigMode: 'builtin',
+        transformConfig: 'builtin:clash_misub',
+        ruleLevel: 'std',
+        builtinSkipCertVerify: true,
+        builtinEnableUdp: true,
+        subconverter: { engineMode: 'external', defaultBackend: 'example.invalid' },
     };
 }
 
-describe('TransformCard third-party backend test button', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
+describe('TransformCard in the personal edition', () => {
+    it('does not expose disabled third-party converter controls or mutate saved history', () => {
+        const settings = settingsWithHistoricalBackend();
+        const wrapper = mountCard(settings);
+
+        expect(wrapper.find('[data-testid="test-subconverter-backend"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="engine-change-notice"]').exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('External backend parameters');
+        expect(wrapper.text()).not.toContain('Test backend availability');
+        expect(settings.subconverter.engineMode).toBe('external');
+        expect(settings.subconverter.defaultBackend).toBe('example.invalid');
     });
 
-    it('restores previous built-in settings after switching engine and handles rejected tests', async () => {
-        const settings = createSettings({
-            transformConfigMode: 'builtin',
-            transformConfig: 'builtin:clash_misub',
-            builtinSkipCertVerify: true,
-            builtinEnableUdp: true,
-            subconverter: { engineMode: 'builtin' },
-        });
-        const wrapper = mount(TransformCard, {
-            props: { settings },
-            global: {
-                stubs: { TransformSelector: true, RuleTemplateManager: true },
-            },
-        });
+    it('keeps rule source selection and the built-in conversion controls', async () => {
+        const settings = settingsWithHistoricalBackend();
+        const wrapper = mountCard(settings);
 
-        const engineButtons = wrapper.findAll('button');
-        await engineButtons
-            .find((button) => button.text().includes('External backend'))
-            .trigger('click');
-        await wrapper
-            .get('[data-testid="engine-change-notice"] button:nth-of-type(2)')
-            .trigger('click');
-        expect(settings.subconverter.engineMode).toBe('builtin');
-        expect(settings.transformConfigMode).toBe('builtin');
-        expect(settings.transformConfig).toBe('builtin:clash_misub');
+        expect(wrapper.findAll('select').length).toBeGreaterThan(0);
+        expect(wrapper.findComponent({ name: 'TransformSelector' }).exists()).toBe(true);
+        expect(wrapper.text()).toContain('UDP');
+        await wrapper.find('select').setValue('custom_template');
+        expect(settings.transformConfigMode).toBe('custom_template');
         expect(settings.builtinSkipCertVerify).toBe(true);
         expect(settings.builtinEnableUdp).toBe(true);
-
-        const externalSettings = createSettings();
-        externalSettings.subconverter.defaultBackend = 'api.v1.mk';
-        const externalWrapper = mount(TransformCard, {
-            props: { settings: externalSettings },
-            global: { stubs: { TransformSelector: true, RuleTemplateManager: true } },
-        });
-        testSubconverterBackend.mockRejectedValue(new Error('网络不可用'));
-        const testButton = externalWrapper.get('[data-testid="test-subconverter-backend"]');
-        await testButton.trigger('click');
-        expect(testSubconverterBackend).toHaveBeenCalledOnce();
-        await vi.waitFor(() =>
-            expect(
-                externalWrapper.find('[data-testid="subconverter-backend-test-result"]').exists()
-            ).toBe(true)
-        );
-        await flushPromises();
-        expect(
-            externalWrapper.get('[data-testid="subconverter-backend-test-result"]').text()
-        ).toContain('网络不可用');
-        expect(testButton.attributes('disabled')).toBeUndefined();
-    });
-
-    it('renders a safe backend test action and displays success feedback', async () => {
-        testSubconverterBackend.mockResolvedValue({
-            success: true,
-            available: true,
-            message: '第三方转换后端可用，响应 200，耗时 123ms。',
-            endpoint: 'https://api.v1.mk/sub',
-            elapsedMs: 123,
-        });
-
-        const wrapper = mount(TransformCard, {
-            props: { settings: createSettings() },
-            global: {
-                stubs: {
-                    TransformSelector: true,
-                    RuleTemplateManager: true,
-                },
-            },
-        });
-
-        expect(wrapper.text()).toContain('Test backend availability');
-        expect(wrapper.text()).toContain('Your real subscription links are not sent');
-
-        await wrapper.get('[data-testid="test-subconverter-backend"]').trigger('click');
-        await nextTick();
-        await nextTick();
-
-        expect(testSubconverterBackend).toHaveBeenCalledWith('api.v1.mk', 'clash');
-        expect(wrapper.get('[data-testid="subconverter-backend-test-result"]').text()).toContain(
-            '第三方转换后端可用'
-        );
-        expect(wrapper.get('[data-testid="subconverter-backend-test-result"]').text()).toContain(
-            'https://api.v1.mk/sub'
-        );
-    });
-
-    it('clears old backend test result after backend changes', async () => {
-        const settings = createSettings();
-        testSubconverterBackend.mockResolvedValue({
-            success: false,
-            available: false,
-            error: '测试失败',
-        });
-
-        const wrapper = mount(TransformCard, {
-            props: { settings },
-            global: {
-                stubs: {
-                    TransformSelector: true,
-                    RuleTemplateManager: true,
-                },
-            },
-        });
-
-        await wrapper.get('[data-testid="test-subconverter-backend"]').trigger('click');
-        await nextTick();
-        await nextTick();
-        expect(wrapper.find('[data-testid="subconverter-backend-test-result"]').exists()).toBe(
-            true
-        );
-
-        const backendInput = wrapper.get('input[type="text"]');
-        await backendInput.setValue('subapi.cmliussss.net');
-        await nextTick();
-
-        expect(wrapper.find('[data-testid="subconverter-backend-test-result"]').exists()).toBe(
-            false
-        );
     });
 });
