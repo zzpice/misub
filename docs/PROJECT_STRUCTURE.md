@@ -6,8 +6,8 @@
 
 - **前端**：Vue 3 SPA，使用 Vite 构建，代码位于 `src/`。
 - **后端**：Cloudflare Pages Functions，代码位于 `functions/`。
-- **存储**：KV 与 D1 双存储，通过 `functions/storage-adapter.js` 统一抽象。
-- **构建产物**：`dist/`（生产）与 `dev-dist/`（开发）。
+- **存储**：个人模式下 D1 是唯一业务数据库，KV 只保存辅助运行状态；通过 `functions/storage-adapter.js` 统一访问。
+- **构建产物**：`dist/`（本地构建输出）。
 
 ## 仓库布局（顶层）
 
@@ -19,11 +19,10 @@
 ├─ tests/                   # 单元测试
 ├─ docs/                    # 项目文档
 ├─ dist/                    # 构建产物（自动生成）
-├─ dev-dist/                # 开发构建产物（自动生成）
 ├─ node_modules/            # 依赖（自动生成）
 ├─ schema.sql               # D1 表结构
 ├─ fix_d1_schema.sql        # D1 表结构修复脚本
-├─ wrangler.toml            # Cloudflare 配置
+├─ wrangler-cf-pages.toml   # Cloudflare Pages 配置参考
 ├─ package.json             # 脚本与依赖
 ├─ vite.config.js           # Vite 配置
 └─ vitest.config.js         # Vitest 配置
@@ -95,7 +94,7 @@ functions/
 
 - `functions/[[path]].js`：
     - 全局入口，拦截所有请求。
-    - **伪装逻辑**：调用 `disguise-handler.js`，根据配置决定是否伪装根路径或 SPA 路由。
+    - **历史伪装逻辑**：原有处理器仍存在，个人版后续计划删除，不作为新的部署指引。
     - **路由分发**：将 `/api/*` 分发给 API 路由，`/sub/*` 分发给订阅处理，`/cron` 分发给定时任务。
     - **SPA 回退**：处理前端路由的 `index.html` 返回。
 
