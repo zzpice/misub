@@ -145,9 +145,8 @@ describe('settings page English translations', () => {
             },
         });
 
-        expect(transform.text()).toContain('Default conversion engine');
-        expect(transform.text()).toContain('External backend parameters');
-        expect(transform.text()).toContain('Test backend availability');
+        expect(transform.text()).not.toContain('External backend parameters');
+        expect(transform.text()).not.toContain('Test backend availability');
         expectNoChineseOrKeys(transform.text());
 
         const rules = mount(RuleTemplateManager, {
