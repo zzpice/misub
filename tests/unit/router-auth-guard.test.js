@@ -3,23 +3,22 @@ import router, { configureAuthGuard } from '../../src/router/index.js';
 
 describe('router authentication guard', () => {
     beforeEach(async () => {
-        configureAuthGuard(() => ({ state: 'loggedOut', loginPath: '/admin-login' }));
+        configureAuthGuard(() => ({ state: 'loggedOut' }));
         await router.replace('/');
     });
 
     afterEach(() => {
-        configureAuthGuard(() => ({ state: 'loading', loginPath: '/login' }));
+        configureAuthGuard(() => ({ state: 'loading' }));
     });
 
-    it('redirects unauthenticated users to the configured login path', async () => {
+    it('returns unauthenticated users to the single root login page', async () => {
         await router.push('/dashboard');
 
-        expect(router.currentRoute.value.path).toBe('/admin-login');
-        expect(router.currentRoute.value.query.redirect).toBe('/dashboard');
+        expect(router.currentRoute.value.path).toBe('/');
     });
 
     it('allows authenticated users to enter protected routes', async () => {
-        configureAuthGuard(() => ({ state: 'loggedIn', loginPath: '/admin-login' }));
+        configureAuthGuard(() => ({ state: 'loggedIn' }));
 
         await router.push('/dashboard');
 
@@ -27,10 +26,10 @@ describe('router authentication guard', () => {
     });
 
     it('does not block public routes while the session is loading', async () => {
-        configureAuthGuard(() => ({ state: 'loading', loginPath: '/admin-login' }));
+        configureAuthGuard(() => ({ state: 'loading' }));
 
-        await router.push('/explore');
+        await router.push('/');
 
-        expect(router.currentRoute.value.path).toBe('/explore');
+        expect(router.currentRoute.value.path).toBe('/');
     });
 });
