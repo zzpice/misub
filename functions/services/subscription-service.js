@@ -21,6 +21,8 @@ import { assertPublicNetworkUrl } from '../modules/security-utils.js';
 import { isSuspiciousNodeCountDrop } from './node-cache-service.js';
 import { isPersonalMode } from '../modules/personal-mode.js';
 import { resolveSourceSnapshot } from './source-snapshot-service.js';
+import { readRegionPreferences, fingerprintNode, correctedName } from './region-preferences.js';
+import { resolveNodeRegion } from '../modules/utils/geo-utils.js';
 
 const PERSONAL_SOURCE_CACHE_MAX_AGE = 12 * 60 * 60 * 1000;
 
@@ -955,11 +957,25 @@ export async function generateCombinedNodeList(
         const validNodes = snapshot.migratedLegacy
             ? [...snapshot.nodes]
             : await applySubscriptionTransforms(snapshot.nodes, sub);
+        // Corrections affect only generated output; source snapshots remain untouched.
+        const preferences = storage && sub.id
+            ? await readRegionPreferences(storage, sub.id) : { overrides: {} };
+        const localizedNodes = await Promise.all(validNodes.map(async (url) => {
+            const fingerprint = await fingerprintNode(url);
+            const info = parseNodeInfo(url);
+            const region = resolveNodeRegion(info.name, {
+                manualRegion: preferences.overrides[fingerprint],
+                regionOverrides: config.regionOverrides,
+                defaultRegion: sub.defaultRegion,
+            });
+            const name = correctedName(url, region);
+            return name ? applyManualNodeName(url, name) : url;
+        }));
         const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
         const shouldAddSubPrefix = shouldPrependSubscriptions && !skipPrefixDueToRenaming;
         return (shouldAddSubPrefix && sub.name
-            ? validNodes.map((node) => prependNodeName(node, sub.name))
-            : validNodes).join('\n');
+            ? localizedNodes.map((node) => prependNodeName(node, sub.name))
+            : localizedNodes).join('\n');
     };
 
     // 使用并发控制器限制同时请求数量，避免网络拥塞
