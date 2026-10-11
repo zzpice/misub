@@ -27,10 +27,11 @@
     - 写入：可能写下载计数、节点缓存、运行态/错误信息、通知状态。
 
 - `/cron`
-    - Handler：`handleCronTrigger()`，`functions/modules/notifications.js`
+    - Handler：`handleCronTrigger()`，`functions/modules/subscription-refresh.js`
     - 认证：需要 `settings.cronSecret`，通过 Bearer 或 query secret 校验。
-    - 读取：settings、subscriptions。
-    - 写入：订阅节点数、用户流量信息、通知状态等 cron 同步结果。
+    - 读取：settings、subscriptions、每个来源的永久快照及刷新时间。
+    - 写入：采用 `refreshSourceSnapshot()` 更新永久节点快照、节点数及流量元数据；上游失败时保留旧快照；遵循来源自动更新开关、间隔和重试退避。
+    - 调度：仅暴露认证接口，不会因设置 Cron Secret 就自动运行；Cloudflare Pages 需外部定时调用。
 
 ## `/api/*` 公开或条件公开接口
 
@@ -290,14 +291,14 @@
 
 - `POST /api/cron/trigger`
     - Handler：api-router 内联 `handleCronTriggerRequest()`
-    - 行为：导入 `functions/_schedule.js` 执行同步。
+    - 行为：复用 `functions/modules/subscription-refresh.js`，与 `/cron` 使用同一快照刷新逻辑。
     - 写入：`cron_last_execution`；同步过程可能写订阅状态。
 
 ## 当前值得关注的边界
 
 - `GET /api/clients*` 是公开只读接口，但当前可能在图标迁移时写回 KV；如果未来要严格区分只读公开接口，可单独收敛这个副作用。
 - `/api/auth_debug` 与 `/api/auth_check` 不要求登录，但默认关闭；部署时必须保持 `ENABLE_AUTH_DIAGNOSTICS` 关闭，除非正在排查登录问题。
-- `/api/cron/trigger` 当前复用 `functions/_schedule.js`，而 `docs/codebase-review.md` 已标记 `_cron.js` / `_schedule.js` 为疑似遗留定时实现；后续应继续确认并收敛 cron 主实现。
+- `/cron` 与 `/api/cron/trigger` 已统一为生产快照刷新路径；`functions/_cron.js` / `_schedule.js` 仍是历史样例实现，后续可在确认无依赖时清理。
 - `/api/system/export` 可导出脱敏数据；虽然需要登录，后续仍应通过测试固定脱敏字段覆盖。
 - 所有会主动拉取外部 URL 的接口应继续依赖 `validatePublicFetchUrl()` / `safeFetchPublicUrl()`，避免私网 SSRF 回归。
 
