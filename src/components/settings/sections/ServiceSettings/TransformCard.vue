@@ -142,15 +142,6 @@
                                     >
                                     <Switch v-model="settings.builtinSkipCertVerify" size="sm" />
                                 </div>
-                                <div
-                                    class="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/50 p-2.5 dark:border-white/5 dark:bg-white/5"
-                                >
-                                    <span
-                                        class="text-[11px] font-medium text-gray-700 dark:text-gray-300"
-                                        >{{ t('settings.transformBuiltinUdp') }}</span
-                                    >
-                                    <Switch v-model="settings.builtinEnableUdp" size="sm" />
-                                </div>
                             </div>
                         </div>
                     </div>
