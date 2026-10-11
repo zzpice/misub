@@ -12,6 +12,7 @@
     import NavBar from './components/layout/NavBar.vue';
     import { detectLegacyD1 } from './lib/api.js';
     import { useI18n } from './i18n/index.js';
+    import { BRAND_TITLE } from './lib/brand.js';
     import { configureAuthGuard, translateRouteTitle } from './router/index.js';
 
     // Lazy components
@@ -107,7 +108,7 @@
         () => {
             if (typeof document === 'undefined') return;
             const rawTitle = translateRouteTitle(route, t);
-            document.title = rawTitle ? `${rawTitle} - MISUB` : 'MISUB';
+            document.title = rawTitle ? `${rawTitle} · ${BRAND_TITLE}` : BRAND_TITLE;
         },
         { immediate: true }
     );
