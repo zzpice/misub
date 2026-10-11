@@ -35,6 +35,8 @@ function fixture(override = {}) {
     const adapter = {
         get: vi.fn(async (key) => records.get(key) ?? null),
         put: vi.fn(async (key, value) => { records.set(key, value); }),
+        getAllSubscriptions: vi.fn(async () => [SOURCE]),
+        getAllProfiles: vi.fn(async () => []),
         getSubscriptionById: vi.fn(async () => SOURCE),
         getProfileById: vi.fn(async () => ({
             id: 'profile-1', enabled: true, subscriptions: ['source-1'], manualNodes: [],
@@ -113,6 +115,37 @@ describe('personal previews use durable saved snapshots', () => {
         expect(result.success).toBe(true);
         expect(result.nodes).toHaveLength(2);
         expect(upstream).toHaveBeenCalled();
+    });
+
+    it('returns HTTP 503 instead of a successful empty downstream subscription when the saved snapshot is missing', async () => {
+        fixture();
+        const upstream = vi.fn(async () => { throw Error('Upstream must not be fetched'); });
+        vi.stubGlobal('fetch', upstream);
+        const env = {
+            MISUB_PERSONAL_MODE: 'true',
+            ADMIN_PASSWORD: 'a'.repeat(32),
+            COOKIE_SECRET: 'b'.repeat(32),
+            SUBSCRIPTION_TOKEN: 'c'.repeat(32),
+            PROFILE_TOKEN: 'd'.repeat(32),
+        };
+        const { handleMisubRequest } = await import('../../functions/modules/subscription/main-handler.js');
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        try {
+            const response = await handleMisubRequest({
+                request: new Request(
+                    'https://misub.test/' + env.SUBSCRIPTION_TOKEN + '?target=nodes&refresh=1',
+                    { headers: { 'User-Agent': 'ClashMeta' } }
+                ),
+                env,
+                waitUntil: vi.fn(),
+            });
+            expect(response.status).toBe(503);
+            expect(response.headers.get('X-MiSub-Source-State')).toBe('snapshot-missing');
+            expect(await response.text()).toContain('No saved node snapshot');
+            expect(upstream).not.toHaveBeenCalled();
+        } finally {
+            logSpy.mockRestore();
+        }
     });
 
     it('does not leak a snapshot saved under a different source URL', async () => {
