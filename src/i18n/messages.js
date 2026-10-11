@@ -101,7 +101,7 @@ export const messages = {
             enabledStatus: '启用状态',
             enable: '启用',
 
-            downloadCount: '被订阅 {count} 次',
+            downloadCount: '成功拉取 {count} 次',
             copySubscription: '复制订阅',
             nameRequired: '订阅组名称不能为空',
             customIdExists: '自定义 ID "{id}" 已存在',
@@ -1662,7 +1662,7 @@ export const messages = {
             enabledStatus: 'Enabled',
             enable: 'Enable',
 
-            downloadCount: 'Used {count} times',
+            downloadCount: 'Successful downloads: {count}',
             copySubscription: 'Copy sub',
             nameRequired: 'Profile name required',
             customIdExists: 'Custom ID "{id}" already exists',
