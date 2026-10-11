@@ -50,6 +50,17 @@ describe('unified region engine', () => {
         expect(resolveNodeRegion('Japan-London')).toBe('其他');
     });
 
+    it('does not let a second group regex pass undo a finalized manual flag', () => {
+        const groups = groupNodeLinesByRegion(
+            [{ name: '🇺🇸 LA-vless-reality', tag: '🇺🇸 LA-vless-reality' }],
+            { regionOverrides: [{ pattern: 'LA', region: '老挝' }] }
+        );
+        expect(groups[0].name).toBe('🇺🇸 美国节点');
+    });
+    it('does not treat mainland-China flag as Taiwan', () => {
+        expect(extractNodeRegion('🇨🇳 Beijing')).toBe('中国');
+        expect(extractNodeRegion('🇹🇼 Taipei')).toBe('台湾');
+    });
     it('returns searchable country and flag options', () => {
         const us = getRegionOptions().find((x) => x.name === '美国');
         expect(us).toMatchObject({ code: 'US', flag: '🇺🇸' });
