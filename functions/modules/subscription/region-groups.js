@@ -36,31 +36,19 @@ export const REGION_GROUP_PATTERNS = [
     { name: '🇦🇺 澳洲节点', pattern: /澳|AU|Australia/i },
 ];
 
-function normalizeRegionOverrides(overrides = []) {
-    if (!Array.isArray(overrides)) return [];
-    return overrides
-        .map((rule) => {
-            if (!rule || !rule.pattern || !rule.region) return null;
-            try {
-                return {
-                    pattern: new RegExp(rule.pattern, rule.flags || 'i'),
-                    region: String(rule.region).trim(),
-                };
-            } catch {
-                return null;
-            }
-        })
-        .filter(Boolean);
-}
-
 export function groupNodeLinesByRegion(nodes = [], options = {}) {
     const groups = new Map();
-    const regionOverrides = normalizeRegionOverrides(options.regionOverrides);
 
     nodes.forEach((node) => {
         const tagName = node.tag || node.name;
+        // Generated URLs already contain the source-corrected flag. Treat that
+        // final display marker as authoritative: otherwise a second regex pass
+        // would undo a user edit after generation had applied manual > regex.
+        const finalizedFlag = String(tagName || '').match(/[\u{1F1E6}-\u{1F1FF}]{2}/u)?.[0];
+        const finalizedRegion = finalizedFlag ? resolveNodeRegion(finalizedFlag) : '';
         const region = resolveNodeRegion(tagName, {
-            manualRegion: node.manualRegion || node.metadata?.manualRegion,
+            manualRegion: node.manualRegion || node.metadata?.manualRegion ||
+                (finalizedRegion !== '其他' ? finalizedRegion : ''),
             regionOverrides: options.regionOverrides,
             defaultRegion: node.defaultRegion,
         });
