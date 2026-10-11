@@ -11,9 +11,11 @@
     import { fetchNodeCount } from '../../../lib/api.js';
     import { useToastStore } from '../../../stores/toast.js';
     import { useI18n } from '../../../i18n/index.js';
+    import { getRegionOptions } from '../../../../functions/modules/utils/geo-utils.js';
 
     const { showToast } = useToastStore();
     const { t } = useI18n();
+    const regionOptions = getRegionOptions();
 
     // 使用独立的本地状态，防止用户清空输入框时开关自动跳回关闭状态
     const useFetchProxy = ref(false);
@@ -122,6 +124,18 @@
                 )"
             />
         </label>
+    </div>
+
+    <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
+        <label for="sub-default-region" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">订阅源默认地区</label>
+        <select id="sub-default-region" v-model="editingSubscription.defaultRegion"
+            class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+            <option value="">自动识别（不设默认值）</option>
+            <option v-for="region in regionOptions" :key="region.name" :value="region.name">
+                {{ region.flag }} {{ region.name }}
+            </option>
+        </select>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">仅在节点名称无法明确识别时使用，不覆盖国旗、国家或城市信息。</p>
     </div>
 
     <!-- 专属拉取代理 -->
