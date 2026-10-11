@@ -1,7 +1,7 @@
 # zzpice 的 MiSub 维护说明
 
 生产：`https://misub.zzp.moe`；Pages 项目：`misub`；独立仓库：`zzpice/misub`。
-预览只使用允许的 `preview` 分支，具体环境地址和资源标识在私有运维记录中维护。
+当前仅维护 `main` 生产分支；历史 `preview` 分支及其独立 D1、KV、Secrets 已弃用，不得在普通维护中重新创建。
 
 ## 来源与维护边界
 
@@ -9,17 +9,17 @@
 `f8362c55ef9886289debf6263822b13636739008`（版本标识 2.7.0）。
 保留 LICENSE、原作者版权及第三方依赖声明。仓库当前为 Public 独立快照，
 2026-10-10 重建为单个根提交，**未保留完整上游 Git 历史**；不是 GitHub Fork，且已删除上游自动同步工作流。
-仅 main 推送触发正式部署。只有 `preview` 分支允许预览构建；没有定时合并、升级或部署。
+仅 `main` 推送触发正式部署；不维护预览分支或自动同步、升级任务。
 
 ## 配置与凭据
 
-生产和预览都必须设置 `MISUB_PERSONAL_MODE=true`，以及四个相互独立的 Secrets：
+生产必须设置 `MISUB_PERSONAL_MODE=true`，以及四个相互独立的 Secrets：
 `ADMIN_PASSWORD`、`COOKIE_SECRET`、`SUBSCRIPTION_TOKEN`（mytoken）、`PROFILE_TOKEN`（profileToken）。
 凭据单独保存在受控的私有凭据记录中，不写入本仓库、构建日志或公开报告。
 Secrets 优先于数据库中的 Token 和 KV 认证记录。后台不能修改由 Secrets 控制的管理员密码或 Token。
 密码变化后旧会话立即无效；正常部署保留 COOKIE_SECRET 和所有已有有效凭据，不自动轮换。
 
-生产绑定 `misub-production` 的 MISUB_DB 与 MISUB_KV；预览绑定独立的 `misub-preview` 资源。
+生产使用专属 MISUB_DB 与 MISUB_KV；现不维护 `misub-preview` D1/KV，实际生产绑定名称和标识以 Cloudflare 控制台为准。
 D1 是设置、订阅、节点、订阅组和节点缓存的唯一业务数据来源；D1 故障不会回退到 KV 或伪装成空数据。
 管理集合直接读取 D1，避免不同 Cloudflare 实例中的短时内存缓存让保存、备份或恢复使用旧数据。
 KV 仅供保留功能的辅助运行状态使用，不镜像正式设置或订阅。不共享 Sub-Store 资源。
@@ -43,9 +43,9 @@ KV 仅供保留功能的辅助运行状态使用，不镜像正式设置或订�
 2. D1 使用 Cloudflare 控制台的导出/Time Travel，或本机 `wrangler d1 export misub-production --remote --output /安全私有目录/misub.sql`。
    不在公开仓库保存 JSON/SQL，不把凭据放在命令参数或终端日志中。
 3. 免费 D1 的 Time Travel 保留期限以当前控制台为准。重大变更前额外手工导出完整 SQL；备份存放在加密磁盘或受控私有位置。
-4. 先在独立预览库验证 JSON 恢复和 SQL 导入。正式恢复前再次备份并核对数据库名称与 UUID，避免覆盖别的服务。
+4. 使用合成数据在本地隔离数据库验证 JSON 恢复和 SQL 导入；未经明确授权不得新建云端预览资源或在生产执行恢复演练。正式恢复前再次备份并核对数据库名称与 UUID，避免覆盖别的服务。
 5. JSON 恢复在后台执行（管理员 API 为 `/api/backup/restore`）；可以先通过 `/api/backup/export` 导出。
-   Secrets 不依赖 JSON/SQL 备份，须从私有凭据记录另行恢复；预览恢复正式备份仍使用预览 Secrets。
+   Secrets 不依赖 JSON/SQL 备份，须由维护者通过受控凭据记录另行恢复；测试数据及测试凭据不得使用生产值。
 6. Pages 历史部署可回滚代码；**回滚 Pages 不会恢复 D1 数据或撤销数据库迁移**。
    有 schema 变化时必须有单独的 SQL 恢复计划，再执行代码回滚。
 
@@ -59,7 +59,7 @@ KV 仅供保留功能的辅助运行状态使用，不镜像正式设置或订�
 仅在确有漏洞、实际问题或有价值的功能时更新。改动来自人工审查与必要测试，不要求获取或合并原仓库。
 禁止对 main 强制推送、reset 为上游或恢复上游同步工作流。锁文件只随经过审查的依赖修复更新。
 运行 `npm ci`、`npm run test:run`、`npm run build`；协议转换变更还须用实际 Mihomo/sing-box 校验配置。
-先部署 preview，确认与生产的 Bindings/Secrets 完全不同；通过后正常推送 main。
+先在本地隔离测试环境完成验证；未经明确授权不创建 preview 或其他云端测试资源，通过后再正常推送 `main`。
 保留一次合并前 Pages 部署和数据库备份。检查 Cloudflare 部署完成及实际 API 读写，不能仅看 GitHub 提交成功。
 
 ## 源站抓取故障

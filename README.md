@@ -38,7 +38,7 @@ Telegram 服务分流规则、管理员节点预览、客户端信息与订阅�
 3. 在 Pages 环境变量中设置 `MISUB_PERSONAL_MODE=true`、`ENABLE_CRON=false`、`ENABLE_AUTH_DIAGNOSTICS=false`。
 4. 在 Pages 中分别设置四项 Secret：`ADMIN_PASSWORD`、`COOKIE_SECRET`、`SUBSCRIPTION_TOKEN`、`PROFILE_TOKEN`。
    每项至少 32 个字符，值必须互不相同；由密码管理器生成和保存。没有可直接用于生产的默认凭据。
-5. 如启用预览，生产与预览必须分别使用自己的 D1、KV 和 Secrets，并限制允许构建的预览分支。
+5. 现有实例仅使用正式分支 `main`，不维护预览分支、预览 D1、预览 KV 或预览 Secrets。日后确需新增隔离测试部署时，先单独审查并明确授权。
 6. 部署后核对实际绑定、管理员登录、未登录 API 拒绝访问、订阅 Token 校验与数据持久化，再绑定正式域名。
 
 现有个人实例使用 [misub.zzp.moe](https://misub.zzp.moe)，管理与订阅访问需要原有凭据。
@@ -65,7 +65,7 @@ npm run dev
 - 保持锁文件；只为明确问题修改依赖，不批量追新版本。
 - 保留 2.7.0 兼容基线，并在页脚显示实际 Git Commit；以本仓库的提交、测试和部署结果管理版本；按实际问题人工审查修复，禁止强制推送、重置 main 或加入自动同步工作流。
 - 修改代码时运行相关测试和构建；协议转换变更还需用实际客户端配置校验工具验证输出。
-- 数据恢复、迁移或升级前备份；先用独立预览环境验证。Pages 代码回滚不会恢复 D1 数据。
+- 数据恢复、迁移或升级前备份；优先用合成数据在本地隔离环境验证，未经明确授权不新建云端预览或触碰生产数据。Pages 代码回滚不会恢复 D1 数据。
 - 部署以 Cloudflare 的实际提交与线上认证检查为准，不能仅凭 GitHub 推送成功判断完成。
 
 详见 [维护与恢复](docs/PERSONAL-MAINTENANCE.md)、[文档索引](docs/README.md)、
