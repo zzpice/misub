@@ -9,8 +9,10 @@
  */
 export const REGION_KEYWORDS = {
     香港: ['HK', 'HKG', 'HKT', '香港', 'Hong Kong', 'HongKong'],
+    澳门: ['MO', 'MAC', '澳门', '澳門', 'Macao', 'Macau'],
+    中国: ['CN', 'CHN', '中国', '中國', 'China', 'Beijing', 'Shanghai', '北京', '上海', 'BJS', 'PEK', 'PVG'],
     台湾: ['TW', 'TPE', '台湾', '台北', 'Taiwan', 'Taipei'],
-    新加坡: ['SG', 'SIN', '新加坡', 'Singapore'],
+    新加坡: ['SG', 'SIN', '新加坡', '狮城', '獅城', 'Singapore'],
     日本: [
         'JP',
         'JPN',
@@ -392,7 +394,9 @@ export const REGION_KEYWORDS = {
  */
 export const REGION_EMOJI = {
     香港: '🇭🇰',
-    台湾: '🇨🇳',
+    澳门: '🇲🇴',
+    中国: '🇨🇳',
+    台湾: '🇹🇼',
     新加坡: '🇸🇬',
     日本: '🇯🇵',
     美国: '🇺🇸',
@@ -536,9 +540,14 @@ function parseHostPort(value) {
  * @returns {string} 识别出的地区，如未识别返回"其他"
  */
 const AMBIGUOUS_REGION_CODES = new Set(['LA', 'CA', 'IN', 'FRA']);
+// Derive flags from ISO-style two-letter entries, not from presentation aliases.
 const FLAG_REGIONS = new Map(
-    Object.entries(REGION_EMOJI).filter(([region, flag]) => region !== '其他' && flag !== '🌍')
-        .map(([region, flag]) => [flag, region])
+    Object.entries(REGION_KEYWORDS).map(([region, aliases]) => {
+        const code = aliases.find((value) => /^[A-Z]{2}$/.test(value));
+        if (!code) return [null, region];
+        const flag = String.fromCodePoint(...Array.from(code, (ch) => ch.charCodeAt(0) + 127397));
+        return [flag, region];
+    }).filter(([flag]) => flag)
 );
 const REGION_ALIASES = Object.entries(REGION_KEYWORDS).flatMap(([region, words]) =>
     words.map((word) => ({
@@ -645,20 +654,7 @@ export function getRegionEmoji(region) {
  * @returns {boolean} 是否包含该地区
  */
 export function containsRegion(nodeName, region) {
-    if (!nodeName || !region || !REGION_KEYWORDS[region]) {
-        return false;
-    }
-
-    const normalizedNodeName = nodeName.toLowerCase();
-    const keywords = REGION_KEYWORDS[region];
-
-    for (const keyword of keywords) {
-        if (normalizedNodeName.includes(keyword.toLowerCase())) {
-            return true;
-        }
-    }
-
-    return false;
+    return extractNodeRegion(nodeName) === normalizeRegion(region);
 }
 
 /**
@@ -710,9 +706,6 @@ export function parseNodeInfo(nodeUrl) {
         const urlParts = urlWithoutProtocol.split(/[:@?#]/);
         nodeName = urlParts[0] || '未命名节点';
     }
-
-    // [修复] 将台湾旗帜替换为中国国旗
-    nodeName = nodeName.replace(/🇹🇼/g, '🇨🇳');
 
     // [新增] 提取服务器地址和端口
     let server = '';
@@ -976,7 +969,7 @@ export function calculateRegionStats(nodes) {
     const total = nodes.length;
 
     nodes.forEach((node) => {
-        const region = extractNodeRegion(node.name || '');
+        const region = node.region || extractNodeRegion(node.name || '');
         stats[region] = (stats[region] || 0) + 1;
     });
 
