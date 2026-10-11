@@ -15,7 +15,7 @@ Only valid non-empty snapshots are published. A failed fetch, expired source URL
 ## Downstream behavior
 Every authenticated or token-based output continues through the original subscription group rules, filtering, prefixing, built-in generators and template conversion. A source snapshot is loaded once per upstream and shared across client types; downstream configuration variants and snapshot revisions are separated in aggregate cache keys.
 
-When downstream requests arrive, a source whose interval has elapsed triggers a background refresh using Cloudflare Pages Functions `waitUntil`, while its previous snapshot is returned immediately. There is no guaranteed refresh without traffic and no separate Cron/Worker dependency. A missing initial snapshot on an enabled source requires a one-time synchronous bootstrap; an automatic-update-disabled source never triggers network access from a downstream request.
+When downstream requests arrive, a source whose interval has elapsed triggers a background refresh using Cloudflare Pages Functions `waitUntil`, while its previous snapshot is returned immediately. Without an external scheduler, there is no guaranteed refresh when no client requests arrive. An optional authenticated /cron endpoint now reuses the same durable snapshot refresh service; it does not create a separate cache or require a new Worker. A missing initial snapshot on an enabled source requires a one-time synchronous bootstrap; an automatic-update-disabled source never triggers network access from a downstream request.
 
 For manual-only sources, explicitly click their refresh control once to establish an initial snapshot before distributing their nodes.
 
