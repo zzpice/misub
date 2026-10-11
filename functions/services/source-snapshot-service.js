@@ -201,20 +201,23 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
  * only when due and only with Cloudflare waitUntil; never block a client.
  * Sources with auto-update disabled never contact the upstream here.
  */
-export async function resolveSourceSnapshot({ storage, source, context, fetcher }) {
-    let snapshot = await readSourceSnapshot(storage, source);
-    if (source.autoUpdateEnabled === false) return snapshot;
+export async function isSourceRefreshDue(storage, source, snapshot = null) {
+    if (source.autoUpdateEnabled === false) return false;
+    const current = snapshot || await readSourceSnapshot(storage, source);
     const now = Date.now();
-    const lastSuccess = Date.parse(snapshot?.updatedAt || '');
-    if (snapshot && Number.isFinite(lastSuccess) &&
+    const lastSuccess = Date.parse(current?.updatedAt || '');
+    if (current && Number.isFinite(lastSuccess) &&
         now - lastSuccess < getSourceUpdateInterval(source) * 60 * 1000) {
-        return snapshot;
+        return false;
     }
     const attempt = await storage.get(attemptKey(source));
     const lastAttempt = Date.parse(attempt?.lastAttemptAt || '');
-    if (Number.isFinite(lastAttempt) && now - lastAttempt < RETRY_BACKOFF_MS) {
-        return snapshot;
-    }
+    return !Number.isFinite(lastAttempt) || now - lastAttempt >= RETRY_BACKOFF_MS;
+}
+
+export async function resolveSourceSnapshot({ storage, source, context, fetcher }) {
+    let snapshot = await readSourceSnapshot(storage, source);
+    if (!(await isSourceRefreshDue(storage, source, snapshot))) return snapshot;
     if (snapshot) {
         if (typeof context?.waitUntil === 'function') {
             context.waitUntil(

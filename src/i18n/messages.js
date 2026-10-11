@@ -929,9 +929,18 @@ export const messages = {
             regionOverrideRegionPlaceholder: '例如：美国',
             regionOverrideFlags: '标志',
 
-            cronTitle: '自动任务配置 (Cron)',
+            serviceBasicTitle: '日常订阅设置',
+            serviceBasicDesc: '优先使用内置自动分流；必要时展开高级设置修改规则、DNS 或定时任务。',
+            serviceCustomActive: '当前使用自定义方案，可在高级设置中修改',
+            serviceUdpHint: '内置转换输出的 UDP 支持',
+            serviceAdvancedConfigured: '检测到已保存的高级配置；折叠界面不会清除这些设置。',
+            serviceAdvancedTitle: '高级设置',
+            serviceAdvancedDesc: '规则模板、分流等级、证书例外、DNS 覆写与外部定时任务',
+            serviceExpand: '展开',
+            serviceCollapse: '收起',
+            cronTitle: '外部定时刷新（高级）',
             cronDesc:
-                '定时更新所有订阅的流量信息和节点数量，并在订阅临期或流量不足时通过 Telegram 发送提醒。',
+                '外部调度器访问 /cron 时，使用与订阅源相同的永久快照刷新机制更新节点与流量信息；仅填写密钥不会自动运行。',
             cronShowGuide: '如何配置?',
             cronHideGuide: '收起',
             cronSecretPlaceholder: '自定义一个密钥，用于保护定时任务接口',
@@ -946,7 +955,7 @@ export const messages = {
             cronGuideExternal:
                 '由于 Cloudflare Pages 免费版不支持 Cron Trigger，请使用外部监控服务（如 UptimeRobot, Cron-Job.org）定时访问上方生成的兼容链接。',
             cronGuideBearer: '如果服务支持自定义请求头，也可以使用推荐的 Bearer 方式触发 /cron。',
-            cronGuideFrequency: '建议频率：每天一次 (Every 24 hours)',
+            cronGuideFrequency: '建议按订阅源频率和上游限制设置外部触发间隔；服务端会跳过尚未到期的来源。',
 
             copyFailedManualSelect: '复制失败，请手动选择文本复制',
             copiedShort: '已复制',
@@ -2571,9 +2580,18 @@ export const messages = {
             regionOverrideRegionPlaceholder: 'e.g. United States',
             regionOverrideFlags: 'Flags',
 
-            cronTitle: 'Automation (Cron)',
+            serviceBasicTitle: 'Everyday subscription settings',
+            serviceBasicDesc: 'Use built-in routing by default. Open advanced settings to customize rules, DNS, or scheduling.',
+            serviceCustomActive: 'Custom routing is active; edit it in advanced settings',
+            serviceUdpHint: 'UDP support for built-in generated output',
+            serviceAdvancedConfigured: 'Saved advanced options are active; collapsing them does not reset them.',
+            serviceAdvancedTitle: 'Advanced settings',
+            serviceAdvancedDesc: 'Rule templates, routing levels, certificate exceptions, DNS overrides and scheduled refresh',
+            serviceExpand: 'Expand',
+            serviceCollapse: 'Collapse',
+            cronTitle: 'External scheduled refresh (advanced)',
             cronDesc:
-                'Periodically update traffic and node counts, and send Telegram alerts when subscriptions are near expiry or traffic is low.',
+                'When an external scheduler calls /cron, update node snapshots and traffic metadata using the same safe source-refresh mechanism. A secret alone does not schedule anything.',
             cronShowGuide: 'How to configure?',
             cronHideGuide: 'Hide',
             cronSecretPlaceholder: 'Set a secret to protect the Cron endpoint',
@@ -2591,7 +2609,7 @@ export const messages = {
                 'Cloudflare Pages Free does not support Cron Triggers. Use an external monitor such as UptimeRobot or Cron-Job.org to access the compatible link above on a schedule.',
             cronGuideBearer:
                 'If your service supports custom headers, you can also trigger /cron with the recommended Bearer method.',
-            cronGuideFrequency: 'Recommended frequency: once per day (every 24 hours)',
+            cronGuideFrequency: 'Schedule according to source intervals and upstream limits; sources not yet due are skipped.',
 
             copyFailedManualSelect: 'Copy failed. Select the text manually.',
             copiedShort: 'Copied',

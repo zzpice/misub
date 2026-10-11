@@ -347,7 +347,7 @@ describe('security hardening', () => {
                 '[Storage] No KV binding found, using noop adapter'
             );
             expect(infoSpy).toHaveBeenCalledWith(
-                '[Cron] Starting parallel update for 0 subscriptions'
+                '[Cron] Checking 0 remote sources'
             );
         } finally {
             warnSpy.mockRestore();

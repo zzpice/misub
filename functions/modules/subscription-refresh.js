@@ -1,183 +1,88 @@
-/** 订阅刷新：保留流量、节点计数、失败保护与持久化。 */
-import { KV_KEY_SUBS, SYSTEM_CONSTANTS } from './config.js';
+/**
+ * The external /cron endpoint reuses the same durable per-source snapshot path
+ * as downstream subscriptions and the manual refresh button.
+ * No parallel cache format, no duplicate metadata fetch, no bulk overwrites.
+ */
+import { KV_KEY_SUBS } from './config.js';
+import { isSourceRefreshDue, refreshSourceSnapshot } from '../services/source-snapshot-service.js';
+import { fetchRemoteSourceSnapshot } from '../services/subscription-service.js';
 
-async function loadSubscriptionsForCron(storageAdapter) {
-    if (typeof storageAdapter.getAllSubscriptions === 'function') {
-        const subscriptions = await storageAdapter.getAllSubscriptions();
-        if (Array.isArray(subscriptions)) {
-            return subscriptions;
-        }
+async function loadSubscriptionsForCron(storage) {
+    if (typeof storage.getAllSubscriptions === 'function') {
+        const subscriptions = await storage.getAllSubscriptions();
+        if (Array.isArray(subscriptions)) return subscriptions;
     }
-
-    const subscriptions = await storageAdapter.get(KV_KEY_SUBS);
+    const subscriptions = await storage.get(KV_KEY_SUBS);
     return Array.isArray(subscriptions) ? subscriptions : [];
 }
 
-async function persistSubscriptionsForCron(storageAdapter, subscriptions) {
-    if (typeof storageAdapter.putAllSubscriptions === 'function') {
-        await storageAdapter.putAllSubscriptions(subscriptions);
-        return;
+async function runWithConcurrency(items, concurrency, fn) {
+    const results = [];
+    const executing = new Set();
+    for (const item of items) {
+        const task = Promise.resolve().then(() => fn(item)).catch((error) => ({
+            state: 'failed',
+            name: item.name,
+            error: String(error?.message || 'Unexpected refresh error'),
+        }));
+        executing.add(task);
+        task.finally(() => executing.delete(task));
+        results.push(task);
+        if (executing.size >= concurrency) await Promise.race(executing);
     }
-
-    await storageAdapter.put(KV_KEY_SUBS, subscriptions);
+    return Promise.all(results);
 }
 
-/** 并行刷新远程订阅。 */
+/** Authenticated externally scheduled run; respects per-source auto-update intervals. */
 export async function handleCronTrigger(env) {
     const { StorageFactory } = await import('../storage-adapter.js');
-
-    const storageAdapter = await StorageFactory.createAdapter(
+    const storage = await StorageFactory.createAdapter(
         env,
         await StorageFactory.getStorageType(env)
     );
-    const originalSubs = await loadSubscriptionsForCron(storageAdapter);
-    const allSubs = JSON.parse(JSON.stringify(originalSubs));
+    const subscriptions = await loadSubscriptionsForCron(storage);
+    const remoteSources = subscriptions.filter((source) =>
+        source?.enabled && /^https?:\/\//i.test(String(source.url || ''))
+    );
+    const startedAt = Date.now();
+    console.info(`[Cron] Checking ${remoteSources.length} remote sources`);
 
-    const httpSubscriptions = allSubs.filter((sub) => sub.url.startsWith('http') && sub.enabled);
-
-    console.info(`[Cron] Starting parallel update for ${httpSubscriptions.length} subscriptions`);
-    const startTime = Date.now();
-
-    const CONCURRENCY = 6;
-    const TIMEOUT = 15000;
-
-    const nodeRegex =
-        /^(ss|ssr|vmess|vless|trojan|hysteria2?|hy|hy2|tuic|anytls|socks5|socks):\/\//gm;
-    let changesMade = false;
-    let updatedCount = 0;
-    let failedCount = 0;
-    const failedSubscriptions = [];
-
-    async function processSubscription(sub) {
-        try {
-            const fetchWithTimeout = (url, options) => {
-                const { cf, ...requestInit } = options;
-                const fetchCall = cf
-                    ? fetch(new Request(url, requestInit), { cf })
-                    : fetch(new Request(url, requestInit));
-                return Promise.race([
-                    fetchCall,
-                    new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Timeout')), TIMEOUT)
-                    ),
-                ]);
-            };
-
-            const [trafficResult, nodeCountResult] = await Promise.allSettled([
-                fetchWithTimeout(sub.url, {
-                    headers: { 'User-Agent': 'clash-verge/v2.4.3' },
-                    redirect: 'follow',
-                    cf: { insecureSkipVerify: true },
-                }),
-                fetchWithTimeout(sub.url, {
-                    headers: { 'User-Agent': SYSTEM_CONSTANTS.FETCHER_USER_AGENT },
-                    redirect: 'follow',
-                    cf: { insecureSkipVerify: true },
-                }),
-            ]);
-
-            let hasTrafficUpdate = false;
-            let hasNodeCountUpdate = false;
-
-            if (trafficResult.status === 'fulfilled' && trafficResult.value.ok) {
-                const userInfoHeader = trafficResult.value.headers.get('subscription-userinfo');
-                if (userInfoHeader) {
-                    const info = {};
-                    userInfoHeader.split(';').forEach((part) => {
-                        const [key, value] = part.trim().split('=');
-                        if (key && value) info[key] = /^\d+$/.test(value) ? Number(value) : value;
-                    });
-                    const originalSub = allSubs.find((s) => s.id === sub.id);
-                    if (originalSub) {
-                        originalSub.userInfo = info;
-                    }
-                    hasTrafficUpdate = true;
-                }
-            }
-
-            if (nodeCountResult.status === 'fulfilled' && nodeCountResult.value.ok) {
-                const text = await nodeCountResult.value.text();
-                let decoded = '';
-                try {
-                    decoded = atob(text.replace(/\s/g, ''));
-                } catch {
-                    decoded = text;
-                }
-                const matches = decoded.match(nodeRegex);
-                if (matches) {
-                    const originalSub = allSubs.find((s) => s.id === sub.id);
-                    if (originalSub) {
-                        const newCount = matches.length;
-                        originalSub.nodeCount = newCount;
-                    }
-                    hasNodeCountUpdate = true;
-                }
-            }
-
-            return {
-                name: sub.name,
-                success: hasTrafficUpdate || hasNodeCountUpdate,
-                traffic: hasTrafficUpdate,
-                nodes: hasNodeCountUpdate,
-            };
-        } catch (e) {
-            return {
-                name: sub.name,
-                success: false,
-                error: e.message,
-            };
+    const results = await runWithConcurrency(remoteSources, 6, async (source) => {
+        if (!(await isSourceRefreshDue(storage, source))) {
+            return { state: 'skipped', name: source.name };
         }
-    }
-
-    async function runWithConcurrency(items, concurrency, fn) {
-        const results = [];
-        const executing = new Set();
-        for (const item of items) {
-            const promise = fn(item).then((result) => {
-                executing.delete(promise);
-                return result;
-            });
-            executing.add(promise);
-            results.push(promise);
-            if (executing.size >= concurrency) {
-                await Promise.race(executing);
-            }
+        const refreshed = await refreshSourceSnapshot({
+            storage,
+            source,
+            fetcher: (current) => fetchRemoteSourceSnapshot(current, storage),
+        });
+        if (refreshed.busy) return { state: 'skipped', name: source.name };
+        if (refreshed.success) {
+            return { state: 'updated', name: source.name };
         }
-        return Promise.all(results);
-    }
+        return {
+            state: 'failed',
+            name: source.name,
+            error: refreshed.error || 'Upstream refresh failed',
+            preserved: Boolean(refreshed.snapshot),
+        };
+    });
 
-    const results = await runWithConcurrency(httpSubscriptions, CONCURRENCY, processSubscription);
-
-    for (const result of results) {
-        if (result.success) {
-            updatedCount++;
-            changesMade = true;
-        } else if (result.error) {
-            failedCount++;
-            failedSubscriptions.push({ name: result.name, error: result.error });
-        }
-    }
-
-    if (changesMade) {
-        await persistSubscriptionsForCron(storageAdapter, allSubs);
-    }
-
-    const duration = Date.now() - startTime;
+    const updated = results.filter((r) => r.state === 'updated').length;
+    const skipped = results.filter((r) => r.state === 'skipped').length;
+    const failures = results.filter((r) => r.state === 'failed');
     const summary = {
-        success: true,
-        summary: {
-            total: httpSubscriptions.length,
-            updated: updatedCount,
-            failed: failedCount,
-            changes: changesMade,
-            duration: `${duration}ms`,
-            failed_subscriptions: failedSubscriptions,
-        },
+        total: remoteSources.length,
+        updated,
+        skipped,
+        failed: failures.length,
+        changes: updated > 0,
+        preserved: failures.filter((r) => r.preserved).length,
+        duration: `${Date.now() - startedAt}ms`,
+        failed_subscriptions: failures.map(({ name, error }) => ({ name, error })),
     };
-
-    console.info(`[Cron] Completed in ${duration}ms:`, summary.summary);
-
-    return new Response(JSON.stringify(summary), {
+    console.info('[Cron] Snapshot refresh completed:', summary);
+    return new Response(JSON.stringify({ success: true, summary }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
     });

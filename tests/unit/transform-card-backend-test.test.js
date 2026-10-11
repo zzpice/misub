@@ -43,7 +43,7 @@ describe('TransformCard in the personal edition', () => {
 
         expect(wrapper.findAll('select').length).toBeGreaterThan(0);
         expect(wrapper.findComponent({ name: 'TransformSelector' }).exists()).toBe(true);
-        expect(wrapper.text()).toContain('UDP');
+        expect(wrapper.text()).toContain('skip certificate verification');
         await wrapper.find('select').setValue('custom_template');
         expect(settings.transformConfigMode).toBe('custom_template');
         expect(settings.builtinSkipCertVerify).toBe(true);
