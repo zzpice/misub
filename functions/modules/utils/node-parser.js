@@ -548,7 +548,7 @@ export function calculateRegionStats(nodes) {
     const stats = {};
     const total = nodes.length;
     nodes.forEach((node) => {
-        const region = extractNodeRegion(node.name || '');
+        const region = node.region || extractNodeRegion(node.name || '');
         stats[region] = (stats[region] || 0) + 1;
     });
     for (const [region, count] of Object.entries(stats)) {
