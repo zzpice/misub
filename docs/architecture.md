@@ -65,7 +65,7 @@ HTTP Request
     ├── /sub/*                         → functions/modules/subscription-handler.js
     ├── /<mytoken>/*, /<profileToken>/* → functions/modules/subscription-handler.js
     ├── /cron                          → functions/modules/subscription-refresh.js
-    └── 其他路径                        → SPA 静态资源、公开页或伪装页
+    └── 其他路径                        → SPA 静态资源或伪装页
 ```
 
 顶层入口还负责：
@@ -103,7 +103,6 @@ functions/modules/api-router.js
 /api/login_config
 /api/config
 /api/system/error_report
-/api/clients/*
 /api/github/release
 ```
 
@@ -137,7 +136,6 @@ functions/modules/auth-middleware.js              # 登录态、cookie、密码�
 functions/modules/rule-template-handler.js        # 自定义规则模板
 functions/modules/handlers/node-handler.js        # 节点数量、批量刷新、节点清理、健康检查
 functions/modules/handlers/debug-handler.js       # 调试、系统信息、导出、预览内容
-functions/modules/handlers/client-handler.js      # 客户端配置接口
 functions/modules/handlers/github-proxy-handler.js
 functions/modules/handlers/error-report-handler.js
 ```
@@ -223,7 +221,7 @@ functions/modules/subscription/node-fetcher.js
 - Profile 模式：按订阅分组生成完整输出
 - 单订阅模式：对某一个订阅生成输出
 - Direct URL 模式：直接对 URL 生成预览或输出
-- Public Preview 模式：公开页使用的节点预览
+- Public Preview 模式：历史功能，个人模式已禁用
 
 ## 7. 节点获取、缓存与保护性缓存
 
@@ -387,7 +385,6 @@ src/router/index.js
 
 ```text
 /                         # 首页/公开入口包装页
-/explore                  # 公开页
 /dashboard                # 仪表盘
 /dashboard/groups         # 订阅组
 /dashboard/nodes          # 手动节点
