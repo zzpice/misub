@@ -5,6 +5,7 @@ import { calculateProtocolStats, calculateRegionStats } from '../utils/node-pars
 import { KV_KEY_SUBS } from '../config.js';
 import { fetchSubscriptionNodes } from './node-fetcher.js';
 import { fetchPreviewSourceNodes } from './preview-source.js';
+import { getRegionOptions } from '../utils/geo-utils.js';
 
 /**
  * 处理单个订阅模式的节点获取
@@ -92,6 +93,7 @@ export async function handleSingleSubscriptionMode(
         success: true,
         subscriptions: [result],
         nodes: result.nodes,
+        regionOptions: getRegionOptions(),
         totalCount: result.nodes.length,
         stats: {
             protocols: calculateProtocolStats(result.nodes),
