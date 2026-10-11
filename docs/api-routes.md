@@ -53,12 +53,6 @@
     - 认证：匿名可读，返回 `{ isLoginPath }`，不返回登录路径或个人配置。
     - 读取：settings；不写入。
 
-- `GET /api/clients*`
-    - Handler：`handleClientRequest()`，`functions/modules/handlers/client-handler.js`
-    - 认证：个人模式要求管理员登录。
-    - 读取：`misub_clients_v1`；无 KV 或存储暂停时回退内置默认客户端列表。
-    - 写入：读取时如发现旧图标可能尝试迁移写回。
-
 - `GET /api/data`
     - Handler：`handleDataRequest()` 仅在认证通过时调用。
     - 认证：条件公开。未登录返回 HTTP 200 和 `{ authenticated: false, message: 'Not logged in' }`，不会返回业务数据。
@@ -174,10 +168,6 @@
     - Handler：api-router 内联旧 KV 迁移逻辑。
     - 读取：旧 `misub_data_v1` 与新 `misub_subscriptions_v1`。
     - 写入：`misub_subscriptions_v1`、`misub_profiles_v1`、旧数据备份 key，并删除旧 key。
-
-- `POST/DELETE /api/clients*`、`POST /api/clients/init`
-    - Handler：`handleClientRequest()`
-    - 写入：`misub_clients_v1`。
 
 - `GET /api/kv_test`
     - Handler：api-router 内联 KV 诊断。
@@ -296,7 +286,7 @@
 
 ## 当前值得关注的边界
 
-- `GET /api/clients*` 是公开只读接口，但当前可能在图标迁移时写回 KV；如果未来要严格区分只读公开接口，可单独收敛这个副作用。
+- 已移除公开页客户端目录与 `/api/clients*`，客户端订阅格式生成及受 Token 保护的订阅短链不受影响。
 - `/api/auth_debug` 与 `/api/auth_check` 不要求登录，但默认关闭；部署时必须保持 `ENABLE_AUTH_DIAGNOSTICS` 关闭，除非正在排查登录问题。
 - `/cron` 与 `/api/cron/trigger` 已统一为生产快照刷新路径；旧版模拟的 `/_cron`、`/_schedule` 与 `/cron-dashboard` 已删除。
 - `/api/system/export` 可导出脱敏数据；虽然需要登录，后续仍应通过测试固定脱敏字段覆盖。
@@ -310,4 +300,4 @@
 ## 已移除的功能
 
 留言/反馈、公告、Explore、自定义公开主页与 Telegram Bot 已删除。原公开展示、留言管理、Webhook、通知测试、错误上报和旧公开配置接口均返回 404。
-订阅短链仍按既有 Token 校验；管理员节点预览、客户端信息查询与 Telegram 分流规则保留。
+订阅短链仍按既有 Token 校验；管理员节点预览与 Telegram 分流规则保留，公开客户端下载目录与单击导入页面已移除。
