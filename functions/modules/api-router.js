@@ -56,7 +56,6 @@ import {
     handleCleanNodesRequest,
     handleHealthCheckRequest,
 } from './handlers/node-handler.js';
-import { handleClientRequest } from './handlers/client-handler.js';
 import { handleGithubReleaseRequest } from './handlers/github-proxy-handler.js'; // [NEW] Import handler
 import { handleParseSubscription } from './parse-subscription-handler.js';
 import { safeFetchPublicUrl, validatePublicFetchUrl } from './security-utils.js';
@@ -82,6 +81,11 @@ export async function handleApiRequest(request, env, context = null) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/api/, '');
 
+    // Removed public-page client catalog; keep all subscription format detection separate.
+    if (path === '/clients' || path.startsWith('/clients/')) {
+        return createErrorResponse('Not Found', 404);
+    }
+
     if (
         /^\/(public(?:\/|$)|guestbook(?:\/|$)|telegram(?:\/|$))/.test(path) ||
         ['/public_config', '/config', '/test_notification', '/system/error_report'].includes(path)
@@ -94,13 +98,6 @@ export async function handleApiRequest(request, env, context = null) {
         (path === '/github/release' || path === '/migrate' || path === '/migrate_to_d1')
     ) {
         return createErrorResponse('Not Found', 404);
-    }
-    if (
-        isPersonalMode(env) &&
-        path.startsWith('/clients') &&
-        !(await authMiddleware(request, env))
-    ) {
-        return createJsonResponse({ error: 'Unauthorized' }, 401);
     }
 
     if (path === '/external-nodes-callback') {
@@ -247,10 +244,6 @@ export async function handleApiRequest(request, env, context = null) {
         return await handleLoginConfig(request, env);
     }
 
-    // Public GET access for clients
-    if (path.startsWith('/clients') && request.method === 'GET') {
-        return await handleClientRequest(request, env);
-    }
 
     // Special handling for /data to return 200 OK for unauthenticated requests
     if (path === '/data') {
@@ -305,10 +298,6 @@ export async function handleApiRequest(request, env, context = null) {
         return createJsonResponse({ error: 'Unauthorized' }, 401);
     }
 
-    // Auth-only route for client management (POST, DELETE, etc.)
-    if (path.startsWith('/clients')) {
-        return await handleClientRequest(request, env);
-    }
 
     // KV 诊断端点：测试 KV 读写是否正常（需登录）
     if (path === '/kv_test') {
