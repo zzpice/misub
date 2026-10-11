@@ -5,7 +5,7 @@ import { calculateProtocolStats, calculateRegionStats } from '../utils/node-pars
 import { applyNodeTransformPipeline } from '../../utils/node-transformer.js';
 import { runOperatorChain } from '../../utils/operator-runner.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS } from '../config.js';
-import { fetchSubscriptionNodes } from './node-fetcher.js';
+import { fetchPreviewSourceNodes, SNAPSHOT_MISSING_MESSAGE } from './preview-source.js';
 import { applyManualNodeName } from '../utils/node-cleaner.js';
 
 function ensureArray(data) {
@@ -140,7 +140,8 @@ export async function handleProfileMode(
     // 1. Add subscriptions in order defined by profile
     const profileSubIds = profile.subscriptions || [];
     if (Array.isArray(profileSubIds)) {
-        profileSubIds.forEach((id) => {
+        profileSubIds.forEach((entry) => {
+            const id = typeof entry === 'object' ? entry?.id : entry;
             const sub = misubMap.get(id);
             if (sub && sub.enabled && sub.url.startsWith('http')) {
                 targetMisubs.push(sub);
@@ -189,21 +190,11 @@ export async function handleProfileMode(
         };
     });
 
-    // 并行获取HTTP订阅节点
+    // 个人模式按 D1 快照预览，和下游订阅共用最后成功的数据。
+    // 保留其他部署模式原来的实时预览方式。
     const subscriptionResults = await Promise.all(
         targetSubscriptions.map((sub) =>
-            fetchSubscriptionNodes(
-                sub.url,
-                sub.name,
-                userAgent,
-                sub.customUserAgent,
-                false,
-                sub.exclude,
-                sub.fetchProxy,
-                skipCertVerify,
-                Boolean(sub?.plusAsSpace),
-                sub?.enableNodeCache === true
-            )
+            fetchPreviewSourceNodes(storageAdapter, env, sub, userAgent, skipCertVerify)
         )
     );
 
@@ -217,6 +208,23 @@ export async function handleProfileMode(
             allNodes.push(...result.nodes);
         }
     });
+
+    // 没有任何节点且所有来源都尚未建立快照时，明确告知原因，
+    // 不把空白结果当成成功的节点预览。
+    if (
+        allNodes.length === 0 &&
+        subscriptionResults.length > 0 &&
+        subscriptionResults.every((result) => result.snapshotMissing)
+    ) {
+        return {
+            success: false,
+            error: SNAPSHOT_MISSING_MESSAGE,
+            subscriptions: allResults,
+            nodes: [],
+            totalCount: 0,
+            stats: { protocols: {}, regions: {} },
+        };
+    }
 
     // 如果需要应用转换规则，则处理节点名称
     let processedNodes = allNodes;

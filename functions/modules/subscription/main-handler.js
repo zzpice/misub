@@ -1045,6 +1045,27 @@ export async function handleMisubRequest(context) {
 
     console.log(`[MiSub Nodes] Count/Length: ${combinedNodeList ? combinedNodeList.length : 0}`);
 
+    // Do not claim success with an empty subscription when there is no
+    // durable snapshot to serve. Clients should retain their last working
+    // configuration and retry once the source has been refreshed.
+    if (
+        isPersonalMode(env) &&
+        !isProfileExpired &&
+        !String(combinedNodeList || '').trim() &&
+        remoteSources.length > 0 &&
+        remoteSources.every((sub) => !sourceSnapshots.get(sub.id)?.nodes?.length)
+    ) {
+        return new Response('No saved node snapshot available. Refresh the source while its upstream subscription is accessible.', {
+            status: 503,
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-store',
+                'Retry-After': '300',
+                'X-MiSub-Source-State': 'snapshot-missing',
+            },
+        });
+    }
+
     const domain = url.hostname;
 
     // [Support] External Subconverter Logic

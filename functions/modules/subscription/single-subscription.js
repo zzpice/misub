@@ -4,6 +4,7 @@ import { parseNodeInfo } from '../utils/geo-utils.js';
 import { calculateProtocolStats, calculateRegionStats } from '../utils/node-parser.js';
 import { KV_KEY_SUBS } from '../config.js';
 import { fetchSubscriptionNodes } from './node-fetcher.js';
+import { fetchPreviewSourceNodes } from './preview-source.js';
 
 /**
  * 处理单个订阅模式的节点获取
@@ -67,19 +68,25 @@ export async function handleSingleSubscriptionMode(
         };
     }
 
-    // HTTP订阅：获取节点
-    const result = await fetchSubscriptionNodes(
-        subscription.url,
-        subscription.name,
+    // 已保存的订阅在个人模式下只预览 D1 最后成功快照，不再临时抓上游。
+    const result = await fetchPreviewSourceNodes(
+        storageAdapter,
+        env,
+        subscription,
         userAgent,
-        subscription.customUserAgent,
-        false,
-        subscription.exclude,
-        subscription.fetchProxy,
-        skipCertVerify,
-        Boolean(subscription?.plusAsSpace),
-        subscription?.enableNodeCache === true
+        skipCertVerify
     );
+
+    if (result.snapshotMissing) {
+        return {
+            success: false,
+            error: result.error,
+            subscriptions: [result],
+            nodes: [],
+            totalCount: 0,
+            stats: { protocols: {}, regions: {} },
+        };
+    }
 
     return {
         success: true,
