@@ -1,10 +1,14 @@
-# MiSub 文档
+# MiSub · zzpice 文档
 
 本仓库是 zzpice 独立维护的个人版，当前部署以 [主说明](../README.md) 和
 [维护与恢复](PERSONAL-MAINTENANCE.md) 为准。保留的上游工程文档用于理解代码与兼容性，
-其中历史升级、公开分享、Cron 和外部管理 API 等内容仅供参考，**并非当前个人模式的可用功能或部署指引**。
+其中历史升级、公开分享和外部管理 API 等内容仅供参考；**Cron 已更新为可选认证的永久快照刷新接口**，不能再依赖旧版模拟任务或仪表盘。
 
 ## 核心文档
+
+- [BRANDING.md](BRANDING.md) — 独立品牌、版本号、来源与授权约定。
+- [NOTICE](../NOTICE.md) — 上游 MIT 版权与衍生作品来源声明。
+- [source-snapshots.md](source-snapshots.md) — 最新永久来源快照、失败回退与后台刷新机制。
 
 - [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) — 仓库布局、模块边界、开发约定。
 - [TECHNICAL_DETAILS.md](TECHNICAL_DETAILS.md) — 后端管道、operator chain、存储适配器、节点解析说明。
@@ -30,7 +34,7 @@
 
 - [PERSONAL-MAINTENANCE.md](PERSONAL-MAINTENANCE.md) — 当前个人部署、隔离、备份与维护约定。
 - [安全说明](../SECURITY.md) — 凭据保护与漏洞报告。
-- [CRON_DASHBOARD_GUIDE.md](CRON_DASHBOARD_GUIDE.md) — cron 仪表盘指南。
+- [CRON_DASHBOARD_GUIDE.md](CRON_DASHBOARD_GUIDE.md) — 当前认证 /cron 外部定时更新说明（旧 dashboard 已删除）。
 - [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) — 迁移指南。
 - [UPGRADE_V2.5.md](UPGRADE_V2.5.md) — v2.5 升级历史。
 - [plans/](plans/) — 历史规划文档。

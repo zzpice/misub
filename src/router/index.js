@@ -1,3 +1,4 @@
+import { BRAND_TITLE } from '../lib/brand.js';
 import { createRouter, createMemoryHistory } from 'vue-router';
 import { isChunkLoadError, shouldReloadForChunkError } from '../utils/chunk-reload.js';
 import { t } from '../i18n/index.js';
@@ -96,7 +97,7 @@ router.onError((error) => {
 router.beforeEach((to) => {
     if (typeof document !== 'undefined') {
         const title = translateRouteTitle(to, t);
-        document.title = title ? `${title} - MISUB` : 'MISUB';
+        document.title = title ? `${title} · ${BRAND_TITLE}` : BRAND_TITLE;
     }
 
     if (!to.meta.requiresAuth) return true;
