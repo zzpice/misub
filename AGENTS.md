@@ -1,4 +1,6 @@
-# Personal MiSub maintenance
+# MiSub · zzpice independent maintenance
+
+This is the independent v1.0.0+ version line derived from imzyb/MiSub v2.7.0. Keep its upstream MIT license and copyright in LICENSE, maintain NOTICE.md, and keep brand titles/logo/version aligned per docs/BRANDING.md.
 
 This is zzpice's independent MiSub repository. Preserve the mature upstream architecture and MIT notices. Read docs/PERSONAL-MAINTENANCE.md before changing deployment or persistence behavior.
 
