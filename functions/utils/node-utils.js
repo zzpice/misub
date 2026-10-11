@@ -91,6 +91,12 @@ function updateSsrRemarks(link, updater) {
     }
 }
 
+/** Safely replace SSR remarks without emitting a broken URL fragment. */
+export function replaceSsrDisplayName(link, name) {
+    if (!name) return link;
+    return updateSsrRemarks(link, () => name);
+}
+
 /**
  * 为节点名称添加前缀
  */
