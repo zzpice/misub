@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
+const read = (path) => readFileSync(resolve(process.cwd(), path), 'utf8');
 
 describe('independent MiSub · zzpice brand and version invariants', () => {
     it('uses its own version consistently without rewriting the upstream provenance', () => {
