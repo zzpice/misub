@@ -3229,7 +3229,7 @@ export const messages = {
             clearConfirm: 'Clear all logs?',
             clearSuccess: 'Logs cleared',
             clearFailed: 'Failed to clear logs',
-            empty: 'No detailed access logs. Personal mode disables access logging; download counts are tracked separately.',
+            empty: 'No detailed access records are available. Personal mode disables access logging; download counts are tracked separately.',
             emptyForProfile: 'No detailed access logs for this profile. Personal mode does not retain visitor IPs; download counts are tracked separately.',
             time: 'Time',
             location: 'Location',
