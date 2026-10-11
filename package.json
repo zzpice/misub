@@ -29,7 +29,6 @@
         "@vue/test-utils": "^2.4.6",
         "happy-dom": "^20.0.11",
         "jsdom": "^27.4.0",
-        "miniflare": "^4.20250803.0",
         "playwright": "^1.60.0",
         "prettier": "^3.9.6",
         "tailwindcss": "^4.1.12",
