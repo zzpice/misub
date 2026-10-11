@@ -27,7 +27,6 @@
             tabs: [
                 { id: 'global', labelKey: 'settings.tabs.global' },
                 { id: 'service', labelKey: 'settings.tabs.service' },
-                { id: 'client', labelKey: 'settings.tabs.client' },
             ],
         },
         {
@@ -105,12 +104,6 @@
                         d="M13 10V3L4 14h7v7l9-11h-7z"
                     />
 
-                    <path
-                        v-if="tab.id === 'client'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
-                    />
 
                     <path
                         v-if="tab.id === 'system'"
