@@ -646,7 +646,8 @@ class D1StorageAdapter {
             if (String(key).startsWith(DATA_KEYS.PROFILE_DOWNLOAD_COUNT_PREFIX)) {
                 return { table: 'settings', queryField: 'key', queryValue: key };
             }
-            if (String(key).startsWith('misub_source_snapshot_v1_') ||
+            if (String(key).startsWith('misub_region_preferences_v1_') ||
+                String(key).startsWith('misub_source_snapshot_v1_') ||
                 String(key).startsWith('misub_source_attempt_v1_') ||
                 String(key).startsWith('misub_source_lock_v1_')) {
                 return { table: 'settings', queryField: 'key', queryValue: key };
