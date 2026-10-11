@@ -422,4 +422,20 @@ describe('audit: actual D1 SQLite statements and concurrency', () => {
         expect(await storage.get('misub_source_snapshot_v1_s')).toBeNull();
     });
 
+    it.each([false, true])('excludes runtime subscription Secrets from personal backups with settings row = %s', async stored => {
+        const { storage, env } = await fixture();
+        if (stored) await storage.put('worker_settings_v1', { mytoken: env.SUBSCRIPTION_TOKEN,
+            profileToken: env.PROFILE_TOKEN, FileName: 'Synthetic' });
+        const payload = await buildBackupPayload(env, { scope: 'dataAndSettings' });
+        expect(payload.data.settings.mytoken).toBeUndefined();
+        expect(payload.data.settings.profileToken).toBeUndefined();
+        expect(JSON.stringify(payload)).not.toContain(env.SUBSCRIPTION_TOKEN);
+        expect(JSON.stringify(payload)).not.toContain(env.PROFILE_TOKEN);
+        await restoreBackupPayload(env, { ...payload, data: { ...payload.data,
+            settings: { ...payload.data.settings, mytoken: 'old-secret', profileToken: 'old-profile-secret' },
+        } }, { createSnapshot: false });
+        expect((await SettingsCache.get(env)).mytoken).toBe(env.SUBSCRIPTION_TOKEN);
+        expect((await storage.get('worker_settings_v1')).mytoken).toBeUndefined();
+    });
+
 });

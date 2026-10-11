@@ -7,6 +7,7 @@
  * - WebDAV credentials and runtime secrets are never written into backup payloads.
  */
 
+import { isPersonalMode } from './personal-mode.js';
 import { StorageFactory, SettingsCache, STORAGE_TYPES } from '../storage-adapter.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS } from './config.js';
 import { KV_KEY_RULE_TEMPLATES, listRuleTemplates } from './rule-template-handler.js';
@@ -66,7 +67,7 @@ function normalizeWebdavConfig(settings = {}) {
     return { ...DEFAULT_WEBDAV_CONFIG, ...(settings.webdavBackup || {}) };
 }
 
-function sanitizeRuntimeSecrets(settings = {}) {
+function sanitizeRuntimeSecrets(settings = {}, env = {}) {
     const sanitized = cloneJson(settings) || {};
     delete sanitized.webdavBackup;
     delete sanitized.adminPassword;
@@ -74,6 +75,12 @@ function sanitizeRuntimeSecrets(settings = {}) {
     delete sanitized.password;
     delete sanitized.cookieSecret;
     delete sanitized.COOKIE_SECRET;
+    delete sanitized.SUBSCRIPTION_TOKEN;
+    delete sanitized.PROFILE_TOKEN;
+    if (isPersonalMode(env)) {
+        delete sanitized.mytoken;
+        delete sanitized.profileToken;
+    }
     delete sanitized.sessionSecret;
     delete sanitized.lastBackupAt;
     delete sanitized.lastBackupStatus;
@@ -82,12 +89,12 @@ function sanitizeRuntimeSecrets(settings = {}) {
     return sanitized;
 }
 
-export function sanitizeSettingsForBackup(settings = {}) {
-    return sanitizeRuntimeSecrets(settings);
+export function sanitizeSettingsForBackup(settings = {}, env = {}) {
+    return sanitizeRuntimeSecrets(settings, env);
 }
 
-export function sanitizeSettingsForRestore(settings = {}) {
-    return sanitizeRuntimeSecrets(settings);
+export function sanitizeSettingsForRestore(settings = {}, env = {}) {
+    return sanitizeRuntimeSecrets(settings, env);
 }
 
 async function getStorage(env) {
@@ -157,7 +164,7 @@ export async function buildBackupPayload(env, options = {}) {
     };
 
     if (scope === BACKUP_SCOPES.DATA_AND_SETTINGS) {
-        payload.data.settings = sanitizeSettingsForBackup(settings);
+        payload.data.settings = sanitizeSettingsForBackup(settings, env);
     }
 
     // Leave room for the API's { payload } envelope. Reject explicitly before upload.
@@ -329,7 +336,7 @@ export async function restoreBackupPayload(env, rawPayload, options = {}) {
     }
     if (scope === BACKUP_SCOPES.DATA_AND_SETTINGS && payload.data.settings) {
         const currentSettings = (await storageAdapter.get(KV_KEY_SETTINGS)) || {};
-        const restoredSettings = sanitizeSettingsForRestore(payload.data.settings);
+        const restoredSettings = sanitizeSettingsForRestore(payload.data.settings, env);
         const finalSettings = {
             ...restoredSettings,
             webdavBackup: currentSettings.webdavBackup,
