@@ -6,6 +6,7 @@ import { applyNodeTransformPipeline } from '../../utils/node-transformer.js';
 import { runOperatorChain } from '../../utils/operator-runner.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS } from '../config.js';
 import { fetchPreviewSourceNodes, SNAPSHOT_MISSING_MESSAGE } from './preview-source.js';
+import { fingerprintNode } from '../../services/region-preferences.js';
 import { applyManualNodeName } from '../utils/node-cleaner.js';
 
 function ensureArray(data) {
@@ -282,23 +283,32 @@ export async function handleProfileMode(
             });
         }
 
-        processedNodes = transformedUrls.map((transformedUrl) => {
+        // Only propagate metadata by complete connection identity; hostname+port
+        // alone would accidentally cross-bind different credentials/sources.
+        const indexed = new Map(), ambiguous = new Set();
+        for (const node of allNodes) {
+            const key = await fingerprintNode(node.url);
+            if (indexed.has(key) && indexed.get(key)?.sourceId !== node.sourceId) {
+                ambiguous.add(key);
+            } else {
+                indexed.set(key, node);
+            }
+        }
+        processedNodes = await Promise.all(transformedUrls.map(async (transformedUrl) => {
             const nodeInfo = parseNodeInfo(transformedUrl);
-            const originalNode = allNodes.find((n) => {
-                try {
-                    const origUrl = new URL(n.url);
-                    const transUrl = new URL(transformedUrl);
-                    return origUrl.hostname === transUrl.hostname && origUrl.port === transUrl.port;
-                } catch {
-                    return false;
-                }
-            });
+            const key = await fingerprintNode(transformedUrl);
+            const original = ambiguous.has(key) ? null : indexed.get(key);
             return {
                 ...nodeInfo,
-                subscriptionName:
-                    originalNode?.subscriptionName || nodeInfo.subscriptionName || '未知',
+                ...(original ? {
+                    region: original.region,
+                    sourceId: original.sourceId,
+                    fingerprint: original.fingerprint,
+                    regionSource: original.regionSource,
+                } : {}),
+                subscriptionName: original?.subscriptionName || nodeInfo.subscriptionName || '未知',
             };
-        });
+        }));
     }
 
     // 生成统计信息（使用处理后的节点）
