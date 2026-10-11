@@ -44,7 +44,9 @@ export function groupNodeLinesByRegion(nodes = [], options = {}) {
         // Generated URLs already contain the source-corrected flag. Treat that
         // final display marker as authoritative: otherwise a second regex pass
         // would undo a user edit after generation had applied manual > regex.
-        const finalizedFlag = String(tagName || '').match(/[\u{1F1E6}-\u{1F1FF}]{2}/u)?.[0];
+        const finalizedFlag = options.regionsAlreadyResolved
+            ? String(tagName || '').match(/[\u{1F1E6}-\u{1F1FF}]{2}/u)?.[0]
+            : null;
         const finalizedRegion = finalizedFlag ? resolveNodeRegion(finalizedFlag) : '';
         const region = resolveNodeRegion(tagName, {
             manualRegion: node.manualRegion || node.metadata?.manualRegion ||
