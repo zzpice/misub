@@ -39,27 +39,29 @@ function environment() {
 }
 
 describe('independent personal deployment', () => {
-    it('bounds protective source caches and retains their original age on fallback', async () => {
+    it('migrates legacy D1 source caches to permanent snapshots regardless of original age', async () => {
         const sub = {
             id: 'fixture',
             url: 'https://example.com/sub',
             enabled: true,
             enableNodeCache: true,
+            autoUpdateEnabled: false,
         };
-        const key = buildSubscriptionNodeCacheKey(sub);
-        const fetchMock = vi
-            .spyOn(globalThis, 'fetch')
-            .mockResolvedValue(new Response('Forbidden', { status: 403 }));
+        const legacyKey = buildSubscriptionNodeCacheKey(sub);
+        const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValue(
+            new Error('Upstream unavailable')
+        );
         try {
             for (const age of [6 * 3600000, 13 * 3600000, null]) {
                 const timestamp = age === null ? null : Date.now() - age;
-                const record = {
+                const initial = {
                     nodes: ['trojan://fixture@192.0.2.2:443#Cached'],
                     updatedAt: timestamp === null ? '' : new Date(timestamp).toISOString(),
                 };
+                const records = new Map([[legacyKey, initial]]);
                 const storage = {
-                    get: async (cacheKey) => (cacheKey === key ? record : null),
-                    put: vi.fn(),
+                    get: async (key) => records.get(key) ?? null,
+                    put: vi.fn(async (key, value) => { records.set(key, value); }),
                 };
                 const context = { env: environment(), storage };
                 const result = await generateCombinedNodeList(
@@ -70,15 +72,16 @@ describe('independent personal deployment', () => {
                     '',
                     { enableSubscriptions: false }
                 );
-                if (age === 6 * 3600000) {
-                    expect(result).toContain('Cached');
-                    expect(context.cachedFallbackTimestamp).toBe(timestamp);
-                } else {
-                    expect(result).not.toContain('Cached');
-                    expect(context.cachedFallbackTimestamp).toBeUndefined();
-                }
-                expect(storage.put).not.toHaveBeenCalled();
+                expect(result).toContain('Cached');
+                const durable = records.get('misub_source_snapshot_v1_fixture');
+                expect(durable.nodes).toEqual(initial.nodes);
+                expect(durable.updatedAt).toBe(
+                    timestamp === null ? new Date(0).toISOString() : initial.updatedAt
+                );
+                expect(durable.migratedLegacy).toBe(true);
+                expect(storage.put).toHaveBeenCalledOnce();
             }
+            expect(fetchMock).not.toHaveBeenCalled();
         } finally {
             fetchMock.mockRestore();
         }

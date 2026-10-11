@@ -439,6 +439,16 @@
                 <div v-else class="text-xs text-gray-500 dark:text-gray-400">
                     {{ t('subscriptions.noTrafficData') }}
                 </div>
+                <div class="text-[11px] text-gray-500 dark:text-gray-400 space-y-0.5">
+                    <p>
+                        {{ misub.autoUpdateEnabled === false
+                            ? '手动更新'
+                            : `自动更新 · ${misub.autoUpdateIntervalMinutes || 60} 分钟` }}
+                    </p>
+                    <p v-if="misub.lastSuccessAt || misub.lastUpdate">
+                        上次成功：{{ new Date(misub.lastSuccessAt || misub.lastUpdate).toLocaleString() }}
+                    </p>
+                </div>
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-gray-500 dark:text-gray-400">{{
                         t('subscriptions.nodeCountLabel')

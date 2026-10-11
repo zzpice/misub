@@ -20,6 +20,7 @@ import { createTimeoutFetch } from '../modules/utils.js';
 import { assertPublicNetworkUrl } from '../modules/security-utils.js';
 import { isSuspiciousNodeCountDrop } from './node-cache-service.js';
 import { isPersonalMode } from '../modules/personal-mode.js';
+import { resolveSourceSnapshot } from './source-snapshot-service.js';
 
 const PERSONAL_SOURCE_CACHE_MAX_AGE = 12 * 60 * 60 * 1000;
 
@@ -586,6 +587,46 @@ function createConcurrencyLimiter(limit) {
         });
 }
 
+
+/**
+ * Fetch and parse a raw upstream source once with a stable server-side User-Agent.
+ * Source-level operators, profile rules and output conversion are intentionally not
+ * applied here, so every downstream client shares the same durable source snapshot.
+ */
+export async function fetchRemoteSourceSnapshot(sub, storage = null, context = null) {
+    assertPublicNetworkUrl(sub.url);
+    const customUserAgent = typeof sub.customUserAgent === 'string'
+        ? sub.customUserAgent.trim()
+        : '';
+    const userAgent = customUserAgent || getProcessedUserAgent('MiSub-Backend', sub.url);
+    const url = sub.fetchProxy
+        ? buildFetchProxyUrl(sub.fetchProxy, sub.url, userAgent)
+        : sub.url;
+    const safeUrl = assertPublicNetworkUrl(url).toString();
+    const response = await fetchWithRetry(safeUrl, {
+        headers: { 'User-Agent': userAgent },
+        redirect: 'follow',
+    }, { timeout: 12000, maxRetries: 0 });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const buffer = await response.arrayBuffer();
+    let text = await decodeBase64Content(new TextDecoder('utf-8').decode(buffer));
+    let parsed = parseNodeList(text);
+    if (!parsed.length) {
+        text = await decodeBase64Content(encodeArrayBufferToBase64(buffer));
+        parsed = parseNodeList(text);
+    }
+    const nodes = parsed.map((node) => node.url).filter(
+        (node) => isRealProxyNode(node) || /^https?:\/\//i.test(String(node || ''))
+    );
+    if (!nodes.length) throw new Error('No valid proxy nodes in upstream response');
+    const userInfo = parseSubscriptionUserInfoHeader(
+        response.headers.get('subscription-userinfo')
+    );
+    const detectedName = parseSubscriptionProfileTitle(response.headers);
+    return { nodes, userInfo, detectedName };
+}
+
 /**
  * 生成组合节点列表
  * @param {Object} context - 请求上下文
@@ -726,7 +767,7 @@ export async function generateCombinedNodeList(
      * @param {Object} sub - 订阅对象
      * @returns {Promise<string>} - 处理后的节点列表
      */
-    const fetchSingleSubscription = async (sub) => {
+    const legacyFetchSingleSubscription = async (sub) => {
         const cacheEnabled = sub?.enableNodeCache === true;
         const storage = context?.storage;
         const recordEmptyRuntimeInfo = () => {
@@ -885,8 +926,49 @@ export async function generateCombinedNodeList(
         }
     };
 
+    const fetchSingleSubscription = async (sub) => {
+        const storage = context?.storage;
+        const fetcher = (source) => fetchRemoteSourceSnapshot(source, storage, context);
+        let snapshot;
+        if (sub.id && context?.preloadedSourceSnapshots?.has(sub.id)) {
+            snapshot = context.preloadedSourceSnapshots.get(sub.id);
+        } else if (storage && sub.id) {
+            snapshot = await resolveSourceSnapshot({ storage, source: sub, context, fetcher });
+        } else {
+            // Authenticated one-off previews without a saved ID are explicit fetches.
+            try {
+                snapshot = await fetchRemoteSourceSnapshot(sub);
+            } catch {
+                snapshot = null;
+            }
+        }
+        if (!snapshot?.nodes?.length) return '';
+
+        // Persisted source data stays unmodified; source and profile transformations
+        // run on a fresh copy on every downstream generation.
+        recordCurrentRequestRuntimeInfo(context, sub, {
+            nodeCount: snapshot.nodeCount,
+            userInfo: snapshot.userInfo || null,
+            ...(snapshot.detectedName ? { detectedName: snapshot.detectedName } : {}),
+        });
+        upstreamSuccessCount++;
+        const validNodes = snapshot.migratedLegacy
+            ? [...snapshot.nodes]
+            : await applySubscriptionTransforms(snapshot.nodes, sub);
+        const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
+        const shouldAddSubPrefix = shouldPrependSubscriptions && !skipPrefixDueToRenaming;
+        return (shouldAddSubPrefix && sub.name
+            ? validNodes.map((node) => prependNodeName(node, sub.name))
+            : validNodes).join('\n');
+    };
+
     // 使用并发控制器限制同时请求数量，避免网络拥塞
-    const subPromises = httpSubs.map((sub) => limiter(() => fetchSingleSubscription(sub)));
+    // Keep legacy KV/non-personal compatibility intact. Personal D1 deployments
+    // use the single source snapshot path and no longer depend on cache TTL.
+    const selectedFetcher = isPersonalMode(context?.env)
+        ? fetchSingleSubscription
+        : legacyFetchSingleSubscription;
+    const subPromises = httpSubs.map((sub) => limiter(() => selectedFetcher(sub)));
     const processedSubContents = await Promise.all(subPromises);
 
     // --- 阶段 1: 原始数据汇聚 (Raw Data Aggregation) ---

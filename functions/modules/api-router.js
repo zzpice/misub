@@ -32,6 +32,7 @@ import {
 import { handleRuleTemplatesRequest } from './rule-template-handler.js';
 import { handleCronTrigger } from './subscription-refresh.js';
 import { handleSubscriptionNodesRequest } from './subscription-handler.js';
+import { handleSourceSnapshotRefresh } from './handlers/source-refresh-handler.js';
 import {
     handleWebdavBackupStatus,
     handleWebdavBackupTest,
@@ -440,6 +441,9 @@ export async function handleApiRequest(request, env, context = null) {
 
         case '/fetch_external_url':
             return await handleExternalFetchRequest(request, env);
+
+        case '/source_snapshot/refresh':
+            return await handleSourceSnapshotRefresh(request, env);
 
         case '/batch_update_nodes':
             return await handleBatchUpdateNodesRequest(request, env);

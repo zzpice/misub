@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useDataStore } from '../stores/useDataStore';
 import { useToastStore } from '../stores/toast.js';
-import { fetchNodeCount, batchUpdateNodes } from '../lib/api.js';
+import { refreshSourceSnapshot } from '../lib/api.js';
 import { handleError } from '../utils/errorHandler.js';
 import { TIMING } from '../constants/timing.js';
 import { t } from '../i18n/index.js';
@@ -145,12 +145,10 @@ export function useSubscriptions(markDirty) {
         }, TIMING.REQUEST_TIMEOUT_MS);
 
         try {
-            const result = await fetchNodeCount(
-                subToUpdate.url,
-                subToUpdate.fetchProxy,
-                Boolean(subToUpdate.plusAsSpace),
-                subToUpdate.customUserAgent
-            );
+            // Manual refresh must persist any pending edits before looking up the ID.
+            if (!(await dataStore.saveData())) return false;
+            const result = await refreshSourceSnapshot(subId);
+            const currentSub = subscriptions.value.find((item) => item.id === subId) || subToUpdate;
 
             // 清除超时保护
             clearTimeout(timeoutId);
@@ -195,23 +193,18 @@ export function useSubscriptions(markDirty) {
                 );
 
                 // 重要: 记录错误到本地对象中(非持久化,仅用于UI展示,直到下次持久化保存)
-                subToUpdate.lastError = result.error;
-                if (subToUpdate.enableNodeCache !== true) {
-                    subToUpdate.nodeCount = 0;
-                    subToUpdate.userInfo = null;
-                    if (!isInitialLoad) {
-                        markDirty();
-                        void dataStore.saveData();
-                    }
-                }
+                currentSub.lastError = result.error;
+                // Failure never erases the last known successful node count or traffic.
                 return false; // 开启保护性缓存节点时，失败保留旧值
             }
 
             // 成功获取数据
             const data = result.data.data || result.data; // 兼容后端返回结构
-            subToUpdate.nodeCount = data.count || 0;
-            subToUpdate.userInfo = data.userInfo || null;
-            subToUpdate.lastError = null; // 成功后清除错误状态
+            currentSub.nodeCount = data.nodeCount ?? data.count ?? 0;
+            currentSub.lastSuccessAt = data.lastSuccessAt || currentSub.lastSuccessAt;
+            currentSub.lastUpdate = data.lastSuccessAt || currentSub.lastUpdate;
+            currentSub.userInfo = data.userInfo || null;
+            currentSub.lastError = null; // 成功后清除错误状态
 
             if (!isInitialLoad) {
                 showToast(
@@ -250,27 +243,16 @@ export function useSubscriptions(markDirty) {
     function addSubscription(sub) {
         dataStore.addSubscription(sub);
         subsCurrentPage.value = 1;
-        handleUpdateNodeCount(sub.id);
+        // Saving a new source is not an implicit manual upstream refresh.
         markDirty();
     }
 
     function updateSubscription(updatedSub) {
-        // Verify it exists in our filtered list
-        const originalSub = subscriptions.value.find((s) => s.id === updatedSub.id);
-        if (originalSub) {
-            const urlChanged = originalSub.url !== updatedSub.url;
-            dataStore.updateSubscription(updatedSub.id, updatedSub);
-
-            if (urlChanged) {
-                // Re-fetch from filtered list to get the reactive object
-                const sub = subscriptions.value.find((s) => s.id === updatedSub.id);
-                if (sub) {
-                    sub.nodeCount = 0;
-                    handleUpdateNodeCount(sub.id);
-                }
-            }
-            markDirty();
-        }
+        const existing = subscriptions.value.find((sub) => sub.id === updatedSub.id);
+        if (!existing) return;
+        dataStore.updateSubscription(updatedSub.id, updatedSub);
+        // A source URL change must not trigger an implicit upstream request.
+        markDirty();
     }
 
     function deleteSubscription(subId) {
@@ -304,209 +286,38 @@ export function useSubscriptions(markDirty) {
     }
 
     async function addSubscriptionsFromBulk(subs) {
-        // Reverse insert to maintain order
         for (let i = subs.length - 1; i >= 0; i--) {
             dataStore.addSubscription(subs[i]);
         }
         markDirty();
-
-        const subsToUpdate = subs.filter((sub) => sub.url && sub.url.startsWith('http'));
-
-        if (subsToUpdate.length > 0) {
-            showToast(t('subscriptions.batchUpdating', { count: subsToUpdate.length }), 'info');
-
-            // Use individual updates instead of batch backend update
-            // This avoids 400 error because backend doesn't have these IDs yet.
-            const updatePromises = subsToUpdate.map((sub) => handleUpdateNodeCount(sub.id));
-
-            // handleUpdateNodeCount 内部已逐个提示失败，自身不抛出，
-            // 所以 Promise.allSettled 恒为 fulfilled —— 原先包在这里的 try/catch 是死代码。
-            // 改为按返回值统计真实失败数，避免「有失败却提示全部完成」。
-            const results = await Promise.allSettled(updatePromises);
-            const failedCount = results.filter(
-                (result) => result.status === 'rejected' || result.value === false
-            ).length;
-            if (failedCount > 0) {
-                showToast(
-                    t('subscriptions.bulkUpdatePartial', {
-                        failed: failedCount,
-                        total: subsToUpdate.length,
-                    }),
-                    'warning'
-                );
-            } else {
-                showToast(t('subscriptions.bulkImportUpdateDone'), 'success');
-            }
-        } else {
-            showToast(t('subscriptions.bulkImportDone'), 'success');
-        }
+        showToast(t('subscriptions.bulkImportDone'), 'success');
     }
 
     async function batchUpdateAllSubscriptions() {
         const subsToUpdate = subscriptions.value.filter(
-            (sub) => sub.enabled && sub.url && sub.url.startsWith('http') && !sub.isUpdating
+            (sub) => sub.enabled && /^https?:\/\//i.test(String(sub.url || ''))
         );
-
-        if (subsToUpdate.length === 0) {
+        if (!subsToUpdate.length) {
             showToast(t('subscriptions.noRefreshableSubscriptions'), 'info');
             return;
         }
-
         isRefreshing.value = true;
         refreshError.value = false;
-        subsToUpdate.forEach((sub) => {
-            sub.isUpdating = true;
-        });
-        showToast(t('subscriptions.refreshing', { count: subsToUpdate.length }), 'info');
-
+        let successes = 0;
         try {
-            const result = await batchUpdateNodes(subsToUpdate.map((sub) => sub.id));
-
-            if (result && result.success) {
-                let successCount = 0;
-                const resultList = Array.isArray(result.results) ? result.results : [];
-
-                resultList.forEach((updateResult) => {
-                    const id = updateResult.subscriptionId || updateResult.id;
-                    const sub = subscriptions.value.find((s) => s.id === id);
-                    if (!sub) return;
-
-                    if (updateResult.success) {
-                        sub.nodeCount = updateResult.nodeCount || 0;
-                        successCount++;
-                    }
-                });
-
-                for (const sub of subsToUpdate) {
-                    try {
-                        const result = await fetchNodeCount(sub.url);
-                        if (result.success && result.data.userInfo) {
-                            sub.userInfo = result.data.userInfo;
-                        }
-                    } catch (error) {
-                        if (isDev) {
-                            console.debug(
-                                '[Subscriptions] Failed to fetch node info during batch update:',
-                                error
-                            );
-                        }
-                    }
-                }
-
-                const failedCount = subsToUpdate.length - successCount;
-                refreshError.value = failedCount > 0;
-                showToast(
-                    t('subscriptions.refreshDone', {
-                        success: successCount,
-                        total: subsToUpdate.length,
-                        failed: failedCount,
-                    }),
-                    'success'
-                );
-                markDirty();
-            } else {
-                showToast(
-                    t('subscriptions.refreshFailed', {
-                        message: result?.message || t('subscriptions.unknownError'),
-                    }),
-                    'error'
-                );
-                refreshError.value = true;
-                for (const sub of subsToUpdate) {
-                    await handleUpdateNodeCount(sub.id);
-                }
-            }
-        } catch (error) {
-            refreshError.value = true;
-            handleError(error, 'Batch Subscription Update Error', {
-                subscriptionCount: subsToUpdate.length,
-            });
-            showToast(t('subscriptions.refreshFallback'), 'error');
             for (const sub of subsToUpdate) {
-                await handleUpdateNodeCount(sub.id);
+                if (await handleUpdateNodeCount(sub.id)) successes++;
             }
+            refreshError.value = successes !== subsToUpdate.length;
+            showToast(t('subscriptions.refreshDone', {
+                success: successes,
+                total: subsToUpdate.length,
+                failed: subsToUpdate.length - successes,
+            }), successes === subsToUpdate.length ? 'success' : 'warning');
         } finally {
             lastRefreshAt.value = new Date().toISOString();
             isRefreshing.value = false;
-            subsToUpdate.forEach((sub) => {
-                sub.isUpdating = false;
-            });
         }
-    }
-
-    // ========== 定时自动更新功能 ==========
-    const DEFAULT_INTERVAL_MS = TIMING.AUTO_UPDATE_INTERVAL_MS;
-    let autoUpdateTimerId = null;
-    let currentIntervalMs = DEFAULT_INTERVAL_MS;
-
-    async function autoUpdateAllSubscriptions() {
-        try {
-            const subsToUpdate = subscriptions.value.filter(
-                (sub) => sub.enabled && sub.url && sub.url.startsWith('http') && !sub.isUpdating
-            );
-            for (const sub of subsToUpdate) {
-                await handleUpdateNodeCount(sub.id, true);
-            }
-        } catch (e) {
-            // 后台定时任务：handleUpdateNodeCount 内部已逐个提示失败，
-            // 且用户此刻可能不在页面上，这里只记日志，避免无意义的打扰。
-            console.error('Auto update failed', e);
-        }
-    }
-
-    function startAutoUpdate(intervalMinutes = null) {
-        // 如果传入间隔，使用传入值；否则从 settings 读取
-        let intervalMs;
-        if (intervalMinutes !== null) {
-            intervalMs = intervalMinutes * 60 * 1000;
-        } else {
-            const settings = dataStore.settings;
-            const settingsInterval = Number(settings?.autoUpdateInterval);
-            if (settingsInterval === 0) {
-                intervalMs = 0;
-            } else if (Number.isFinite(settingsInterval) && settingsInterval > 0) {
-                intervalMs = settingsInterval * 60 * 1000;
-            } else {
-                intervalMs = DEFAULT_INTERVAL_MS;
-            }
-        }
-
-        // 如果间隔为0，表示禁用自动更新
-        if (intervalMs === 0) {
-            stopAutoUpdate();
-            if (isDev) console.debug('[AutoUpdate] Disabled by user setting');
-            return;
-        }
-
-        // 如果间隔没变且定时器已运行，不需要重启
-        if (autoUpdateTimerId && intervalMs === currentIntervalMs) {
-            return;
-        }
-
-        // 停止旧定时器
-        stopAutoUpdate();
-
-        // 启动新定时器
-        currentIntervalMs = intervalMs;
-        autoUpdateTimerId = setInterval(() => {
-            void autoUpdateAllSubscriptions();
-        }, intervalMs);
-
-        if (isDev)
-            console.debug(`[AutoUpdate] Started with interval: ${intervalMs / 60000} minutes`);
-    }
-
-    function stopAutoUpdate() {
-        if (autoUpdateTimerId) {
-            clearInterval(autoUpdateTimerId);
-            autoUpdateTimerId = null;
-            if (isDev) console.debug('[AutoUpdate] Stopped');
-        }
-    }
-
-    function restartAutoUpdate(intervalMinutes) {
-        stopAutoUpdate();
-        startAutoUpdate(intervalMinutes);
     }
 
     function reorderSubscriptions(newOrder) {
@@ -549,9 +360,6 @@ export function useSubscriptions(markDirty) {
         addSubscriptionsFromBulk,
         handleUpdateNodeCount,
         batchUpdateAllSubscriptions,
-        startAutoUpdate,
-        stopAutoUpdate,
-        restartAutoUpdate,
         reorderSubscriptions,
     };
 }
