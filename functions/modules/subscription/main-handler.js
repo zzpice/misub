@@ -1128,6 +1128,7 @@ export async function handleMisubRequest(context) {
                     enableUdp: shouldEnableUdp,
                     enableTfo: urlTfo === 'true' || urlTfo === '1',
                     ruleLevel,
+                    regionsAlreadyResolved: isPersonalMode(env),
                     regionOverrides: Array.isArray(config.regionOverrides)
                         ? config.regionOverrides
                         : [],
@@ -1264,6 +1265,7 @@ export async function handleMisubRequest(context) {
         enableTfo: finalEnableTfo,
         ruleLevel: ruleLevel, // 统一后的规则等级
         regionOverrides: Array.isArray(config.regionOverrides) ? config.regionOverrides : [],
+        regionsAlreadyResolved: isPersonalMode(env),
         isMeta: isMetaCore(userAgentHeader, url.searchParams),
         customDnsOverride: config.customDnsOverride || '',
         dnsMode:
