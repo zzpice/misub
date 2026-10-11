@@ -28,6 +28,7 @@ import { resolveRequestContext } from './request-context.js';
 import { resolveNodeListWithCache } from './cache-manager.js';
 import { ProcessorService } from '../../services/processor-service.js';
 import { logAccessSuccess, shouldSkipLogging as shouldSkipAccessLog } from './access-logger.js';
+import { recordSuccessfulProfileResponse } from '../../services/profile-download-counter.js';
 import {
     isBrowserAgent,
     determineTargetFormat,
@@ -556,6 +557,13 @@ export async function handleMisubRequest(context) {
 
     let currentProfile = null;
 
+    // Only successful, real client responses increment the aggregate profile
+    // counter. Detailed access logs remain disabled in personal mode.
+    const countSuccessfulResponse = (response) => recordSuccessfulProfileResponse({
+        response, context, storage: storageAdapter, profile: currentProfile, request,
+        skip: isProfileExpired || shouldSkipLogging || url.searchParams.has('callback_token'),
+    });
+
     if (profileIdentifier) {
         // [修正] 使用 config 變量
         if (!token || token !== config.profileToken) {
@@ -648,29 +656,7 @@ export async function handleMisubRequest(context) {
                     });
                 }
             }
-            // [新增] 增加订阅组下载计数
-            // 仅在非回调请求时及非内部请求时增加计数(避免重复计数)
-            // 且仅当开启访问日志时才计数
-            if (
-                !url.searchParams.has('callback_token') &&
-                !shouldSkipLogging &&
-                config.enableAccessLog
-            ) {
-                try {
-                    const downloadCountKey = getProfileDownloadCountKey(profile);
-                    const currentCount = Number(await storageAdapter.get(downloadCountKey)) || 0;
-                    context.waitUntil(
-                        storageAdapter
-                            .put(downloadCountKey, currentCount + 1)
-                            .catch((err) =>
-                                console.error('[Download Count] Failed to update:', err)
-                            )
-                    );
-                } catch (err) {
-                    // 计数失败不影响订阅服务
-                    console.error('[Download Count] Error:', err);
-                }
-            }
+
         } else {
             return new Response('Profile not found or disabled', { status: 404 });
         }
@@ -1096,9 +1082,9 @@ export async function handleMisubRequest(context) {
         }
         // [兼容性优化] 第三方转换后端对明文列表的支持通常比 Base64 更好。
         // 同时对于 Cloudflare 而言，明文输出更有利于其边缘节点的流式处理。
-        return new Response(contentToReturn, {
+        return countSuccessfulResponse(new Response(contentToReturn, {
             headers: nodeHeaders,
-        });
+        }));
     }
 
     // 2. If external mode active, build the redirect URL and return 302
@@ -1170,7 +1156,7 @@ export async function handleMisubRequest(context) {
                     Object.entries(rendered.headers || {}).forEach(([key, value]) =>
                         responseHeaders.set(key, value)
                     );
-                    return new Response(rendered.content, { headers: responseHeaders });
+                    return countSuccessfulResponse(new Response(rendered.content, { headers: responseHeaders }));
                 }
             } catch (err) {
                 console.warn(
@@ -1243,7 +1229,7 @@ export async function handleMisubRequest(context) {
             }
         }
 
-        return new Response(base64EncodeUtf8(contentToEncode), { headers });
+        return countSuccessfulResponse(new Response(base64EncodeUtf8(contentToEncode), { headers }));
     }
 
     // [Subconverter API] URL 参数优先级高于全局/Profile 设置
@@ -1362,7 +1348,7 @@ export async function handleMisubRequest(context) {
                 }
             }
 
-            return new Response(finalContent || '', { headers: responseHeaders });
+            return countSuccessfulResponse(new Response(finalContent || '', { headers: responseHeaders }));
         } catch (e) {
             console.error(`[Builtin${targetFormat}] Generation failed:`, e);
         }
@@ -1385,5 +1371,5 @@ export async function handleMisubRequest(context) {
         base64Headers[key] = value;
     });
 
-    return new Response(base64EncodeUtf8(combinedNodeList), { headers: base64Headers });
+    return countSuccessfulResponse(new Response(base64EncodeUtf8(combinedNodeList), { headers: base64Headers }));
 }
