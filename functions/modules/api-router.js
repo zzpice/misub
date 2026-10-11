@@ -3,6 +3,7 @@
  * 处理所有API请求的路由分发
  */
 
+import { handleRegionPreferencesRequest } from './handlers/region-preferences-handler.js';
 import { StorageFactory, DataMigrator } from '../storage-adapter.js';
 import { isPersonalMode } from './personal-mode.js';
 import { KV_KEY_SUBS } from './config.js';
@@ -450,6 +451,9 @@ export async function handleApiRequest(request, env, context = null) {
 
         case '/subscription_nodes':
             return await handleSubscriptionNodesRequest(request, env);
+
+        case '/node_regions':
+            return await handleRegionPreferencesRequest(request, env);
 
         case '/debug_subscription':
             return await handleDebugSubscriptionRequest(request, env);
