@@ -227,7 +227,7 @@
                                 <div
                                     class="text-[11px] text-gray-500 dark:text-gray-400 mb-0.5 font-medium uppercase tracking-tighter"
                                 >
-                                    Endpoint
+                                    {{ t('nodePreview.endpoint') }}
                                 </div>
                                 <div
                                     class="text-xs font-mono text-gray-600 dark:text-gray-300 truncate"

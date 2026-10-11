@@ -8,7 +8,7 @@ import {
 } from '../utils.js';
 import { generateCombinedNodeList, fetchRemoteSourceSnapshot } from '../../services/subscription-service.js';
 import { resolveSourceSnapshot } from '../../services/source-snapshot-service.js';
-import { readRegionPreferences } from '../../services/region-preferences.js';
+import { readRegionPreferences, fingerprintNode, nodeRegionIdentity } from '../../services/region-preferences.js';
 import { isPersonalMode } from '../personal-mode.js';
 import {
     KV_KEY_SUBS,
@@ -36,45 +36,7 @@ import {
     isHiddifyAgent,
 } from './user-agent-utils.js'; // [Added] Import centralized util
 import { authMiddleware } from '../auth-middleware.js';
-import { transformBuiltinSubscription } from './transformer-factory.js';
-import { fetchTransformTemplate } from './transform-template-cache.js';
-import {
-    buildTransformTemplateContext,
-    renderTransformTemplate,
-} from './transform-template-renderer.js';
-import { groupNodeLinesByRegion } from './region-groups.js';
-import { groupNodeLinesByProtocol } from './protocol-groups.js';
-import { shouldApplyExternalTemplateForTarget } from './template-compatibility.js';
-import {
-    renderClashFromIniTemplate,
-    renderLoonFromIniTemplate,
-    renderQuanxFromIniTemplate,
-    renderSingboxFromIniTemplate,
-    renderSurgeFromIniTemplate,
-} from './template-pipeline.js';
-import { getBuiltinTemplate } from './builtin-template-registry.js';
 import { assertPublicNetworkUrl } from '../security-utils.js';
-
-function maskSensitiveLogValue(value) {
-    const text = String(value ?? '');
-    if (!text) return '';
-    if (text.length <= 8) return '***';
-    return `${text.slice(0, 4)}…${text.slice(-4)} (${text.length})`;
-}
-
-const PROFILE_DOWNLOAD_COUNT_PREFIX = 'misub_profile_download_count_';
-
-function getProfileDownloadCountKey(profile) {
-    return `${PROFILE_DOWNLOAD_COUNT_PREFIX}${profile.customId || profile.id}`;
-}
-
-function buildTemplateProxyBlock(nodeList) {
-    return nodeList
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line && !line.startsWith('#'))
-        .join('\n');
-}
 
 export function extractProxySectionFromBuiltin(content, targetFormat) {
     if (typeof content !== 'string' || content.trim() === '') return '';
@@ -110,7 +72,7 @@ export function extractProxySectionFromBuiltin(content, targetFormat) {
             if (config.outbounds && Array.isArray(config.outbounds)) {
                 // 过滤掉 direct, block, dns-out 等元 outbound
                 const proxies = config.outbounds.filter(
-                    (o) => o.type !== 'direct' && o.type !== 'block' && o.type !== 'dns'
+                    (o) => Boolean(o.server)
                 );
                 return JSON.stringify(proxies, null, 2);
             }
@@ -590,7 +552,7 @@ export async function handleMisubRequest(context) {
             }
 
             if (isProfileExpired) {
-                subName = profile.name; // Still use profile name for filename
+                subName = String(profile.name || config.FileName || 'MiSub'); // Still use profile name for filename
                 targetMisubs = [
                     {
                         id: 'expired-node',
@@ -600,7 +562,7 @@ export async function handleMisubRequest(context) {
                     },
                 ]; // Set expired node as the only targetMisub
             } else {
-                subName = profile.name;
+                subName = String(profile.name || config.FileName || 'MiSub');
                 targetMisubs = [];
                 const relatedIds = [
                     ...(Array.isArray(profile.subscriptions)
@@ -685,53 +647,12 @@ export async function handleMisubRequest(context) {
 
     let prependedContentForSubconverter = '';
 
-    if (isProfileExpired) {
-        // Use the flag set earlier
-        prependedContentForSubconverter = ''; // Expired node is now in targetMisubs
-    } else {
-        // Otherwise, add traffic and expiration info nodes if enabled.
-        if (config.enableTrafficNode !== false) {
-            const totalUserInfo = mergeSubscriptionUserInfo(context, targetMisubs);
-            const profileExpireTimestamp = currentProfile?.expiresAt
-                ? Math.floor(new Date(currentProfile.expiresAt).getTime() / 1000)
-                : 0;
-            const expireTimestamp =
-                profileExpireTimestamp > 0 ? profileExpireTimestamp : totalUserInfo.expire;
-            const virtualNodes = [];
-
-            const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
-                const userInfo = sub?.enabled ? getCurrentRequestUserInfo(context, sub) : null;
-                if (userInfo && userInfo.total > 0) {
-                    const used = (userInfo.upload || 0) + (userInfo.download || 0);
-                    return acc + Math.max(0, userInfo.total - used);
-                }
-                return acc;
-            }, 0);
-            if (totalRemainingBytes > 0) {
-                const fakeNodeName = `流量剩余 ≫ ${formatBytes(totalRemainingBytes)}`;
-                virtualNodes.push(
-                    `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`
-                );
-            }
-
-            const expireText = formatSubscriptionExpireTime(expireTimestamp);
-            if (expireText) {
-                const fakeNodeName = `到期时间 ≫ ${expireText}`;
-                virtualNodes.push(
-                    `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`
-                );
-            }
-
-            prependedContentForSubconverter = virtualNodes.join('\n');
-        }
-    }
-
     // [Subconverter Engine Selection] Priority: URL Parameter > Profile Settings > Global Settings
     const profileSub = currentProfile?.subconverter || {};
     const globalSub = config.subconverter || {};
 
     // [Optimization] Respect user defined engine mode while preventing loops for non-browser agents (backend fetchers)
-    const effectiveEngine = resolveEffectiveEngine({
+    const effectiveEngine = isPersonalMode(env) ? 'builtin' : resolveEffectiveEngine({
         searchParams: url.searchParams,
         userAgent: userAgentHeader,
         profileEngineMode: profileSub.engineMode,
@@ -796,14 +717,76 @@ export async function handleMisubRequest(context) {
         }
     }));
     context.preloadedSourceSnapshots = sourceSnapshots;
+    context.currentSubscriptionRuntimeInfo ||= {};
+    for (const sub of remoteSources) {
+        const snapshot = sourceSnapshots.get(sub.id);
+        if (snapshot) context.currentSubscriptionRuntimeInfo[sub.id] = {
+            userInfo: snapshot.userInfo || null, nodeCount: snapshot.nodeCount,
+        };
+    }
+
+    if (isProfileExpired) {
+        // Use the flag set earlier
+        prependedContentForSubconverter = ''; // Expired node is now in targetMisubs
+    } else {
+        // Otherwise, add traffic and expiration info nodes if enabled.
+        if (config.enableTrafficNode !== false) {
+            const totalUserInfo = mergeSubscriptionUserInfo(context, targetMisubs);
+            const profileExpireTimestamp = currentProfile?.expiresAt
+                ? Math.floor(new Date(currentProfile.expiresAt).getTime() / 1000)
+                : 0;
+            const expireTimestamp =
+                profileExpireTimestamp > 0 ? profileExpireTimestamp : totalUserInfo.expire;
+            const virtualNodes = [];
+
+            const totalRemainingBytes = targetMisubs.reduce((acc, sub) => {
+                const userInfo = sub?.enabled ? getCurrentRequestUserInfo(context, sub) : null;
+                if (userInfo && userInfo.total > 0) {
+                    const used = (userInfo.upload || 0) + (userInfo.download || 0);
+                    return acc + Math.max(0, userInfo.total - used);
+                }
+                return acc;
+            }, 0);
+            if (totalRemainingBytes > 0) {
+                const fakeNodeName = `流量剩余 ≫ ${formatBytes(totalRemainingBytes)}`;
+                virtualNodes.push(
+                    `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`
+                );
+            }
+
+            const expireText = formatSubscriptionExpireTime(expireTimestamp);
+            if (expireText) {
+                const fakeNodeName = `到期时间 ≫ ${expireText}`;
+                virtualNodes.push(
+                    `trojan://00000000-0000-0000-0000-000000000000@127.0.0.1:443#${encodeURIComponent(fakeNodeName)}`
+                );
+            }
+
+            prependedContentForSubconverter = virtualNodes.join('\n');
+        }
+    }
+
 
     // An aggregate cache includes the snapshot versions AND the requested
     // transform variant. Different profiles, filters, formats and user agents
     // must not replace one another's aggregate content.
-    const regionVersions = isPersonalMode(env)
-        ? await Promise.all(remoteSources.map(async (sub) =>
-            (await readRegionPreferences(storageAdapter, sub.id)).version
-        )) : [];
+    const savedRegionPreferences = isPersonalMode(env)
+        ? await Promise.all(remoteSources.map(sub => readRegionPreferences(storageAdapter, sub.id))) : [];
+    const regionVersions = savedRegionPreferences.map(data => data.version);
+    // Keep source identity separate from display flags; emoji removal and renaming
+    // must not undo a correction, including when the aggregate cache is hit.
+    const sourceRegionHints = new Map();
+    for (let i = 0; i < remoteSources.length; i++) {
+        const sub = remoteSources[i];
+        for (const node of sourceSnapshots.get(sub.id)?.nodes || []) {
+            const key = nodeRegionIdentity(node);
+            if (!sourceRegionHints.has(key)) sourceRegionHints.set(key, {
+                manualRegion: savedRegionPreferences[i]?.overrides[await fingerprintNode(node)],
+                defaultRegion: sub.defaultRegion,
+            });
+        }
+    }
+    context.sourceRegionHints = sourceRegionHints;
     const variant = JSON.stringify({
         targetFormat, userAgentHeader, urlInclude, urlExclude, urlRename, urlEmoji,
         sources: remoteSources.map((sub, i) => [
@@ -1115,6 +1098,8 @@ export async function handleMisubRequest(context) {
                     enableTfo: urlTfo === 'true' || urlTfo === '1',
                     ruleLevel,
                     regionsAlreadyResolved: isPersonalMode(env),
+                    sourceRegionHints,
+                    addFlagEmoji: urlEmoji === 'true' || (urlEmoji !== 'false' && config.enableFlagEmoji !== false),
                     regionOverrides: Array.isArray(config.regionOverrides)
                         ? config.regionOverrides
                         : [],
@@ -1207,6 +1192,11 @@ export async function handleMisubRequest(context) {
             'Content-Type': 'text/plain; charset=utf-8',
             'Cache-Control': 'no-store, no-cache',
         };
+        const userInfoHeader = buildUserInfoHeaderFromSubscriptions(context, targetMisubs, currentProfile?.expiresAt);
+        if (userInfoHeader) {
+            headers['Subscription-Userinfo'] = userInfoHeader;
+            headers['Profile-Update-Interval'] = String(config.UpdateInterval || 24);
+        }
         Object.entries(cacheHeaders).forEach(([key, value]) => {
             headers[key] = value;
         });
@@ -1252,6 +1242,8 @@ export async function handleMisubRequest(context) {
         ruleLevel: ruleLevel, // 统一后的规则等级
         regionOverrides: Array.isArray(config.regionOverrides) ? config.regionOverrides : [],
         regionsAlreadyResolved: isPersonalMode(env),
+        sourceRegionHints,
+        addFlagEmoji: urlEmoji === 'true' || (urlEmoji !== 'false' && config.enableFlagEmoji !== false),
         isMeta: isMetaCore(userAgentHeader, url.searchParams),
         customDnsOverride: config.customDnsOverride || '',
         dnsMode:
@@ -1350,7 +1342,11 @@ export async function handleMisubRequest(context) {
 
             return countSuccessfulResponse(new Response(finalContent || '', { headers: responseHeaders }));
         } catch (e) {
-            console.error(`[Builtin${targetFormat}] Generation failed:`, e);
+            console.error(`[Builtin${targetFormat}] Generation failed`);
+            return new Response('Subscription generation failed. Please retry later.', {
+                status: 502,
+                headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+            });
         }
     }
 

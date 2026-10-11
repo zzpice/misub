@@ -1,59 +1,42 @@
-# MiSub 后端技术细节 (Technical Details)
+# MiSub · zzpice 后端技术细节
 
-本文档面向开发者，详细说明 MiSub 后端（Cloudflare Pages Functions）的关键技术实现。
+当前独立版本为 v1.0.0。生产个人模式采用 Cloudflare Pages Functions + D1 + KV；D1 是业务数据和认证设置的唯一来源，KV 不提供认证或业务数据故障回退。
 
----
+## 节点与订阅处理
 
-## 1. 节点处理流水线 (Processing Pipeline)
+订阅请求从 `functions/modules/subscription/main-handler.js` 进入，经 Token 校验、来源快照读取、来源操作符、订阅组/全局操作符、过滤及格式生成返回。`subscription-service.js` 组合 URL 节点；`processor-service.js` 负责格式与模板输出。
 
-节点处理由 `functions/services/subscription-service.js` 驱动。完整流程如下：
+- `source-snapshot-service.js` 保存每来源最后成功的原始节点、流量和更新时间。数据没有应用 TTL；失败、空内容和异常截断不覆盖有效快照。
+- 自动更新到期后通过 `waitUntil` 后台刷新；没有快照且允许自动更新时同步初始化。关闭自动更新的来源只允许管理员显式刷新。
+- D1 刷新租约包含独立所有者，发布快照同时检查租约有效性及来源 URL。过期任务不能覆盖新快照或删除新所有者的锁。
+- `node_cache_*` 是可重新生成的临时组合缓存，与永久来源快照分离。过期的个人模式组合变体逐批清理，不清理来源快照和地区纠错。
 
-1. **组合 (Combination)**：从 D1/KV 获取订阅源（Subscriptions）和手动节点（Manual Nodes）。
-2. **清洗 (Cleaning)**：初步修复破损的节点 URL，移除已知无法识别的非法字符。
-3. **执行操作符链 (Operator Chain Executor)**：
-    - 优先级：`订阅组操作符 (Profile Operators)` > `全局操作符 (Global Operators)`。
-    - 兼容逻辑：若两者皆无且存在旧版配置，则通过 `adaptLegacyTransform` 进行桥接。
-4. **格式生成 (Generator)**：将处理后的通用节点模型转换为 Clash、Sing-Box 等目标格式。
+地区优先级为人工纠错、全局地区规则、名称自动识别、来源默认地区。纠错记录在来源范围内按连接身份的 SHA-256 指纹保存；显示名称变化不会丢失纠错，连接凭据变化会形成新身份。地区元数据独立于显示国旗，供过滤、排序和各客户端分组使用。
 
----
+## 操作符安全
 
-## 2. 操作符运行引擎 (Operator Runner)
+操作符执行器位于 `functions/utils/operator-runner.js`。脚本操作符使用 `expression-dsl.js` 的受限声明式条件与模板，不使用 `eval`、`Function` 或 `AsyncFunction` 执行任意 JavaScript。旧表达式只能按兼容语法转换，不能获得 Worker 全局对象或 Secrets。
 
-执行引擎位于 `functions/utils/operator-runner.js`。
+来源操作符先于订阅组操作符运行。订阅组存在操作符时采用该链，否则采用全局默认链，再回退到旧转换配置的兼容适配。文本 include/exclude 规则仍保留独立过滤步骤。
 
-### 脚本执行沙箱 (Script Sandbox)
+## 存储一致性
 
-为了支持自定义逻辑，我们实现了 JavaScript 脚本操作符。
+`functions/storage-adapter.js` 保留 KV 与 D1 适配能力，个人模式强制 D1，并在读故障时失败关闭。来源与订阅组使用行级记录；旧主记录读取兼容仍保留。
 
-- **实现方式**：基于 `AsyncFunction` 构建闭包。
-- **传入上下文**：
-    - `$nodes`: 原始节点数组的深拷贝。
-    - `$context`: 包含 `target` (目标格式), `userAgent`, `timestamp` 等。
-    - `$utils`: 提供 `formatBytes`, `getRegionCode` 等内置工具。
+后台刷新元数据和 WebDAV 状态更新使用 D1 条件写入及有限次数重试，合并并发管理员修改。地区纠错采用相同的比较后写入机制。匿名成功拉取计数使用单条 SQL UPSERT，与详细访问日志是否开启无关。
 
-> [!WARNING]
-> **安全局限性**：由于 Cloudflare Workers 环境暂不支持完整的 WASM 沙箱（如 V8 Isolate），目前的脚本执行虽然处于闭包中，但无法实现 100% 的恶意代码防御（如无限循环攻击）。建议仅运行受信任的脚本。
+KV 不具备 D1 的事务或跨实例锁保障；其兼容路径只提供尽力而为的写入和计数。多集合保存/恢复仍是多条写入，不应描述成全局事务；生产迁移或恢复需要单独备份与验证。
 
-### 性能优化
+## 解析、格式与外部抓取
 
-- **Immutable 操作**：操作符内部尽量减少对原数组的修改，使用 map/filter 返回新数组，减少内存碎片。
-- **正则预编译**：常用的地区识别正则在 Worker 启动时进行一次性编译。
+解析入口为 `functions/modules/utils/node-parser.js`，支持 URL 列表、Base64、Clash YAML 和协议 JSON；`functions/utils/url-to-clash.js` 转成通用代理对象，各内置生成器再输出目标格式。
 
----
+节点及策略共享名称空间。生成时避免重复后缀、内置保留名称和模板分组名称冲突。结构化格式生成失败返回错误，避免把 Base64 当作成功配置。不同客户端本身不支持的协议按原有能力处理，不新增协议或转换后端。
 
-## 3. 存储适配层 (Storage Adapter)
+外部订阅、模板及诊断请求逐跳验证 HTTP(S) URL，阻止私网/本地目标并限制重定向；跨来源跳转移除认证头。订阅与模板响应限制为 10 MiB，超时覆盖响应体读取。WebDAV 备份拒绝跨来源重定向，防止备份正文及凭据被重放到其他站点。
 
-为了同时支持 KV 和 D1，我们实现了一个抽象层 `functions/storage-adapter.js`：
+## 验证边界
 
-- **混合模式**：读请求优先从 KV（如果开启了缓存）或 D1 读取。
-- **事务模拟**：由于 KV 不支持事务，涉及多表操作时，Adapter 会执行乐观锁重试逻辑。
+使用合成节点、本地 SQLite 和隔离浏览器测试；协议变更还需要真实 Mihomo/sing-box 配置校验。SQLite 能验证 SQL 与并发逻辑，不等同于 Cloudflare 全球运行验证。生产绑定、Secrets、数据及资源不用于测试或修复。
 
----
-
-## 4. 节点解析逻辑
-
-解析器位于 `functions/modules/subscription/parser.js`。其核心是一个多阶段识别引擎：
-
-1. **Base64 探测**：识别内容是否为经过编码的节点列表。
-2. **格式分发**：根据关键字识别 YAML (Clash), JSON, 或 URL Scheme 列表。
-3. **协议提取**：逐行提取协议参数，并归一化为统一的 `ProxyNode` 对象。
+更多维护约束见 [PERSONAL-MAINTENANCE](PERSONAL-MAINTENANCE.md)，本轮结果见 [2026-10-11 审计](audits/2026-10-11-reliability.md)。

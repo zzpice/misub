@@ -11,14 +11,14 @@ MiSub 是一个部署在 Cloudflare Pages Functions 上的订阅管理与转换�
 - 管理机场订阅、手动节点和订阅分组（Profile）
 - 拉取、缓存、清洗、重命名、过滤、排序和去重节点
 - 根据客户端或 URL 参数生成不同订阅格式
-- 提供公开订阅页、管理后台、调试接口和通知能力
+- 提供受认证保护的管理后台、调试接口与受 Token 保护的订阅输出；公开展示和通知功能已删除
 
 当前技术栈：
 
 - 前端：Vue 3、Vite、Pinia、Vue Router、Tailwind CSS
 - 后端：Cloudflare Pages Functions，ES Modules
-- 存储：Cloudflare KV 或 D1，通过统一适配层访问
-- 测试：Vitest、@vue/test-utils、happy-dom、Miniflare
+- 存储：个人模式强制 D1 为业务权威；保留非个人部署的 KV 适配
+- 测试：Vitest、@vue/test-utils、happy-dom、本地 SQLite D1 SQL 集成测试、Playwright
 
 ## 2. 顶层目录
 
@@ -101,8 +101,6 @@ functions/modules/api-router.js
 /api/login
 /api/logout
 /api/login_config
-/api/config
-/api/system/error_report
 ```
 
 需要登录态的管理接口包括：
@@ -130,12 +128,11 @@ functions/modules/api-router.js
 主要 handler 文件：
 
 ```text
-functions/modules/api-handler.js                  # 数据、设置、公开配置、密码更新
+functions/modules/api-handler.js                  # 数据、设置、密码更新
 functions/modules/auth-middleware.js              # 登录态、cookie、密码校验
 functions/modules/rule-template-handler.js        # 自定义规则模板
 functions/modules/handlers/node-handler.js        # 节点数量、批量刷新、节点清理、健康检查
 functions/modules/handlers/debug-handler.js       # 调试、系统信息、导出、预览内容
-functions/modules/handlers/error-report-handler.js
 ```
 
 ## 5. 存储模型
@@ -172,7 +169,7 @@ functions/modules/config.js
 
 - 订阅 token 与 profile token
 - 内置模板和第三方转换后端设置
-- 节点前缀、国旗、操作符链、缓存、通知、公开页、留言板等开关
+- 节点前缀、国旗、操作符链和缓存设置；已删除公开页/通知/留言板功能不再生效
 - 默认 UA 和系统常量
 
 ## 6. 订阅生成主链路
@@ -219,7 +216,7 @@ functions/modules/subscription/node-fetcher.js
 - Profile 模式：按订阅分组生成完整输出
 - 单订阅模式：对某一个订阅生成输出
 - Direct URL 模式：直接对 URL 生成预览或输出
-- Public Preview 模式：历史功能，个人模式已禁用
+- 已删除 Public Preview 入口，不恢复公开展示
 
 ## 7. 节点获取、缓存与保护性缓存
 
@@ -382,13 +379,13 @@ src/router/index.js
 主要路由：
 
 ```text
-/                         # 首页/公开入口包装页
+/                         # 唯一网页入口：未登录为登录表单，登录后为后台
 /dashboard                # 仪表盘
 /dashboard/groups         # 订阅组
 /dashboard/nodes          # 手动节点
 /dashboard/subscriptions  # 我的订阅
 /dashboard/settings       # 设置
-/:pathMatch(.*)*          # 自定义登录路径或 404 入口
+/:pathMatch(.*)*          # 未知内部位置返回根入口
 ```
 
 前端 API 封装：
@@ -403,7 +400,7 @@ src/constants/api-endpoints.js
 
 ```text
 src/stores/useDataStore.js # subscriptions、profiles、settings、保存状态
-src/stores/session.js      # 登录态、公开配置、初始数据
+src/stores/session.js      # 登录态、初始数据
 src/stores/theme.js        # 主题
 src/stores/toast.js        # Toast
 src/stores/ui.js           # 布局状态
@@ -426,7 +423,7 @@ src/composables/useBulkImportLogic.js
 组件按功能大致分为：
 
 ```text
-src/components/features/       # 仪表盘、公告、操作符链等业务组件
+src/components/features/       # 仪表盘、操作符链等业务组件
 src/components/forms/          # 表单、模态框基础能力
 src/components/layout/         # Header、Footer、导航、布局骨架
 src/components/modals/         # 登录、订阅编辑、Profile、预览、导入等弹窗
@@ -444,7 +441,6 @@ src/components/ui/             # Button、Card、Input、Toast 等基础 UI
 src/components/modals/NodePreview/NodePreviewModal.vue
 src/components/modals/SubscriptionEditModal.vue
 src/components/modals/ProfileModal.vue
-src/components/settings/sections/ClientSettings.vue
 src/stores/useDataStore.js
 src/composables/useSubscriptions.js
 ```
@@ -489,7 +485,7 @@ npm run test:run -- tests/unit/node-utils.test.js tests/unit/template-pipeline.t
 优先定位请求属于哪种模式：
 
 ```text
-Profile / Single Subscription / Direct URL / Public Preview
+Profile / Single Subscription / Authenticated Direct URL
 ```
 
 再沿链路检查：
@@ -498,11 +494,11 @@ Profile / Single Subscription / Direct URL / Public Preview
 request-context
 → storage adapter
 → subscription-service
-→ node-fetcher
+→ durable source snapshots (personal mode) / node-fetcher (legacy preview)
 → node-parser
 → processor-service
 → target format resolver
-→ builtin generator 或 external backend
+→ builtin generator（个人模式强制内置；保留非个人模式 external backend）
 ```
 
 ### 14.2 修协议字段丢失问题

@@ -7,10 +7,11 @@
  * 注意：Surge 不支持 VLESS 协议，VLESS 节点会被跳过
  */
 
-import { urlToClashProxy, urlsToClashProxies } from '../../utils/url-to-clash.js';
+import { urlsToClashProxies } from '../../utils/url-to-clash.js';
 import { getUniqueName } from './name-utils.js';
 import {
     POLICY_GROUPS,
+    createReservedNameMap,
     getBuiltinRules,
     getRemoteProviderDefinitions,
     DEFAULT_SELECT_GROUP,
@@ -439,7 +440,7 @@ export function generateBuiltinSurgeConfig(nodeList, options = {}) {
         }
     }
 
-    const usedNames = new Map();
+    const usedNames = createReservedNameMap(proxies, options);
     const finalResults = [];
     const finalProxyNames = [];
 
@@ -521,6 +522,7 @@ dns-server = 119.29.29.29, 223.5.5.5, system`);
             );
         }
     }
+    abstractGroups = pruneProxyGroups(abstractGroups, proxiesForGrouping);
     const proxyGroupLines = abstractGroups.map((group) => {
         let type = group.type === 'url-test' ? 'url-test' : 'select';
         if (group.type === 'fallback') type = 'fallback';

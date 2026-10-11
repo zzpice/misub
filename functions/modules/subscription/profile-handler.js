@@ -194,9 +194,25 @@ export async function handleProfileMode(
     // 个人模式按 D1 快照预览，和下游订阅共用最后成功的数据。
     // 保留其他部署模式原来的实时预览方式。
     const subscriptionResults = await Promise.all(
-        targetSubscriptions.map((sub) =>
-            fetchPreviewSourceNodes(storageAdapter, env, sub, userAgent, skipCertVerify)
-        )
+        targetSubscriptions.map(async (sub) => {
+            const result = await fetchPreviewSourceNodes(storageAdapter, env, sub, userAgent, skipCertVerify);
+            const operators = ensureArray(sub.operators?.length ? sub.operators : sub.nodeTransform?.operators);
+            if (!applyTransform || !result.success || !operators.length) return result;
+            const metadata = new Map(result.nodes.map(node => [node.url, {
+                metadata: { ...node.metadata, regionZh: node.region },
+            }]));
+            const urls = await runOperatorChain(result.nodes.map(node => node.url), operators, {
+                subName: sub.name, userAgent, config: settings, nodeMetadataByUrl: metadata,
+            });
+            const originals = new Map(await Promise.all(result.nodes.map(async node =>
+                [await fingerprintNode(node.url), node])));
+            return { ...result, nodes: await Promise.all(urls.map(async url => {
+                const original = originals.get(await fingerprintNode(url));
+                return { ...original, ...parseNodeInfo(url), url,
+                    ...(original ? { region: original.region } : {}),
+                };
+            })) };
+        })
     );
 
     // 合并所有结果
@@ -243,7 +259,9 @@ export async function handleProfileMode(
     if (applyTransform) {
         const nodeUrls = allNodes.map((node) => node.url);
         const nodeMetadataByUrl = new Map(
-            allNodes.map((node) => [node.url, { group: node.group || '' }])
+            allNodes.map((node) => [node.url, { group: node.group || '',
+                ...(node.region ? { metadata: { ...node.metadata, regionZh: node.region } } : {}),
+            }])
         );
 
         let activeOperators = ensureArray(profile?.operators);

@@ -10,10 +10,11 @@
  * 5. 完善的 [General] 与 [Rule] 规则
  */
 
-import { urlToClashProxy, urlsToClashProxies } from '../../utils/url-to-clash.js';
+import { urlsToClashProxies } from '../../utils/url-to-clash.js';
 import { getUniqueName } from './name-utils.js';
 import {
     POLICY_GROUPS,
+    createReservedNameMap,
     getBuiltinRules,
     getRemoteProviderDefinitions,
     DEFAULT_SELECT_GROUP,
@@ -305,10 +306,10 @@ export function generateBuiltinLoonConfig(nodeList, options = {}) {
     const proxyLines = [];
     const proxyNames = [];
     const proxiesWithMetadata = [];
-    const usedNames = new Map();
 
     // 转换为 Clash 代理对象
     const proxies = urlsToClashProxies(nodeUrls, options);
+    const usedNames = createReservedNameMap(proxies, options);
 
     // 应用 UDP 开关
     // (已在 urlsToClashProxies 中全局处理)

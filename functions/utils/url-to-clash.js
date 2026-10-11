@@ -2,6 +2,8 @@
  * 支持特殊参数：dialer-proxy、reality-opts 等
  */
 
+import { nodeRegionIdentity } from '../services/region-preferences.js';
+import { resolveNodeRegion, getRegionEmoji } from '../modules/utils/geo-utils.js';
 import { extractNodeMetadata } from '../modules/utils/metadata-extractor.js';
 import { isLocalProxyEndpoint } from './node-utils.js';
 
@@ -1566,6 +1568,14 @@ export function urlsToClashProxies(urls, options = {}) {
 
             // [智能增强] 注入元数据
             proxy.metadata = extractNodeMetadata(proxy.name);
+            const sourceHints = options.sourceRegionHints?.get(nodeRegionIdentity(url));
+            if (sourceHints) {
+                const region = resolveNodeRegion(proxy.name, {
+                    ...sourceHints, regionOverrides: options.regionOverrides,
+                });
+                proxy.metadata = { ...proxy.metadata, region, resolvedRegion: region,
+                    flag: getRegionEmoji(region) };
+            }
 
             // [自动补全] 仅在名称中完全没有国旗/地球 Emoji 时才尝试补全，避免重复添加或干扰用户重命名
             const HAS_EMOJI_REGEX = /([\u{1F1E6}-\u{1F1FF}]{2}|[\u{1F30D}-\u{1F30F}])/u;

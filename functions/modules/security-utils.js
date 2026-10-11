@@ -87,8 +87,16 @@ export function validatePublicFetchUrl(value) {
 }
 
 export async function safeFetchPublicUrl(inputUrl, init = {}, options = {}) {
+    return fetchValidatedUrl(inputUrl, init, options, validatePublicFetchUrl);
+}
+
+export async function safeFetchNetworkUrl(inputUrl, init = {}, options = {}) {
+    return fetchValidatedUrl(inputUrl, init, options, validatePublicNetworkUrl);
+}
+
+async function fetchValidatedUrl(inputUrl, init, options, validate) {
     const maxRedirects = options.maxRedirects ?? MAX_SAFE_REDIRECTS;
-    const validation = validatePublicFetchUrl(inputUrl);
+    const validation = validate(inputUrl);
     if (!validation.ok) {
         const error = new Error(validation.error);
         error.status = 400;
@@ -96,12 +104,15 @@ export async function safeFetchPublicUrl(inputUrl, init = {}, options = {}) {
     }
 
     let currentUrl = validation.url.toString();
+    const { cf, ...standardInit } = init;
+    let requestInit = { ...standardInit, headers: new Headers(init.headers) };
     for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount++) {
         const response = await fetch(
             new Request(currentUrl, {
-                ...init,
+                ...requestInit,
                 redirect: 'manual',
-            })
+            }),
+            ...(cf ? [{ cf }] : [])
         );
 
         if (!isRedirectStatus(response.status)) {
@@ -112,6 +123,7 @@ export async function safeFetchPublicUrl(inputUrl, init = {}, options = {}) {
         if (!location) {
             return response;
         }
+        await response.body?.cancel();
         if (redirectCount >= maxRedirects) {
             const error = new Error('Too many redirects');
             error.status = 400;
@@ -119,11 +131,22 @@ export async function safeFetchPublicUrl(inputUrl, init = {}, options = {}) {
         }
 
         const nextUrl = new URL(location, currentUrl);
-        const nextValidation = validatePublicFetchUrl(nextUrl.toString());
+        const nextValidation = validate(nextUrl.toString());
         if (!nextValidation.ok) {
             const error = new Error(nextValidation.error);
             error.status = 400;
             throw error;
+        }
+        if (nextUrl.origin !== new URL(currentUrl).origin) {
+            for (const header of ['Authorization', 'Cookie', 'Proxy-Authorization']) {
+                requestInit.headers.delete(header);
+            }
+        }
+        if (response.status === 303 ||
+            ([301, 302].includes(response.status) && requestInit.method === 'POST')) {
+            requestInit = { ...requestInit, method: 'GET', body: undefined };
+            requestInit.headers.delete('Content-Type');
+            requestInit.headers.delete('Content-Length');
         }
         currentUrl = nextValidation.url.toString();
     }
@@ -322,4 +345,34 @@ function parseEmbeddedIpv4(hextets) {
         ];
     }
     return null;
+}
+
+/** Bound memory use even when the upstream omits or lies about Content-Length. */
+export async function readResponseBufferWithLimit(response, maxBytes = 10 * 1024 * 1024) {
+    if (Number(response.headers.get('Content-Length')) > maxBytes) {
+        await response.body?.cancel();
+        throw new Error('Response content too large');
+    }
+    if (!response.body) return new ArrayBuffer(0);
+    const reader = response.body.getReader();
+    const chunks = [];
+    let size = 0;
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            size += value.byteLength;
+            if (size > maxBytes) {
+                await reader.cancel();
+                throw new Error('Response content too large');
+            }
+            chunks.push(value);
+        }
+    } finally {
+        reader.releaseLock();
+    }
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    return bytes.buffer;
 }

@@ -1,6 +1,6 @@
 # 订阅请求链路
 
-本文档记录 MiSub 当前真实订阅请求链路，重点覆盖路由入口、token/profile 解析、浏览器伪装、订阅源读取、节点解析、缓存、转换输出、访问计数和通知/日志。
+本文档记录 MiSub 当前真实订阅请求链路，重点覆盖路由入口、token/profile 解析、浏览器伪装、订阅源读取、节点解析、缓存、转换输出、匿名成功拉取计数与兼容日志。
 
 > 代码基准：`functions/[[path]].js`、`functions/modules/subscription/main-handler.js`、`functions/services/subscription-service.js`、`functions/modules/subscription/cache-manager.js`、`functions/services/node-cache-service.js`。
 
@@ -20,9 +20,11 @@
 
 - 路径显式以 `/sub/` 开头。
 - 路径第一段等于配置中的 `mytoken` 或 `profileToken`。
-- 非 API、非 SPA、非静态资源路径的兜底订阅短链。
+- 真实 Token 保护的订阅短链。个人模式下其他非业务网页路径返回 403，公开展示入口已删除。
 
 API 路径 `/api/*` 总是优先进入 `handleApiRequest(request, env)`，不会进入订阅链路。
+
+个人模式强制内置转换，URL 的 `engine=external` 不能开启外部后端。永久来源快照、刷新租约与地区元数据说明见 [source-snapshots](source-snapshots.md)。
 
 ## 2. 基础数据加载
 

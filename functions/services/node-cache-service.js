@@ -159,6 +159,22 @@ export async function setCache(storageAdapter, cacheKey, nodes, sources = [], op
             await storageAdapter.put(cacheKey, cacheEntry);
         }
 
+        // Personal aggregate keys include source revisions. Bound old D1 variants
+        // without touching permanent snapshots, region overrides or legacy sources.
+        if (storageAdapter.db) {
+            try {
+                await storageAdapter.db.prepare(`
+                    DELETE FROM settings WHERE key IN (
+                        SELECT key FROM settings
+                        WHERE (key GLOB 'node_cache_profile_*_v_*' OR key GLOB 'node_cache_token_*_v_*')
+                        AND json_valid(value) AND json_type(value, '$.nodes') = 'text'
+                        AND json_extract(value, '$.timestamp') < ? LIMIT 100
+                    )
+                `).bind(Date.now() - CACHE_CONFIG.MAX_AGE).run();
+            } catch {
+                console.warn('[Cache] Unable to prune expired aggregate variants');
+            }
+        }
         return true;
     } catch (error) {
         console.error('[Cache] Failed to set cache:', error);

@@ -1,3 +1,4 @@
+import { readResponseBufferWithLimit } from '../security-utils.js';
 import { parseNodeList } from '../utils/node-parser.js';
 import { fetchWithRetry } from '../../services/fetch-utils.js';
 import { buildFetchProxyUrl } from '../../utils/fetch-proxy-utils.js';
@@ -70,7 +71,7 @@ export async function fetchSubscriptionNodes(
             };
         }
 
-        const buffer = await response.arrayBuffer();
+        const buffer = await readResponseBufferWithLimit(response);
         let text = new TextDecoder('utf-8').decode(buffer);
 
         let parsedNodes = parseNodeList(text, { plusAsSpace });

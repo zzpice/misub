@@ -21,8 +21,11 @@ vi.mock('../../src/lib/http.js', () => ({
                     server: 'example.com',
                     port: 443,
                     region: 'Hong Kong',
+                    sourceId: 'source-1',
+                    fingerprint: 'a'.repeat(64),
                 },
             ],
+            regionOptions: [{ name: 'United States', code: 'US', flag: '🇺🇸' }],
             stats: {
                 protocols: { vless: 1 },
                 regions: { 'Hong Kong': 1 },
@@ -132,4 +135,24 @@ describe('NodePreviewModal English translations', () => {
         expect(toastMock).toHaveBeenCalledWith(expect.stringContaining('1'), 'success');
         expect(wrapper.text()).not.toContain('Picking mode');
     });
+    it('renders the source region correction and bulk editor controls in English', async () => {
+        const pinia = createPinia(); setActivePinia(pinia);
+        const wrapper = mount(NodePreviewModal, {
+            props: { show: true, subscriptionId: 'source-1', subscriptionName: 'Synthetic' },
+            global: { plugins: [pinia, createI18n({ initialLocale: 'en-US' })],
+                stubs: { Teleport: true, NodeFilters: true, NodeList: true, NodeCard: true, NodePagination: true } },
+        });
+        await flushPromises();
+        const findButton = label => wrapper.findAll('button').find(button => button.text().includes(label));
+        expectNoChineseOrKeys(wrapper.text());
+        await findButton('Edit node regions').trigger('click');
+        expect(wrapper.text()).toContain('Set region');
+        await findButton('Select filtered').trigger('click');
+        await findButton('Set region').trigger('click');
+        expect(wrapper.find('input[placeholder="Search country, region or code"]').exists()).toBe(true);
+        expect(wrapper.text()).toContain('Restore automatic');
+        expectNoChineseOrKeys(wrapper.text());
+        wrapper.unmount();
+    });
+
 });

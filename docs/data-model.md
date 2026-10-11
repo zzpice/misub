@@ -16,7 +16,7 @@ MiSub 的核心持久化数据分为四类：
 - `GET /api/data`：一次性读取 `misubs`、`profiles`、`ruleTemplates`、`config`。
 - `POST /api/misubs`：保存订阅源/手动节点与订阅组，支持全量保存和 `diff` 增量保存。
 - `GET /api/settings`：读取全局设置。
-- `POST /api/settings`：保存全局设置，并同步 KV/D1 设置副本。
+- `POST /api/settings`：保存全局设置，个人模式仅写入 D1；非个人模式保留 KV/D1 副本兼容。
 - `GET /api/rule_templates`：读取自定义规则模板。
 - `POST /api/rule_templates`：保存自定义规则模板。
 
@@ -61,7 +61,7 @@ D1 当前采用“行级 JSON”结构：
     - `updated_at DATETIME`
 - `settings`
     - `key TEXT PRIMARY KEY`
-    - `value TEXT NOT NULL`：设置、下载计数、留言板、自定义规则模板等 JSON 或字符串值。
+    - `value TEXT NOT NULL`：设置、快照、地区纠错、下载计数、自定义规则模板等 JSON 或字符串值。
     - `created_at DATETIME`
     - `updated_at DATETIME`
 
@@ -126,7 +126,7 @@ D1 当前采用“行级 JSON”结构：
 - `name`：订阅组名称。
 - `customId`：自定义公开 ID；分享链接优先使用它，否则使用 `id`。
 - `enabled`：是否启用。
-- `isPublic`：是否在公开页面展示。
+- `isPublic`：保留的历史字段；公开页面已删除，个人模式不启用公开展示。
 - `subscriptions`：订阅源 ID 列表；兼容对象数组，后端会取对象的 `id`。
 - `manualNodes`：手动节点 ID 列表。
 - `sortIndex`：保存时按数组顺序写入。
@@ -177,7 +177,7 @@ Profile 输出链路：
 - `NotifyThresholdPercent`：流量提醒阈值。
 - `enableTrafficNode`：是否启用流量与到期时间虚拟节点。
 - `enableFlagEmoji`：是否启用国旗 emoji。
-- `enablePublicPage`：是否启用公开页。
+- `enablePublicPage`：历史兼容字段，个人模式强制关闭；公开页实现已删除。
 - `autoUpdateInterval`：自动更新间隔，`0` 表示禁用。
 
 节点与转换相关字段：

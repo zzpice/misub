@@ -11,14 +11,23 @@ const MIN_INTERVAL_MINUTES = 5;
 const DEFAULT_INTERVAL_MINUTES = 60;
 const RETRY_BACKOFF_MS = 5 * 60 * 1000;
 const LOCK_LIFETIME_MS = 90 * 1000;
-const pending = new Map();
+const pendingByStorage = new WeakMap();
+const SOURCE_EXISTS_SQL = `(
+    EXISTS (SELECT 1 FROM subscriptions WHERE id = ? AND json_extract(data, '$.url') = ?)
+    OR EXISTS (SELECT 1 FROM subscriptions, json_each(subscriptions.data) AS legacy
+        WHERE subscriptions.id = 'main' AND json_type(subscriptions.data) = 'array'
+        AND legacy.type = 'object' AND json_extract(legacy.value, '$.id') = ?
+        AND json_extract(legacy.value, '$.url') = ?
+        AND NOT EXISTS (SELECT 1 FROM subscriptions WHERE id = ?))
+)`;
+
 
 function sourceKey(source) {
     const id = String(source?.id || '').trim();
     if (!id) throw new Error('Subscription ID is required');
     return encodeURIComponent(id);
 }
-function snapshotKey(source) {
+export function snapshotKey(source) {
     return SNAPSHOT_PREFIX + sourceKey(source);
 }
 function attemptKey(source) {
@@ -68,6 +77,16 @@ export async function readSourceSnapshot(storage, source) {
         detectedName: source.detectedName || '',
         migratedLegacy: true,
     };
+    if (storage.db) {
+        // Migration must never replace a snapshot published while the legacy row was read.
+        await storage.db.prepare(`
+            INSERT OR IGNORE INTO settings (key, value)
+            SELECT ?, ? WHERE ${SOURCE_EXISTS_SQL}
+        `).bind(snapshotKey(source), JSON.stringify(migrated), source.id, source.url, source.id, source.url, source.id).run();
+        const saved = await storage.get(snapshotKey(source));
+        return saved?.sourceUrl === currentUrl && Array.isArray(saved.nodes) && saved.nodes.length
+            ? saved : null;
+    }
     await storage.put(snapshotKey(source), migrated);
     return migrated;
 }
@@ -76,7 +95,7 @@ async function acquireLock(storage, source) {
     if (!storage?.db) return true; // Non-personal KV remains best-effort; D1 uses an atomic lease.
     const key = lockKey(source);
     const now = Date.now();
-    const expires = String(now + LOCK_LIFETIME_MS);
+    const expires = `${now + LOCK_LIFETIME_MS}:${crypto.randomUUID()}`;
     const inserted = await storage.db
         .prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)')
         .bind(key, expires)
@@ -97,6 +116,17 @@ async function releaseLock(storage, source, lease) {
         .run();
 }
 
+async function recordAttempt(storage, source, lease, value) {
+    if (!storage.db) return storage.put(attemptKey(source), value);
+    return storage.db.prepare(`
+        INSERT INTO settings (key, value, updated_at)
+        SELECT ?, ?, CURRENT_TIMESTAMP
+        WHERE EXISTS (SELECT 1 FROM settings WHERE key = ? AND value = ?
+            AND CAST(value AS INTEGER) > ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `).bind(attemptKey(source), JSON.stringify(value), lockKey(source), lease, Date.now()).run();
+}
+
 function safeMessage(error) {
     const message = String(error?.message || '');
     const status = message.match(/HTTP\s+(\d{3})/i);
@@ -105,14 +135,19 @@ function safeMessage(error) {
 
 export async function refreshSourceSnapshot({ storage, source, fetcher }) {
     const key = snapshotKey(source);
-    const inFlight = pending.get(key);
+    const scope = storage.db || storage.kv || storage;
+    let pending = pendingByStorage.get(scope);
+    if (!pending) { pending = new Map(); pendingByStorage.set(scope, pending); }
+    const pendingKey = key + ':' + String(source.url || '');
+    const inFlight = pending.get(pendingKey);
     if (inFlight) return inFlight;
     const task = (async () => {
-        const existing = await readSourceSnapshot(storage, source);
+        let existing = await readSourceSnapshot(storage, source);
         let lease = null;
         try {
             lease = await acquireLock(storage, source);
             if (!lease) return { success: false, busy: true, snapshot: existing };
+            existing = await readSourceSnapshot(storage, source);
             const fetched = await fetcher(source);
             const nodes = Array.isArray(fetched?.nodes)
                 ? fetched.nodes.filter((n) => typeof n === 'string' && n.trim())
@@ -136,7 +171,23 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
                 detectedName: fetched.detectedName || '',
             };
             // Only publish the new snapshot after the full result has been fetched and validated.
-            await storage.put(key, snapshot);
+            if (storage.db) {
+                const published = await storage.db.prepare(`
+                    INSERT INTO settings (key, value, updated_at)
+                    SELECT ?, ?, CURRENT_TIMESTAMP
+                    WHERE EXISTS (SELECT 1 FROM settings WHERE key = ? AND value = ?
+                        AND CAST(value AS INTEGER) > ?)
+                    AND ${SOURCE_EXISTS_SQL}
+                    ON CONFLICT(key) DO UPDATE SET value = excluded.value,
+                        updated_at = excluded.updated_at
+                `).bind(key, JSON.stringify(snapshot), lockKey(source), lease, Date.now(),
+                    source.id, source.url, source.id, source.url, source.id).run();
+                if (published?.meta?.changes !== 1) {
+                    return { success: false, busy: true, snapshot: await readSourceSnapshot(storage, source) };
+                }
+            } else {
+                await storage.put(key, snapshot);
+            }
             // Publish human-readable metadata only after the snapshot write is
             // durable. The snapshot itself remains authoritative if this update
             // fails or the source is concurrently edited by an administrator.
@@ -160,7 +211,7 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
                 }
             }
             try {
-                await storage.put(attemptKey(source), { lastAttemptAt: updatedAt, success: true });
+                await recordAttempt(storage, source, lease, { lastAttemptAt: updatedAt, success: true });
             } catch (error) {
                 console.warn('[SourceSnapshot] Unable to record successful attempt:', error);
             }
@@ -170,7 +221,7 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
             console.warn('[SourceSnapshot] Preserving last successful snapshot:', message);
             if (lease) {
                 try {
-                    await storage.put(attemptKey(source), {
+                    await recordAttempt(storage, source, lease, {
                         lastAttemptAt: new Date().toISOString(),
                         success: false,
                         error: message,
@@ -188,11 +239,11 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
             }
         }
     })();
-    pending.set(key, task);
+    pending.set(pendingKey, task);
     try {
         return await task;
     } finally {
-        if (pending.get(key) === task) pending.delete(key);
+        if (pending.get(pendingKey) === task) pending.delete(pendingKey);
     }
 }
 

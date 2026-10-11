@@ -64,8 +64,8 @@ describe('api-handler storage helper usage', () => {
     beforeEach(() => {
         infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
 
-        getAllSubscriptions.mockReset();
-        getAllProfiles.mockReset();
+        getAllSubscriptions.mockReset().mockResolvedValue([]);
+        getAllProfiles.mockReset().mockResolvedValue([]);
         get.mockReset();
         put.mockReset();
         putSubscription.mockReset();

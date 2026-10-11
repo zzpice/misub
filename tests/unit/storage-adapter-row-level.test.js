@@ -81,6 +81,11 @@ function createD1Mock({
                             return { results: [] };
                         },
                         async run() {
+                            if (sql.startsWith('UPDATE subscriptions SET data')) {
+                                const matched = subMap.get(args[1]) === args[2];
+                                if (matched) subMap.set(args[1], args[0]);
+                                return { success: true, meta: { changes: matched ? 1 : 0 } };
+                            }
                             if (sql.includes('INSERT OR REPLACE INTO subscriptions')) {
                                 subMap.set(args[0], args[1]);
                             }

@@ -20,22 +20,6 @@ const REGION_DISPLAY_CONFIG = {
     土耳其: { flag: '🇹🇷', name: '土耳其节点' },
 };
 
-export const REGION_GROUP_PATTERNS = [
-    { name: '🇭🇰 香港节点', pattern: /港|HK|Hong Kong/i },
-    { name: '🇹🇼 台湾节点', pattern: /台|TW|Taiwan/i },
-    { name: '🇯🇵 日本节点', pattern: /日|JP|Japan/i },
-    { name: '🇸🇬 狮城节点', pattern: /狮城|新|SG|Singapore/i },
-    { name: '🇺🇸 美国节点', pattern: /美|US|America/i },
-    { name: '🇰🇷 韩国节点', pattern: /韩|KR|Korea/i },
-    { name: '🇬🇧 英国节点', pattern: /英|UK|England/i },
-    { name: '🇩🇪 德国节点', pattern: /德|DE|Germany/i },
-    { name: '🇫🇷 法国节点', pattern: /法|FR|France/i },
-    { name: '🇧🇷 巴西节点', pattern: /巴西|BR|Brazil/i },
-    { name: '🇪🇸 西班牙节点', pattern: /西班牙|ES|Spain/i },
-    { name: '🇳🇱 荷兰节点', pattern: /荷兰|NL|Netherlands/i },
-    { name: '🇦🇺 澳洲节点', pattern: /澳|AU|Australia/i },
-];
-
 export function groupNodeLinesByRegion(nodes = [], options = {}) {
     const groups = new Map();
 
@@ -49,7 +33,7 @@ export function groupNodeLinesByRegion(nodes = [], options = {}) {
             : null;
         const finalizedRegion = finalizedFlag ? resolveNodeRegion(finalizedFlag) : '';
         const region = resolveNodeRegion(tagName, {
-            manualRegion: node.manualRegion || node.metadata?.manualRegion ||
+            manualRegion: node.manualRegion || node.metadata?.manualRegion || node.metadata?.resolvedRegion ||
                 (finalizedRegion !== '其他' ? finalizedRegion : ''),
             regionOverrides: options.regionOverrides,
             defaultRegion: node.defaultRegion,

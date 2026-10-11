@@ -10,6 +10,7 @@ import { isMetaCore } from './user-agent-utils.js';
 import { DNS_PROXY_GROUP, resolveSafeDnsConfig } from './safe-dns.js';
 import {
     POLICY_GROUPS,
+    createReservedNameMap,
     RULE_SETS,
     getBuiltinRules,
     getRemoteProviderDefinitions,
@@ -62,8 +63,8 @@ function deepCleanControlChars(obj) {
  * 处理重名节点，确保每个节点名称唯一
  * @param {Object[]} proxies - 代理对象数组
  */
-function deduplicateNames(proxies) {
-    const usedNames = new Map();
+function deduplicateNames(proxies, options = {}) {
+    const usedNames = createReservedNameMap(proxies, options);
     proxies.forEach((proxy) => {
         proxy.name = getUniqueName(proxy.name, usedNames);
     });
@@ -95,9 +96,10 @@ function applyMihomoRelayDialerProxy(proxies, publicProxies, proxyGroups) {
         return { proxies: publicProxies, proxyGroups };
     }
 
+    const usedNames = new Map([...publicProxies.map(proxy => proxy.name), ...proxyGroups.map(group => group.name)].map(name => [name, 1]));
     const chainProxies = publicProxies.map((proxy) => ({
         ...proxy,
-        name: `🔗 链式代理 - ${proxy.name}`,
+        name: getUniqueName(`🔗 链式代理 - ${proxy.name}`, usedNames),
         'dialer-proxy': '入口节点',
     }));
     const chainNames = chainProxies.map((proxy) => proxy.name);
@@ -165,7 +167,7 @@ export function generateBuiltinClashConfig(nodeList, options = {}) {
     // (已在 urlsToClashProxies 中全局处理)
 
     // 处理重名节点
-    deduplicateNames(proxies);
+    deduplicateNames(proxies, options);
 
     if (proxies.length === 0) {
         return '# No valid proxies found\nproxies: []\n';

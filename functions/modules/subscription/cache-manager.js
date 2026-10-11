@@ -78,6 +78,14 @@ export async function resolveNodeListWithCache({
 
         const lastRun = refreshDebounce.get(cacheKey);
         if (!lastRun || Date.now() - lastRun > DEBOUNCE_TIME) {
+            // Variant keys change with each snapshot. Bound the warm isolate's map.
+            if (refreshDebounce.size >= 256) {
+                const cutoff = Date.now() - DEBOUNCE_TIME;
+                for (const [key, timestamp] of refreshDebounce) {
+                    if (timestamp <= cutoff) refreshDebounce.delete(key);
+                }
+                if (refreshDebounce.size >= 256) refreshDebounce.delete(refreshDebounce.keys().next().value);
+            }
             refreshDebounce.set(cacheKey, Date.now());
             triggerBackgroundRefresh(context, () => refreshNodes(true));
         }

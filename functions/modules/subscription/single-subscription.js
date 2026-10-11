@@ -115,13 +115,12 @@ export async function handleDirectUrlMode(
     skipCertVerify = false,
     plusAsSpace = false
 ) {
-    const debug = subscriptionUrl.includes('b0b422857bb46aba65da8234c84f38c6');
     const result = await fetchSubscriptionNodes(
         subscriptionUrl,
         '预览订阅',
         userAgent,
         null,
-        debug,
+        false,
         '',
         null,
         skipCertVerify,

@@ -1,7 +1,7 @@
 import { StorageFactory } from '../../storage-adapter.js';
 import { refreshSourceSnapshot } from '../../services/source-snapshot-service.js';
 import { fetchRemoteSourceSnapshot } from '../../services/subscription-service.js';
-import { createJsonResponse } from '../utils.js';
+import { createJsonResponse, readJsonWithLimit } from '../utils.js';
 
 /** Authenticated, explicit manual refresh. No public downstream request can force it. */
 export async function handleSourceSnapshotRefresh(request, env) {
@@ -10,12 +10,9 @@ export async function handleSourceSnapshotRefresh(request, env) {
     }
     let body;
     try {
-        if (Number(request.headers.get('content-length') || 0) > 4096) {
-            return createJsonResponse({ success: false, error: 'Request too large' }, 413);
-        }
-        body = await request.json();
-    } catch {
-        return createJsonResponse({ success: false, error: 'Invalid JSON' }, 400);
+        body = await readJsonWithLimit(request, 4096);
+    } catch (error) {
+        return createJsonResponse({ success: false, error: error.status === 413 ? 'Request too large' : 'Invalid JSON' }, error.status || 400);
     }
     const subscriptionId = body?.subscriptionId;
     if (typeof subscriptionId !== 'string' || !subscriptionId || subscriptionId.length > 200) {

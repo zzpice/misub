@@ -74,16 +74,16 @@
                                 v-if="selectionMode"
                                 class="col-span-1 flex justify-center text-indigo-500"
                             >
-                                Pick
+                                {{ t('nodePreview.pickNodes') }}
                             </div>
                             <div :class="selectionMode ? 'col-span-3' : 'col-span-4'">
-                                Node Name
+                                {{ t('nodePreview.nodeName') }}
                             </div>
-                            <div class="col-span-3 hidden sm:block">Server Address</div>
-                            <div class="col-span-2 hidden md:block text-center">Port</div>
-                            <div class="col-span-1 hidden sm:block text-center">Type</div>
-                            <div class="col-span-1 hidden sm:block text-center">Region</div>
-                            <div class="col-span-1 text-center">Action</div>
+                            <div class="col-span-3 hidden sm:block">{{ t('nodePreview.serverAddress') }}</div>
+                            <div class="col-span-2 hidden md:block text-center">{{ t('nodePreview.port') }}</div>
+                            <div class="col-span-1 hidden sm:block text-center">{{ t('nodePreview.type') }}</div>
+                            <div class="col-span-1 hidden sm:block text-center">{{ t('nodePreview.region') }}</div>
+                            <div class="col-span-1 text-center">{{ t('nodePreview.action') }}</div>
                         </div>
                     </div>
 

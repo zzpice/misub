@@ -68,7 +68,7 @@ describe('handleNodeCountRequest error body handling', () => {
                 '[NodeHandler] Skipping node count fallback because upstream returned an error body: HTTP 400: failed to fetch remote profile with status 400 Bad Request'
             );
             expect(errorSpy).toHaveBeenCalledWith(
-                '[Node Count] Node count update failed for https://airport.example/sub: HTTP 400: failed to fetch remote profile with status 400 Bad Request'
+                '[Node Count] Node count update failed: HTTP 400: failed to fetch remote profile with status 400 Bad Request'
             );
             expect(adapter.updateSubscriptionById).not.toHaveBeenCalled();
         } finally {

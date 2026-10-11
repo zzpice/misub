@@ -423,7 +423,7 @@ class D1StorageAdapter {
             'subscriptions',
             async () => {
                 try {
-                    const results = await this.db.prepare('SELECT data FROM subscriptions').all();
+                    const results = await this.db.prepare("SELECT data FROM subscriptions ORDER BY CASE WHEN id = 'main' THEN 0 ELSE 1 END").all();
                     if (!Array.isArray(results?.results)) return [];
 
                     const all = [];
@@ -485,7 +485,7 @@ class D1StorageAdapter {
             'profiles',
             async () => {
                 try {
-                    const results = await this.db.prepare('SELECT data FROM profiles').all();
+                    const results = await this.db.prepare("SELECT data FROM profiles ORDER BY CASE WHEN id = 'main' THEN 0 ELSE 1 END").all();
                     if (!Array.isArray(results?.results)) return [];
 
                     const all = [];
@@ -517,20 +517,45 @@ class D1StorageAdapter {
     }
 
     async updateSubscriptionById(id, updater) {
-        const existing = await this.getSubscriptionById(id);
-        if (!existing) return null;
-        const updated = updater({ ...existing });
-        await this.db
-            .prepare(
-                `
-            INSERT OR REPLACE INTO subscriptions (id, data, updated_at)
-            VALUES (?, ?, CURRENT_TIMESTAMP)
-        `
-            )
-            .bind(id, JSON.stringify(updated))
-            .run();
-        invalidateD1CollectionCache(this.db, 'subscriptions');
-        return updated;
+        // Compare the exact row read, retrying against the latest admin edit.
+        // UPDATE cannot resurrect a source deleted during a background refresh.
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const row = await this.db.prepare('SELECT data FROM subscriptions WHERE id = ?')
+                .bind(id).first();
+            if (!row) return null;
+            const existing = JSON.parse(row.data);
+            const updated = updater({ ...existing });
+            if (!updated) return existing;
+            const data = JSON.stringify(updated);
+            if (data === row.data) return updated;
+            const result = await this.db.prepare(
+                'UPDATE subscriptions SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND data = ?'
+            ).bind(data, id, row.data).run();
+            if (result?.meta?.changes === 1) {
+                invalidateD1CollectionCache(this.db, 'subscriptions');
+                return updated;
+            }
+        }
+        throw new Error('Subscription changed concurrently; retry the update');
+    }
+
+    async updateSettingsByKey(key, updater) {
+        const parsedKey = this._parseKey(key);
+        if (parsedKey.table !== 'settings') throw new Error('Expected a settings key');
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const row = await this.db.prepare('SELECT value FROM settings WHERE key = ?')
+                .bind(parsedKey.queryValue).first();
+            const updated = updater(row ? JSON.parse(row.value) : {});
+            const data = JSON.stringify(updated);
+            const result = row
+                ? await this.db.prepare(
+                    'UPDATE settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ? AND value = ?'
+                ).bind(data, parsedKey.queryValue, row.value).run()
+                : await this.db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)')
+                    .bind(parsedKey.queryValue, data).run();
+            if (result?.meta?.changes === 1) return updated;
+        }
+        throw new Error('Settings changed concurrently; retry the update');
     }
 
     async putSubscription(item) {
@@ -547,13 +572,23 @@ class D1StorageAdapter {
         return item;
     }
 
+    async deleteCollectionItem(table, id) {
+        // Keep legacy array readers compatible, but an explicit deletion must
+        // remove the same ID from that array too. D1 batch is transactional.
+        const cleanup = this.db.prepare(`UPDATE ${table} SET data = (
+            SELECT COALESCE(json_group_array(json(value)), '[]') FROM json_each(${table}.data)
+            WHERE type != 'object' OR COALESCE(json_extract(value, '$.id'), '') != ?
+        ), updated_at = CURRENT_TIMESTAMP
+        WHERE id = 'main' AND json_valid(data) AND json_type(data) = 'array'`).bind(id);
+        const deletion = this.db.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id);
+        const results = typeof this.db.batch === 'function'
+            ? await this.db.batch([cleanup, deletion]) : [await cleanup.run(), await deletion.run()];
+        invalidateD1CollectionCache(this.db, table);
+        return Boolean(results.every(result => result?.success));
+    }
+
     async deleteSubscriptionById(id) {
-        const result = await this.db
-            .prepare('DELETE FROM subscriptions WHERE id = ?')
-            .bind(id)
-            .run();
-        invalidateD1CollectionCache(this.db, 'subscriptions');
-        return Boolean(result?.success);
+        return this.deleteCollectionItem('subscriptions', id);
     }
 
     async putProfile(item) {
@@ -571,9 +606,7 @@ class D1StorageAdapter {
     }
 
     async deleteProfileById(id) {
-        const result = await this.db.prepare('DELETE FROM profiles WHERE id = ?').bind(id).run();
-        invalidateD1CollectionCache(this.db, 'profiles');
-        return Boolean(result?.success);
+        return this.deleteCollectionItem('profiles', id);
     }
 
     async getSubscriptionsByIds(ids = []) {

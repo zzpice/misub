@@ -1,7 +1,14 @@
-import { mount } from '@vue/test-utils';
+import { mount, enableAutoUnmount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { reactive } from 'vue';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// These lazy modals are outside the status-filter contract. Stub their modules too,
+// so an unfinished dynamic import cannot outlive Vitest's DOM environment.
+vi.mock('../../src/components/modals/NodePreview/NodePreviewModal.vue', () => ({ default: { render: () => null } }));
+vi.mock('../../src/components/modals/BulkImportModal.vue', () => ({ default: { render: () => null } }));
+vi.mock('../../src/components/modals/QRCodeModal.vue', () => ({ default: { render: () => null } }));
+enableAutoUnmount(afterEach);
 
 // Reactive so the view's `watch(() => route.query.status)` actually fires.
 const route = reactive({ query: {}, path: '/dashboard/subscriptions' });
