@@ -8,6 +8,7 @@ vi.mock('../../functions/storage-adapter.js', () => ({
     StorageFactory: {
         createAdapter: (...args) => createAdapter(...args),
         getStorageType: vi.fn(async () => 'd1'),
+        resolveKV: (env) => env?.MISUB_KV || null,
     },
 }));
 
