@@ -103,7 +103,6 @@ functions/modules/api-router.js
 /api/login_config
 /api/config
 /api/system/error_report
-/api/github/release
 ```
 
 需要登录态的管理接口包括：
@@ -136,7 +135,6 @@ functions/modules/auth-middleware.js              # 登录态、cookie、密码�
 functions/modules/rule-template-handler.js        # 自定义规则模板
 functions/modules/handlers/node-handler.js        # 节点数量、批量刷新、节点清理、健康检查
 functions/modules/handlers/debug-handler.js       # 调试、系统信息、导出、预览内容
-functions/modules/handlers/github-proxy-handler.js
 functions/modules/handlers/error-report-handler.js
 ```
 
