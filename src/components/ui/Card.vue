@@ -110,22 +110,33 @@
     const trafficInfo = computed(() => {
         const info = props.misub.userInfo;
         const REASONABLE_TRAFFIC_LIMIT_BYTES = 10 * 1024 * 1024 * 1024 * 1024 * 1024; // 10 PB
+        if (info?.total == null || info.download == null || info.upload == null) return null;
+
+        const total = Number(info.total);
+        const download = Number(info.download);
+        const upload = Number(info.upload);
         if (
-            !info ||
-            info.total === undefined ||
-            info.download === undefined ||
-            info.upload === undefined ||
-            info.total >= REASONABLE_TRAFFIC_LIMIT_BYTES
+            !Number.isFinite(total) ||
+            total <= 0 ||
+            total >= REASONABLE_TRAFFIC_LIMIT_BYTES ||
+            !Number.isFinite(download) ||
+            download < 0 ||
+            !Number.isFinite(upload) ||
+            upload < 0
         ) {
             return null;
         }
-        const total = info.total;
-        const used = info.download + info.upload;
-        const percentage = total > 0 ? Math.min((used / total) * 100, 100) : 0;
+
+        const used = download + upload;
+        if (!Number.isFinite(used)) return null;
+
+        const remaining = Math.max(0, total - used);
+        const percentage = Math.min((remaining / total) * 100, 100);
         return {
+            remaining: formatBytes(remaining),
             used: formatBytes(used),
             total: formatBytes(total),
-            percentage: percentage,
+            percentage,
         };
     });
 
@@ -416,24 +427,37 @@
                 class="grid gap-3 rounded-lg border border-gray-100 bg-gray-50/80 p-3 dark:border-white/10 dark:bg-white/5"
             >
                 <div v-if="trafficInfo" class="space-y-2">
-                    <div class="flex items-end justify-between text-xs">
-                        <span class="text-gray-500 dark:text-gray-400"
-                            >{{ t('subscriptions.usedTraffic') }}
-                            <span class="font-semibold text-gray-700 dark:text-gray-200">{{
-                                trafficInfo.used
-                            }}</span></span
-                        >
-                        <span class="text-gray-500 dark:text-gray-400">{{
-                            trafficInfo.total
-                        }}</span>
+                    <div class="flex items-center justify-between gap-2 text-xs">
+                        <span class="shrink-0 text-gray-500 dark:text-gray-400">
+                            {{ t('subscriptions.remainingTraffic') }}
+                        </span>
+                        <span class="min-w-0 text-right font-semibold tabular-nums text-gray-700 dark:text-gray-200">
+                            {{ trafficInfo.remaining }} / {{ trafficInfo.total }}
+                        </span>
                     </div>
                     <div
                         class="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10"
                     >
                         <div
+                            data-testid="traffic-remaining-progress"
+                            role="progressbar"
+                            :aria-label="t('subscriptions.remainingTraffic')"
+                            :aria-valuenow="Math.round(trafficInfo.percentage)"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
                             class="h-full rounded-full bg-gradient-to-r from-primary-400 to-cyan-400 transition-all duration-500"
                             :style="{ width: trafficInfo.percentage + '%' }"
                         ></div>
+                    </div>
+                    <div class="flex items-center justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                        <span>{{ t('subscriptions.usedTraffic') }} {{ trafficInfo.used }}</span>
+                        <span class="text-right tabular-nums">
+                            {{
+                                t('subscriptions.remainingRatio', {
+                                    percentage: trafficInfo.percentage.toFixed(1),
+                                })
+                            }}
+                        </span>
                     </div>
                 </div>
                 <div v-else class="text-xs text-gray-500 dark:text-gray-400">
