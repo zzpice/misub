@@ -954,8 +954,10 @@
                             :copied-node-id="copiedNodeId"
                             :parse-node-info="parseNodeInfo"
                             :get-protocol-style="getProtocolStyle"
-                            :selection-mode="pickingMode"
+                            :selection-mode="pickingMode || regionBulkMode"
+                            :editable-regions="Boolean(subscriptionId) && !profileId"
                             :selected-urls="selectedUrls"
+                            @edit-region="(node) => openRegionEditor([node])"
                             @copy="copyNodeUrl"
                             @toggle-select="toggleNodeSelection"
                         />
