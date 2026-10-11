@@ -39,7 +39,7 @@ describe('modal English translations', () => {
         await flushPromises();
 
         expect(wrapper.text()).toContain('Subscription access logs');
-        expect(wrapper.text()).toContain('No detailed access logs.');
+        expect(wrapper.text()).toContain('No detailed access records');
         expect(wrapper.text()).toContain('Refresh');
         expect(wrapper.text()).toContain('Clear');
         expectEnglishOnly(wrapper.text());
