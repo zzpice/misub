@@ -37,11 +37,39 @@ export function getSourceUpdateInterval(source) {
 
 export async function readSourceSnapshot(storage, source) {
     const value = await storage.get(snapshotKey(source));
-    if (!value || !Array.isArray(value.nodes) || value.nodes.length === 0) return null;
-    return {
-        ...value,
-        nodes: value.nodes.filter((n) => typeof n === 'string' && n.trim()),
+    const currentUrl = String(source.url || '').trim();
+    if (Array.isArray(value?.nodes) && value.nodes.length > 0) {
+        // A saved ID may be edited to point to a different upstream. Never
+        // serve the previous upstream's credentials as the new source.
+        if (value.sourceUrl && currentUrl && value.sourceUrl !== currentUrl) return null;
+        const nodes = value.nodes.filter((n) => typeof n === 'string' && n.trim());
+        return nodes.length ? { ...value, nodes } : null;
+    }
+
+    // One-way migration for legacy personal D1 caches, with their original
+    // update timestamp. Unlike those caches this new copy is never TTL bounded.
+    // Old node caches were already processed with source-level rules, so we
+    // tag their migration to avoid processing them a second time on read.
+    const oldKey = 'node_cache_subscription_' + sourceKey(source);
+    const legacy = await storage.get(oldKey);
+    if (!Array.isArray(legacy?.nodes) || !legacy.nodes.length) return null;
+    if (legacy.sourceUrl && currentUrl && legacy.sourceUrl !== currentUrl) return null;
+    const nodes = legacy.nodes.filter((n) => typeof n === 'string' && n.trim());
+    if (!nodes.length) return null;
+    const migrated = {
+        sourceId: source.id,
+        sourceUrl: currentUrl,
+        nodes,
+        nodeCount: nodes.length,
+        updatedAt: Number.isFinite(Date.parse(legacy.updatedAt))
+            ? legacy.updatedAt
+            : new Date(0).toISOString(),
+        userInfo: source.userInfo || null,
+        detectedName: source.detectedName || '',
+        migratedLegacy: true,
     };
+    await storage.put(snapshotKey(source), migrated);
+    return migrated;
 }
 
 async function acquireLock(storage, source) {
@@ -90,12 +118,17 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
                 ? fetched.nodes.filter((n) => typeof n === 'string' && n.trim())
                 : [];
             if (!nodes.length) throw new Error('Invalid or empty upstream subscription');
-            if (isSuspiciousNodeCountDrop(existing?.nodeCount || existing?.nodes?.length || 0, nodes.length)) {
+            const historicalCount = Math.max(
+                Number(existing?.nodeCount || existing?.nodes?.length || 0),
+                Number(source?.lastGoodNodeCount || 0), Number(source?.nodeCount || 0)
+            );
+            if (isSuspiciousNodeCountDrop(historicalCount, nodes.length)) {
                 throw new Error('Suspicious reduction in upstream nodes');
             }
             const updatedAt = new Date().toISOString();
             const snapshot = {
                 sourceId: source.id,
+                sourceUrl: String(source.url || '').trim(),
                 nodes,
                 nodeCount: nodes.length,
                 updatedAt,

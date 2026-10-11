@@ -8,6 +8,7 @@ import {
 } from '../utils.js';
 import { generateCombinedNodeList, fetchRemoteSourceSnapshot } from '../../services/subscription-service.js';
 import { resolveSourceSnapshot } from '../../services/source-snapshot-service.js';
+import { isPersonalMode } from '../personal-mode.js';
 import {
     KV_KEY_SUBS,
     KV_KEY_PROFILES,
@@ -793,7 +794,7 @@ export async function handleMisubRequest(context) {
     const remoteSources = targetMisubs.filter(
         (sub) => sub?.enabled && sub?.id && /^https?:\/\//i.test(String(sub.url || ''))
     );
-    await Promise.all(remoteSources.map(async (sub) => {
+    if (isPersonalMode(env)) await Promise.all(remoteSources.map(async (sub) => {
         try {
             const snapshot = await resolveSourceSnapshot({
                 storage: storageAdapter,
@@ -826,7 +827,7 @@ export async function handleMisubRequest(context) {
     const cacheKey = generateCacheKey(
         profileIdentifier ? 'profile' : 'token',
         profileIdentifier || token
-    ) + '_v_' + (variantHash >>> 0).toString(36);
+    ) + (isPersonalMode(env) ? '_v_' + (variantHash >>> 0).toString(36) : '');
 
     // 检查是否强制刷新（通过 URL 参数）
     const forceRefresh =
