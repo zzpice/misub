@@ -1,3 +1,4 @@
+import { resolveNodeRegion, getRegionEmoji } from '../utils/geo-utils.js';
 // 地区展示配置：包含 Emoji 和标准中文名称
 const REGION_DISPLAY_CONFIG = {
     香港: { flag: '🇭🇰', name: '香港节点' },
@@ -35,56 +36,26 @@ export const REGION_GROUP_PATTERNS = [
     { name: '🇦🇺 澳洲节点', pattern: /澳|AU|Australia/i },
 ];
 
-function normalizeRegionOverrides(overrides = []) {
-    if (!Array.isArray(overrides)) return [];
-    return overrides
-        .map((rule) => {
-            if (!rule || !rule.pattern || !rule.region) return null;
-            try {
-                return {
-                    pattern: new RegExp(rule.pattern, rule.flags || 'i'),
-                    region: String(rule.region).trim(),
-                };
-            } catch {
-                return null;
-            }
-        })
-        .filter(Boolean);
-}
-
 export function groupNodeLinesByRegion(nodes = [], options = {}) {
     const groups = new Map();
-    const regionOverrides = normalizeRegionOverrides(options.regionOverrides);
 
     nodes.forEach((node) => {
         const tagName = node.tag || node.name;
-        let region = '其他';
-        const override = regionOverrides.find((rule) => rule.pattern.test(tagName));
-
-        // 1. 用户自定义规则优先，用于修正自动地区识别误判
-        if (override) {
-            region = override.region;
-        } else if (node.metadata && node.metadata.region && node.metadata.region !== '其他') {
-            // 2. 使用预提取的元数据
-            region = node.metadata.region;
-        } else {
-            // 3. 回退到正则匹配逻辑
-            for (const { name: groupName, pattern } of REGION_GROUP_PATTERNS) {
-                if (pattern.test(tagName)) {
-                    // [核心修复] 增强提取能力：直接由预设名称提取中文核心地名，解决 split 导致的问题
-                    const match = groupName.match(/[\u4e00-\u9fa5]+/);
-                    region = match ? match[0].replace('节点', '') : '其他';
-                    break;
-                }
-            }
-        }
-
-        if (region === '其他') {
-            region = '其他';
-        }
-
+        // Generated URLs already contain the source-corrected flag. Treat that
+        // final display marker as authoritative: otherwise a second regex pass
+        // would undo a user edit after generation had applied manual > regex.
+        const finalizedFlag = options.regionsAlreadyResolved
+            ? String(tagName || '').match(/[\u{1F1E6}-\u{1F1FF}]{2}/u)?.[0]
+            : null;
+        const finalizedRegion = finalizedFlag ? resolveNodeRegion(finalizedFlag) : '';
+        const region = resolveNodeRegion(tagName, {
+            manualRegion: node.manualRegion || node.metadata?.manualRegion ||
+                (finalizedRegion !== '其他' ? finalizedRegion : ''),
+            regionOverrides: options.regionOverrides,
+            defaultRegion: node.defaultRegion,
+        });
         // 4. 构造标准的展示组名
-        const config = REGION_DISPLAY_CONFIG[region] || { flag: '🌍', name: `${region}节点` };
+        const config = REGION_DISPLAY_CONFIG[region] || { flag: getRegionEmoji(region), name: `${region}节点` };
         const groupName = `${config.flag} ${config.name}`;
 
         if (!groups.has(groupName)) {

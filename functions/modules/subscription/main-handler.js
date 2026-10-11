@@ -8,6 +8,7 @@ import {
 } from '../utils.js';
 import { generateCombinedNodeList, fetchRemoteSourceSnapshot } from '../../services/subscription-service.js';
 import { resolveSourceSnapshot } from '../../services/source-snapshot-service.js';
+import { readRegionPreferences } from '../../services/region-preferences.js';
 import { isPersonalMode } from '../personal-mode.js';
 import {
     KV_KEY_SUBS,
@@ -813,9 +814,16 @@ export async function handleMisubRequest(context) {
     // An aggregate cache includes the snapshot versions AND the requested
     // transform variant. Different profiles, filters, formats and user agents
     // must not replace one another's aggregate content.
+    const regionVersions = isPersonalMode(env)
+        ? await Promise.all(remoteSources.map(async (sub) =>
+            (await readRegionPreferences(storageAdapter, sub.id)).version
+        )) : [];
     const variant = JSON.stringify({
         targetFormat, userAgentHeader, urlInclude, urlExclude, urlRename, urlEmoji,
-        sources: remoteSources.map((sub) => [sub.id, sourceSnapshots.get(sub.id)?.updatedAt || 'none']),
+        sources: remoteSources.map((sub, i) => [
+            sub.id, sourceSnapshots.get(sub.id)?.updatedAt || 'none',
+            regionVersions[i] || '', sub.defaultRegion || '',
+        ]),
     });
     let variantHash = 2166136261;
     for (let i = 0; i < variant.length; i++) {
@@ -1120,6 +1128,7 @@ export async function handleMisubRequest(context) {
                     enableUdp: shouldEnableUdp,
                     enableTfo: urlTfo === 'true' || urlTfo === '1',
                     ruleLevel,
+                    regionsAlreadyResolved: isPersonalMode(env),
                     regionOverrides: Array.isArray(config.regionOverrides)
                         ? config.regionOverrides
                         : [],
@@ -1256,6 +1265,7 @@ export async function handleMisubRequest(context) {
         enableTfo: finalEnableTfo,
         ruleLevel: ruleLevel, // 统一后的规则等级
         regionOverrides: Array.isArray(config.regionOverrides) ? config.regionOverrides : [],
+        regionsAlreadyResolved: isPersonalMode(env),
         isMeta: isMetaCore(userAgentHeader, url.searchParams),
         customDnsOverride: config.customDnsOverride || '',
         dnsMode:

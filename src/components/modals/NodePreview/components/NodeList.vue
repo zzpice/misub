@@ -22,6 +22,7 @@
             type: Function,
             required: true,
         },
+        editableRegions: { type: Boolean, default: false },
         // [New] Selection Mode Props
         selectionMode: {
             type: Boolean,
@@ -33,7 +34,7 @@
         },
     });
 
-    const emit = defineEmits(['copy', 'toggle-select']);
+    const emit = defineEmits(['copy', 'toggle-select', 'edit-region']);
 
     const nodesRef = computed(() => props.nodes);
     const containerHeight = 500;
@@ -181,12 +182,17 @@
 
                                     <!-- 地区 (桌面端) -->
                                     <div class="col-span-1 hidden sm:block flex justify-center">
-                                        <span
-                                            class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400"
+                                        <button
+                                            type="button"
+                                            :disabled="!editableRegions || !node.fingerprint || selectionMode"
+                                            @click.stop="emit('edit-region', node)"
+                                            :title="editableRegions ? '点击修改节点地区' : ''"
+                                            class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400 disabled:cursor-default"
+                                            :class="{ 'hover:bg-indigo-100 dark:hover:bg-indigo-500/20': editableRegions }"
                                             style="min-width: 60px"
                                         >
-                                            {{ parseNodeInfo(node).region }}
-                                        </span>
+                                            {{ parseNodeInfo(node).region }}{{ node.regionSource === 'manual' ? ' ✎' : '' }}
+                                        </button>
                                     </div>
 
                                     <!-- 操作 (所有设备) -->
