@@ -59,13 +59,6 @@
     - 读取：登录后读取 subscriptions、profiles、settings、rule templates。
     - 写入：登录后可能异步迁移旧 profile ID。
 
-- `GET /api/github/release?repo=owner/repo`
-    - Handler：`handleGithubReleaseRequest()`，`functions/modules/handlers/github-proxy-handler.js`
-    - 认证：公开。
-    - 读取：GitHub 最新 release API；读 KV 缓存。
-    - 写入：`github_release_${repo}` KV 缓存。
-    - 限制：`repo` 只允许 `owner/repo` 形态；响应只保留 tag/url/time/name/body。
-
 - `GET /api/auth_debug`
     - Handler：`getAuthDebugInfo()` + `getAuthSessionDiagnostic()`
     - 认证：不要求登录，但默认关闭；仅 `ENABLE_AUTH_DIAGNOSTICS=true` 时可访问。
