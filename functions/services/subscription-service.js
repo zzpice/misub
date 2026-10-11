@@ -9,6 +9,7 @@ import { getProcessedUserAgent } from '../utils/format-utils.js';
 import { buildFetchProxyUrl } from '../utils/fetch-proxy-utils.js';
 import {
     prependNodeName,
+    replaceSsrDisplayName,
     addFlagEmoji,
     removeFlagEmoji,
     fixNodeUrlEncoding,
@@ -969,6 +970,7 @@ export async function generateCombinedNodeList(
                 defaultRegion: sub.defaultRegion,
             });
             const name = correctedName(url, region);
+            if (name && url.toLowerCase().startsWith('ssr://')) return replaceSsrDisplayName(url, name);
             return name ? applyManualNodeName(url, name) : url;
         }));
         const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
