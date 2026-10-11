@@ -51,7 +51,7 @@ export async function fetchPreviewSourceNodes(storage, env, subscription, userAg
     }
 
     const saved = await readRegionPreferences(storage, subscription.id);
-    const settings = await storage.get('misub_settings_v1') || {};
+    const settings = await storage.get('worker_settings_v1') || {};
     const localized = await applySourceRegions(nodes, subscription, saved, settings.regionOverrides);
     return {
         subscriptionName: subscription.name,
