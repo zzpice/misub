@@ -298,7 +298,7 @@
 
 - `GET /api/clients*` 是公开只读接口，但当前可能在图标迁移时写回 KV；如果未来要严格区分只读公开接口，可单独收敛这个副作用。
 - `/api/auth_debug` 与 `/api/auth_check` 不要求登录，但默认关闭；部署时必须保持 `ENABLE_AUTH_DIAGNOSTICS` 关闭，除非正在排查登录问题。
-- `/cron` 与 `/api/cron/trigger` 已统一为生产快照刷新路径；`functions/_cron.js` / `_schedule.js` 仍是历史样例实现，后续可在确认无依赖时清理。
+- `/cron` 与 `/api/cron/trigger` 已统一为生产快照刷新路径；旧版模拟的 `/_cron`、`/_schedule` 与 `/cron-dashboard` 已删除。
 - `/api/system/export` 可导出脱敏数据；虽然需要登录，后续仍应通过测试固定脱敏字段覆盖。
 - 所有会主动拉取外部 URL 的接口应继续依赖 `validatePublicFetchUrl()` / `safeFetchPublicUrl()`，避免私网 SSRF 回归。
 
