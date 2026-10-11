@@ -60,7 +60,7 @@ export async function updateRegionPreferences(storage, source, updates) {
     if (!Array.isArray(updates) || updates.length < 1 || updates.length > 200) throw Error('一次请选择 1–200 个节点');
     const snapshot = await readSourceSnapshot(storage, source);
     if (!snapshot?.nodes?.length) throw Error('没有可用的节点快照');
-    const parsed = parseNodeList(snapshot.nodes.join('\n'));
+    const parsed = parseNodeList(snapshot.nodes.join('\n'), { plusAsSpace: Boolean(source.plusAsSpace) });
     const valid = new Set(await Promise.all(parsed.map((node) => fingerprintNode(node.url))));
     for (const item of updates) {
         if (!item || typeof item.fingerprint !== 'string' ||
