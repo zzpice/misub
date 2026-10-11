@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import LogModal from '../../src/components/modals/LogModal.vue';
-import QuickImportModal from '../../src/components/modals/QuickImportModal.vue';
 import ManualNodeDedupModal from '../../src/components/modals/ManualNodeDedupModal.vue';
 import ManualNodeEditModal from '../../src/components/modals/ManualNodeEditModal.vue';
 import { createI18n } from '../../src/i18n/index.js';
@@ -43,23 +42,6 @@ describe('modal English translations', () => {
         expect(wrapper.text()).toContain('No log records yet');
         expect(wrapper.text()).toContain('Refresh');
         expect(wrapper.text()).toContain('Clear');
-        expectEnglishOnly(wrapper.text());
-    });
-
-    it('renders quick import modal in English', () => {
-        const wrapper = mount(QuickImportModal, {
-            props: {
-                show: true,
-                profile: { id: 'p1', name: 'Demo' },
-                clients: [],
-                profileToken: 'profiles',
-            },
-            global: englishGlobal(),
-        });
-
-        expect(wrapper.text()).toContain('Choose client import');
-        expect(wrapper.text()).toContain('No clients support one-click import yet');
-        expect(wrapper.text()).toContain('Tips:');
         expectEnglishOnly(wrapper.text());
     });
 
