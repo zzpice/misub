@@ -46,16 +46,17 @@ function stripInternalProxyFields(proxy) {
     return publicProxy;
 }
 
-function deduplicateProxyNames(proxies) {
-    const seen = new Map();
+function deduplicateProxyNames(proxies, groups = []) {
+    const seen = new Map(['DIRECT', 'REJECT', 'REJECT-DROP', ...groups.map(group => group.name)].map(name => [name, 1]));
     proxies.forEach((proxy) => {
         if (!proxy?.name) return;
         const originalName = proxy.name;
-        const count = seen.get(originalName) || 0;
+        let count = seen.get(originalName) || 0;
+        let name = count ? `${originalName} ${count + 1}` : originalName;
+        while (seen.has(name)) name = `${originalName} ${++count + 1}`;
         seen.set(originalName, count + 1);
-        if (count > 0) {
-            proxy.name = `${originalName} ${count + 1}`;
-        }
+        seen.set(name, 1);
+        proxy.name = name;
     });
 }
 
@@ -87,7 +88,7 @@ export function renderClashYamlProfileTemplate(templateText, nodeList, options =
         .map((line) => line.trim())
         .filter((line) => line && !line.startsWith('#'));
     const proxies = urlsToClashProxies(nodeUrls, options).map(stripInternalProxyFields);
-    deduplicateProxyNames(proxies);
+    deduplicateProxyNames(proxies, config['proxy-groups'] || []);
 
     return yaml.dump(
         {
@@ -177,12 +178,7 @@ export class ProcessorService {
         });
 
         if (!builtinProxyContent) {
-            // Fallback to raw Base64 if generator fails
-            return {
-                content: base64EncodeUtf8(combinedNodeList),
-                contentType: 'text/plain; charset=utf-8',
-                headers: userInfoHeader ? { 'Subscription-Userinfo': userInfoHeader } : {},
-            };
+            throw new Error('No generator output for requested subscription format');
         }
 
         let finalContent = builtinProxyContent;
@@ -213,6 +209,7 @@ export class ProcessorService {
 
             if (templateText && isIniTemplate) {
                 const renderParams = {
+                    ...builtinOptions,
                     nodeList: combinedNodeList,
                     fileName: subName,
                     targetFormat,

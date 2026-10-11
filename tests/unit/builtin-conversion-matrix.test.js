@@ -193,8 +193,8 @@ MATCH,MyGroup
         expect(fetch).not.toHaveBeenCalled();
     });
 
-    it('falls back to base64 node output when no builtin renderer supports the requested target', async () => {
-        const result = await ProcessorService.renderOutput({
+    it('rejects an unsupported structured format rather than serving incompatible base64', async () => {
+        await expect(ProcessorService.renderOutput({
             targetFormat: 'unsupported-target',
             combinedNodeList: NODE_LIST,
             subName: 'Unsupported Matrix Test',
@@ -203,9 +203,6 @@ MATCH,MyGroup
             templateSource: { kind: 'none', value: '' },
             managedConfigUrl: '',
             storageAdapter,
-        });
-
-        expect(result.contentType).toBe('text/plain; charset=utf-8');
-        expect(result.content).toBe(Buffer.from(NODE_LIST, 'utf8').toString('base64'));
+        })).rejects.toThrow('No generator output');
     });
 });

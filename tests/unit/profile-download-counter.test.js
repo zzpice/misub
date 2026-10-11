@@ -6,7 +6,7 @@ import {
 } from '../../functions/services/profile-download-counter.js';
 
 describe('anonymous subscription usage counter', () => {
-    it('uses the existing profile counter key independently of access logging', async () => {
+    it('uses the stable profile ID counter key independently of access logging', async () => {
         const rows = new Map();
         const statement = {
             bind: vi.fn((key) => ({
@@ -17,10 +17,10 @@ describe('anonymous subscription usage counter', () => {
         const storage = { db: { prepare } };
         const profile = { id: 'id', customId: 'family' };
         await Promise.all(Array.from({ length: 5 }, () => incrementProfileDownload(storage, profile)));
-        expect(rows.get('misub_profile_download_count_family')).toBe(5);
+        expect(rows.get('misub_profile_download_count_id')).toBe(5);
         expect(prepare).toHaveBeenCalledTimes(5);
         expect(prepare.mock.calls[0][0]).toContain('ON CONFLICT(key) DO UPDATE');
-        expect(profileCountKey(profile)).toBe('misub_profile_download_count_family');
+        expect(profileCountKey(profile)).toBe('misub_profile_download_count_id');
     });
 
     it('counts only successful real GET responses and waits for durable write', async () => {

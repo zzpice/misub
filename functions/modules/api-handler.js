@@ -34,7 +34,7 @@ import {
 } from './config.js';
 import { listRuleTemplates } from './rule-template-handler.js';
 
-const PROFILE_DOWNLOAD_COUNT_PREFIX = 'misub_profile_download_count_';
+import { readProfileDownloadCount } from '../services/profile-download-counter.js';
 
 function normalizeLoginPath(customLoginPath) {
     if (typeof customLoginPath !== 'string') return '/login';
@@ -56,7 +56,7 @@ async function attachProfileDownloadCounts(storageAdapter, profiles) {
 
     const counts = await Promise.all(
         profiles.map((profile) =>
-            storageAdapter.get(`${PROFILE_DOWNLOAD_COUNT_PREFIX}${profile.customId || profile.id}`)
+            readProfileDownloadCount(storageAdapter, profile)
         )
     );
 
@@ -219,18 +219,15 @@ export async function handleDataRequest(env, context = null) {
         try {
             const taskContext = context || { env };
             const runPromise = maybeRunScheduledTasks(taskContext, { source: 'admin-api' });
-            if (typeof taskContext.waitUntil !== 'function') {
-                runPromise.catch((error) =>
-                    console.warn('[ScheduledTasks] lazy check failed:', error?.message || error)
-                );
-            }
+            const checked = runPromise.catch(() => { console.warn('[ScheduledTasks] lazy check failed'); });
+            if (typeof taskContext.waitUntil === 'function') taskContext.waitUntil(checked);
         } catch (taskError) {
             console.warn(
                 '[ScheduledTasks] lazy check init failed:',
                 taskError?.message || taskError
             );
         }
-        return createJsonResponse({ misubs, profiles, ruleTemplates, config });
+        return createJsonResponse({ misubs, profiles, ruleTemplates, config: redactSettingsForResponse(config) });
     } catch (e) {
         console.error('[API Error /data] Failed to read from storage', {
             error: e?.message,
@@ -343,6 +340,15 @@ export async function handleMisubsSave(request, env) {
             }
         }
 
+        if (Array.isArray(finalProfiles) && (!diff || diff.profiles)) {
+            const oldProfiles = typeof storageAdapter.getAllProfiles === 'function'
+                ? await storageAdapter.getAllProfiles() : await storageAdapter.get(KV_KEY_PROFILES) || [];
+            const oldMap = new Map(oldProfiles.map(p => [p.id, p]));
+            finalProfiles = await Promise.all(finalProfiles.map(async p => ({ ...p,
+                downloadCount: Math.max(Number(p.downloadCount) || 0,
+                    await readProfileDownloadCount(storageAdapter, oldMap.get(p.id) || p)),
+            })));
+        }
         if (Array.isArray(finalProfiles)) {
             finalProfiles = finalProfiles.map((p, index) => ({
                 ...normalizeProfile(p),
@@ -356,11 +362,13 @@ export async function handleMisubsSave(request, env) {
                     diff.profiles.added = diff.profiles.added.map((p) => ({
                         ...p,
                         sortIndex: profileMap.get(p.id)?.sortIndex,
+                        downloadCount: profileMap.get(p.id)?.downloadCount,
                     }));
                 if (diff.profiles.updated)
                     diff.profiles.updated = diff.profiles.updated.map((p) => ({
                         ...p,
                         sortIndex: profileMap.get(p.id)?.sortIndex,
+                        downloadCount: profileMap.get(p.id)?.downloadCount,
                     }));
             }
         }
@@ -400,9 +408,14 @@ export async function handleMisubsSave(request, env) {
                 ]);
 
                 const saveTasks = [];
-                if (!subsHandled) saveTasks.push(storageAdapter.put(KV_KEY_SUBS, finalMisubs));
-                if (!profilesHandled)
-                    saveTasks.push(storageAdapter.put(KV_KEY_PROFILES, finalProfiles));
+                if (diff.subscriptions && !subsHandled) {
+                    if (!(await syncCollectionRowLevel(storageAdapter, 'subscriptions', finalMisubs)))
+                        saveTasks.push(storageAdapter.put(KV_KEY_SUBS, finalMisubs));
+                }
+                if (diff.profiles && !profilesHandled) {
+                    if (!(await syncCollectionRowLevel(storageAdapter, 'profiles', finalProfiles)))
+                        saveTasks.push(storageAdapter.put(KV_KEY_PROFILES, finalProfiles));
+                }
                 if (saveTasks.length > 0) {
                     await Promise.all(saveTasks);
                 }
@@ -514,7 +527,7 @@ export async function handleSettingsSave(request, env) {
                         {
                             success: false,
                             message:
-                                '个人部署的 Token、D1 存储和公开访问由 Cloudflare 配置管理；请同步更新 private-vault。',
+                                '个人部署的 Token、D1 存储和公开访问由 Cloudflare 配置管理；请在 Cloudflare 控制台管理对应配置。',
                         },
                         400
                     );
@@ -623,11 +636,13 @@ export async function handleSettingsSave(request, env) {
         }
 
         // 双存储同步：尽量保持 KV / D1 一致
-        try {
-            const d1Adapter = StorageFactory.createAdapter(env, STORAGE_TYPES.D1);
-            await d1Adapter.put(KV_KEY_SETTINGS, finalSettings);
-        } catch (syncError) {
-            console.warn('[API] Failed to sync settings to D1:', syncError?.message || syncError);
+        if (storageAdapter.type !== STORAGE_TYPES.D1) {
+            try {
+                const d1Adapter = StorageFactory.createAdapter(env, STORAGE_TYPES.D1);
+                await d1Adapter.put(KV_KEY_SETTINGS, finalSettings);
+            } catch (syncError) {
+                console.warn('[API] Failed to sync settings to D1:', syncError?.message || syncError);
+            }
         }
         if (!isPersonalMode(env)) {
             try {
@@ -709,17 +724,6 @@ export async function handleSettingsReset(env) {
     }
 }
 
-/**
- * 处理公开订阅组获取API
- * @param {Object} env - Cloudflare环境对象
- * @returns {Promise<Response>} HTTP响应
- */
-
-/**
- * 处理公开配置获取API
- * @param {Object} env - Cloudflare环境对象
- * @returns {Promise<Response>} HTTP响应
- */
 export async function handleLoginConfig(request, env) {
     try {
         const storageAdapter = await getStorageAdapter(env);

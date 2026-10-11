@@ -430,7 +430,7 @@ describe('security hardening', () => {
         const infoSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         const env = {
             MISUB_KV: createKv({
-                misub_settings_v1: JSON.stringify({
+                worker_settings_v1: JSON.stringify({
                     mytoken: 'super-secret-token',
                     subConverter: 'backend',
                     selectedRules: [],
@@ -627,7 +627,7 @@ describe('security hardening', () => {
     it('redacts sensitive fields from exported settings and subscriptions', async () => {
         const env = {
             MISUB_KV: createKv({
-                misub_settings_v1: JSON.stringify({
+                worker_settings_v1: JSON.stringify({
                     mytoken: 'export-token-secret',
                     cronSecret: 'cron-secret-value',
                     BotToken: 'telegram-bot-token',

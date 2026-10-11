@@ -1,3 +1,4 @@
+import { safeFetchNetworkUrl, readResponseBufferWithLimit } from '../security-utils.js';
 /**
  * 节点处理器模块
  * 处理节点数量统计、批量更新等节点相关API请求
@@ -125,8 +126,8 @@ export async function handleNodeCountRequest(request, env) {
 
             // cf 选项需传给 fetch() 而非 Request()：仅在用户显式启用跳过证书验证时传递
             const cfOptions = await resolveNodeCountFetchCfOptions(env);
-            const trafficRequest = fetch(new Request(requestUrl, trafficFetchOptions), cfOptions);
-            const nodeCountRequest = fetch(new Request(requestUrl, fetchOptions), cfOptions);
+            const trafficRequest = safeFetchNetworkUrl(requestUrl, { ...trafficFetchOptions, ...cfOptions, signal: AbortSignal.timeout(15000) });
+            const nodeCountRequest = safeFetchNetworkUrl(requestUrl, { ...fetchOptions, ...cfOptions, signal: AbortSignal.timeout(15000) });
 
             // 使用 Promise.allSettled 替换 Promise.all
             const responses = await Promise.allSettled([trafficRequest, nodeCountRequest]);
@@ -242,7 +243,7 @@ export async function handleNodeCountRequest(request, env) {
             // 2. 处理节点数请求的结果
             if (responses[1].status === 'fulfilled' && responses[1].value.ok) {
                 const nodeCountResponse = responses[1].value;
-                const buffer = await nodeCountResponse.arrayBuffer();
+                const buffer = await readResponseBufferWithLimit(nodeCountResponse);
                 const text = new TextDecoder('utf-8').decode(buffer);
 
                 // 使用与预览功能相同的节点解析逻辑
@@ -310,7 +311,7 @@ export async function handleNodeCountRequest(request, env) {
                         fetchError =
                             fetchError || new Error('No valid nodes returned from subscription');
                         console.warn(
-                            `[NodeHandler] Node count response parsed successfully but contained no valid nodes for ${subUrl}.`
+                            `[NodeHandler] Node count response parsed successfully but contained no valid nodes.`
                         );
                     }
                 } catch (e) {
@@ -402,7 +403,7 @@ export async function handleNodeCountRequest(request, env) {
                 }
 
                 console.error(
-                    `[Node Count] Node count update failed for ${subUrl}: ${errorMessage}`
+                    `[Node Count] Node count update failed: ${errorMessage}`
                 );
                 return createJsonResponse({
                     success: false,
@@ -420,7 +421,8 @@ export async function handleNodeCountRequest(request, env) {
                     env,
                     await StorageFactory.getStorageType(env)
                 );
-                const originalSubs = (await storageAdapter.get('misub_subscriptions_v1')) || [];
+                const originalSubs = typeof storageAdapter.getAllSubscriptions === 'function'
+                    ? await storageAdapter.getAllSubscriptions() : (await storageAdapter.get('misub_subscriptions_v1')) || [];
                 const subToUpdate = originalSubs.find((s) => s.url === subUrl);
 
                 if (subToUpdate) {
@@ -434,7 +436,7 @@ export async function handleNodeCountRequest(request, env) {
                     // the last healthy count instead of destroying the shrink-protection baseline.
                     if (isSuspiciousNodeCountDrop(knownNodeCount, result.count)) {
                         console.warn(
-                            `[Node Count] Rejecting suspicious node-count drop for ${subUrl} (${knownNodeCount} known -> ${result.count} fetched)`
+                            `[Node Count] Rejecting suspicious node-count drop (${knownNodeCount} known -> ${result.count} fetched)`
                         );
                         result.count = knownNodeCount;
                         result.protected = true;
@@ -446,7 +448,7 @@ export async function handleNodeCountRequest(request, env) {
                     }
 
                     if (typeof storageAdapter.updateSubscriptionById === 'function') {
-                        await storageAdapter.updateSubscriptionById(subToUpdate.id, (current) => ({
+                        await storageAdapter.updateSubscriptionById(subToUpdate.id, (current) => current.url !== subUrl ? current : ({
                             ...current,
                             nodeCount: result.count,
                             ...(result.count >= 10 ? { lastGoodNodeCount: result.count } : {}),
@@ -518,7 +520,8 @@ export async function handleBatchUpdateNodesRequest(request, env) {
             env,
             await StorageFactory.getStorageType(env)
         );
-        const allSubscriptions = (await storageAdapter.get('misub_subscriptions_v1')) || [];
+        const allSubscriptions = typeof storageAdapter.getAllSubscriptions === 'function'
+            ? await storageAdapter.getAllSubscriptions() : (await storageAdapter.get('misub_subscriptions_v1')) || [];
 
         // 过滤出要更新的订阅
         const targetSubscriptions = allSubscriptions.filter(
@@ -561,26 +564,17 @@ export async function handleBatchUpdateNodesRequest(request, env) {
                     );
                 }
 
-                // 使用 Promise.race 实现超时
-                const fetchPromise = fetch(
-                    new Request(requestUrl, {
-                        headers: { 'User-Agent': effectiveUserAgent },
-                        redirect: 'follow',
-                    }),
-                    { cf: { insecureSkipVerify: true } }
-                );
-
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('请求超时')), SINGLE_SUB_TIMEOUT)
-                );
-
-                const response = await Promise.race([fetchPromise, timeoutPromise]);
+                const response = await safeFetchNetworkUrl(requestUrl, {
+                    headers: { 'User-Agent': effectiveUserAgent },
+                    signal: AbortSignal.timeout(SINGLE_SUB_TIMEOUT),
+                    ...(await resolveNodeCountFetchCfOptions(env)),
+                });
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                const text = await response.text();
+                const text = new TextDecoder().decode(await readResponseBufferWithLimit(response));
 
                 // 使用与预览功能相同的解码和节点统计逻辑
                 let nodeCount = 0;
@@ -677,7 +671,11 @@ export async function handleCleanNodesRequest(request, env) {
         if (profileId) {
             // 清理指定订阅组的节点
             const { handleSubscriptionNodesRequest } = await import('../subscription-handler.js');
-            const previewResult = await handleSubscriptionNodesRequest(request, env);
+            const previewResponse = await handleSubscriptionNodesRequest(new Request(request.url, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ profileId }),
+            }), env);
+            const previewResult = await previewResponse.json();
 
             if (!previewResult.success) {
                 return createErrorResponse(`获取订阅组节点失败: ${previewResult.error}`, 400);

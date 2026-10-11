@@ -1,11 +1,9 @@
 import { StorageFactory } from '../../storage-adapter.js';
 import {
     createJsonResponse,
-    createErrorResponse,
     JSON_BODY_LIMITS,
     readJsonWithLimit,
 } from '../utils.js';
-import { KV_KEY_PROFILES } from '../config.js';
 import { handleProfileMode } from './profile-handler.js';
 import { handleSingleSubscriptionMode, handleDirectUrlMode } from './single-subscription.js';
 
@@ -24,13 +22,6 @@ export function determineRequestMode(requestData) {
     }
     return 'unknown';
 }
-
-/**
- * 处理公开订阅组预览请求
- * @param {Object} request - HTTP请求对象
- * @param {Object} env - Cloudflare环境对象
- * @returns {Promise<Response>} HTTP响应
- */
 
 /**
  * 处理订阅节点请求的主要入口
@@ -108,7 +99,7 @@ export async function handleSubscriptionNodesRequest(request, env) {
                 );
         }
 
-        return createJsonResponse(result);
+        return result instanceof Response ? result : createJsonResponse(result);
     } catch (e) {
         return createJsonResponse(
             {

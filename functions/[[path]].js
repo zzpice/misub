@@ -420,24 +420,3 @@ export async function onRequest(context) {
         );
     }
 }
-
-/**
- * 调试信息导出 (仅开发环境)
- */
-export const debugInfo = {
-    version: '2.0.0-modular-v2',
-    modules: [
-        'utils',
-        'auth-middleware',
-        'subscription',
-        'subscription-handler',
-        'api-handler',
-        'api-router',
-        'handlers/subscription-handler',
-        'handlers/node-handler',
-        'handlers/debug-handler',
-        'utils/geo-utils',
-        'utils/node-parser',
-    ],
-    architecture: 'modular-refactor-v2-domain-split',
-};

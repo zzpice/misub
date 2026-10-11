@@ -7,7 +7,7 @@ import { parseNodeList } from '../modules/utils/node-parser.js';
 import { readSourceSnapshot } from './source-snapshot-service.js';
 const PREFIX = 'misub_region_preferences_v1_';
 export function regionPreferencesKey(id) { return PREFIX + encodeURIComponent(String(id)); }
-function identity(url) {
+export function nodeRegionIdentity(url) {
     const base = String(url || '').trim().split('#')[0];
     if (/^vmess:\/\//i.test(base)) {
         try {
@@ -28,7 +28,7 @@ function identity(url) {
     return base;
 }
 export async function fingerprintNode(url) {
-    const bytes = new TextEncoder().encode(identity(url));
+    const bytes = new TextEncoder().encode(nodeRegionIdentity(url));
     const digest = await crypto.subtle.digest('SHA-256', bytes);
     return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 }
@@ -70,17 +70,37 @@ export async function updateRegionPreferences(storage, source, updates) {
         if (item.region != null && item.region !== '' &&
             !Object.prototype.hasOwnProperty.call(REGION_KEYWORDS, item.region)) throw Error('无效地区');
     }
-    const saved = await readRegionPreferences(storage, source.id);
-    const overrides = { ...saved.overrides };
-    for (const item of updates) {
-        if (item.region) overrides[item.fingerprint] = item.region;
-        else delete overrides[item.fingerprint];
+    const key = regionPreferencesKey(source.id);
+    for (let attempt = 0; attempt < 5; attempt++) {
+        const row = storage.db
+            ? await storage.db.prepare('SELECT value FROM settings WHERE key = ?').bind(key).first()
+            : null;
+        const saved = storage.db ? (row ? JSON.parse(row.value) : {})
+            : await readRegionPreferences(storage, source.id);
+        const overrides = { ...(saved.overrides || {}) };
+        for (const item of updates) {
+            if (item.region) overrides[item.fingerprint] = item.region;
+            else delete overrides[item.fingerprint];
+        }
+        if (Object.keys(overrides).length > 3000) throw Error('人工覆盖数量超过上限');
+        const version = new Date().toISOString() + '-' + crypto.randomUUID();
+        const value = { version, overrides };
+        if (!storage.db) {
+            await storage.put(key, value);
+            return { version, updated: updates.length };
+        }
+        const result = row
+            ? await storage.db.prepare(
+                'UPDATE settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ? AND value = ?'
+            ).bind(JSON.stringify(value), key, row.value).run()
+            : await storage.db.prepare(
+                'INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)'
+            ).bind(key, JSON.stringify(value)).run();
+        if (result?.meta?.changes === 1) return { version, updated: updates.length };
     }
-    if (Object.keys(overrides).length > 3000) throw Error('人工覆盖数量超过上限');
-    const version = new Date().toISOString() + '-' + crypto.randomUUID();
-    await storage.put(regionPreferencesKey(source.id), { version, overrides });
-    return { version, updated: updates.length };
+    throw Error('地区设置已被同时修改，请重试');
 }
+
 export function correctedName(url, region) {
     if (!region || region === '其他') return null;
     const name = parseNodeInfo(url).name;

@@ -1,5 +1,4 @@
-import { getCache } from '../../services/node-cache-service.js';
-import { assertPublicNetworkUrl } from '../security-utils.js';
+import { assertPublicNetworkUrl, safeFetchNetworkUrl, readResponseBufferWithLimit } from '../security-utils.js';
 
 const TEMPLATE_CACHE_PREFIX = 'transform_template_';
 const DEFAULT_REVALIDATE_INTERVAL_SECONDS = 5 * 60;
@@ -97,7 +96,7 @@ export async function fetchTransformTemplate(storageAdapter, templateUrl, forceR
     const safeTemplateUrl = assertPublicNetworkUrl(templateUrl).toString();
     const cacheKey = makeTemplateCacheKey(safeTemplateUrl);
     const cacheConfig = getTemplateCacheConfig(storageAdapter);
-    const { data: cachedTemplate } = await getCache(storageAdapter, cacheKey);
+    const cachedTemplate = await storageAdapter.get(cacheKey);
 
     if (
         !forceRefresh &&
@@ -108,12 +107,17 @@ export async function fetchTransformTemplate(storageAdapter, templateUrl, forceR
     }
 
     let response;
+    let text;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
     try {
-        response = await fetch(safeTemplateUrl, {
+        response = await safeFetchNetworkUrl(safeTemplateUrl, {
+            signal: controller.signal,
             headers: forceRefresh
                 ? { 'User-Agent': 'MiSub-Template-Fetch/1.0' }
                 : buildFetchHeaders(cachedTemplate),
         });
+        if (response.ok) text = new TextDecoder().decode(await readResponseBufferWithLimit(response));
     } catch (error) {
         if (
             cachedTemplate?.nodes &&
@@ -125,6 +129,8 @@ export async function fetchTransformTemplate(storageAdapter, templateUrl, forceR
             return cachedTemplate.nodes;
         }
         throw error;
+    } finally {
+        clearTimeout(timeoutId);
     }
 
     if (response.status === 304 && cachedTemplate?.nodes) {
@@ -156,7 +162,6 @@ export async function fetchTransformTemplate(storageAdapter, templateUrl, forceR
         throw new Error(`Template fetch failed: HTTP ${response.status}`);
     }
 
-    const text = await response.text();
     const cacheEntry = createCacheEntry(safeTemplateUrl, text, response, cachedTemplate);
     await putTemplateCache(storageAdapter, cacheKey, cacheEntry, cacheConfig.maxAgeSeconds);
 

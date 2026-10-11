@@ -1,3 +1,4 @@
+import { createReservedNameMap } from './builtin-rules-provider.js';
 import { parseIniTemplate } from './template-parsers/ini-template-parser.js';
 import { applySmartModelOptimizations } from './template-processor.js';
 import { renderClashFromTemplateModel } from './template-renderers/render-clash.js';
@@ -13,9 +14,10 @@ import { getUniqueName } from './name-utils.js';
  * 处理重名节点，确保每个节点名称唯一
  * @param {Object[]} proxies - 代理对象数组
  */
-function deduplicateNames(proxies) {
+function deduplicateNames(proxies, groups, options) {
     if (!Array.isArray(proxies)) return;
-    const usedNames = new Map();
+    const usedNames = createReservedNameMap(proxies, options);
+    groups.forEach(group => usedNames.set(group.name, 1));
     proxies.forEach((proxy) => {
         if (proxy && proxy.name) {
             proxy.name = getUniqueName(proxy.name, usedNames);
@@ -32,7 +34,7 @@ export function renderClashFromIniTemplate(templateText, options = {}) {
     const proxies = Array.isArray(options.proxies)
         ? options.proxies
         : urlsToClashProxies(proxyUrls, options);
-    deduplicateNames(proxies);
+    deduplicateNames(proxies, parseIniTemplate(templateText, options).groups, options);
 
     let model = parseIniTemplate(templateText, {
         ...options,
@@ -54,7 +56,7 @@ export function renderSingboxFromIniTemplate(templateText, options = {}) {
     const proxies = Array.isArray(options.proxies)
         ? options.proxies
         : urlsToClashProxies(proxyUrls, options);
-    deduplicateNames(proxies);
+    deduplicateNames(proxies, parseIniTemplate(templateText, options).groups, options);
 
     let model = parseIniTemplate(templateText, {
         ...options,
@@ -73,7 +75,7 @@ export function renderSurgeFromIniTemplate(templateText, options = {}) {
     const proxies = Array.isArray(options.proxies)
         ? options.proxies
         : urlsToClashProxies(proxyUrls, options);
-    deduplicateNames(proxies);
+    deduplicateNames(proxies, parseIniTemplate(templateText, options).groups, options);
 
     let model = parseIniTemplate(templateText, {
         ...options,
@@ -92,7 +94,7 @@ export function renderLoonFromIniTemplate(templateText, options = {}) {
     const proxies = Array.isArray(options.proxies)
         ? options.proxies
         : urlsToClashProxies(proxyUrls, options);
-    deduplicateNames(proxies);
+    deduplicateNames(proxies, parseIniTemplate(templateText, options).groups, options);
 
     let model = parseIniTemplate(templateText, {
         ...options,
@@ -111,7 +113,7 @@ export function renderQuanxFromIniTemplate(templateText, options = {}) {
     const proxies = Array.isArray(options.proxies)
         ? options.proxies
         : urlsToClashProxies(proxyUrls, options);
-    deduplicateNames(proxies);
+    deduplicateNames(proxies, parseIniTemplate(templateText, options).groups, options);
 
     let model = parseIniTemplate(templateText, {
         ...options,
@@ -130,7 +132,7 @@ export function renderEgernFromIniTemplate(templateText, options = {}) {
     const proxies = Array.isArray(options.proxies)
         ? options.proxies
         : urlsToClashProxies(proxyUrls, options);
-    deduplicateNames(proxies);
+    deduplicateNames(proxies, parseIniTemplate(templateText, options).groups, options);
 
     let model = parseIniTemplate(templateText, {
         ...options,

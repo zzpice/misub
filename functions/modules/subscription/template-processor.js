@@ -1,3 +1,4 @@
+import { resolveNodeRegion } from '../utils/geo-utils.js';
 import { groupNodeLinesByRegion } from './region-groups.js';
 import { AI_SERVICE_RULES } from './builtin-rules-provider.js';
 import { DNS_PROXY_GROUP } from './safe-dns.js';
@@ -93,6 +94,8 @@ function hasEquivalentRegionGroup(model, region) {
         const normalizedGroupName = normalizeGroupSemanticName(group.name);
         if (normalizedGroupName === normalizedRegionName) return true;
 
+        // A global selector containing all nodes is not a region group.
+        if (resolveNodeRegion(group.name) !== resolveNodeRegion(region.name)) return false;
         const members = Array.isArray(group.members) ? group.members : [];
         if (members.length === 0) return false;
 
@@ -363,7 +366,9 @@ export function applySmartModelOptimizations(model) {
         const proxyNames = model.proxies.map((p) => p.name || p.tag).filter(Boolean);
         if (proxyNames.length > 0) {
             // 4. 识别地区分组并注入
-            const nodeEntries = proxyNames.map((name) => ({ tag: name }));
+            const nodeEntries = model.proxies.map(proxy => ({
+                tag: proxy.name || proxy.tag, metadata: proxy.metadata,
+            }));
             const regions = groupNodeLinesByRegion(nodeEntries);
 
             // 注入地区自动选优组

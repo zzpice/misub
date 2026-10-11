@@ -57,7 +57,7 @@ import {
     handleHealthCheckRequest,
 } from './handlers/node-handler.js';
 import { handleParseSubscription } from './parse-subscription-handler.js';
-import { safeFetchPublicUrl, validatePublicFetchUrl } from './security-utils.js';
+import { safeFetchPublicUrl, safeFetchNetworkUrl, readResponseBufferWithLimit, validatePublicFetchUrl } from './security-utils.js';
 import { normalizeSubconverterBackend } from './subscription/main-handler.js';
 import { maybeRunScheduledTasks } from './scheduled-task-runner.js';
 import { handleExternalNodesCallbackRequest } from '../services/external-nodes-callback-service.js';
@@ -562,8 +562,7 @@ export async function handleSubconverterTestRequest(request, env) {
         endpoint.searchParams.set('sort', 'false');
 
         const startedAt = Date.now();
-        const response = await fetch(
-            new Request(endpoint.toString(), {
+        const response = await safeFetchNetworkUrl(endpoint.toString(), {
                 method: 'GET',
                 headers: {
                     'User-Agent': 'MiSub/Backend-Test',
@@ -571,12 +570,9 @@ export async function handleSubconverterTestRequest(request, env) {
                     'Cache-Control': 'no-cache',
                 },
                 signal: controller.signal,
-            })
-        );
+            });
         const elapsedMs = Date.now() - startedAt;
-        clearTimeout(timeoutId);
-
-        const text = await response.text();
+        const text = new TextDecoder().decode(await readResponseBufferWithLimit(response));
         const sample = text.slice(0, 200);
         const hasUsableOutput =
             response.ok && /MiSub-Test-Node|proxies:|proxy-groups:|trojan/i.test(text);
@@ -616,6 +612,8 @@ export async function handleSubconverterTestRequest(request, env) {
             },
             502
         );
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 

@@ -3,6 +3,7 @@
  * 包含各种通用的辅助函数
  */
 
+import { safeFetchNetworkUrl, readResponseBufferWithLimit } from './security-utils.js';
 import { isPersonalMode, applyPersonalSettings } from './personal-mode.js';
 
 /**
@@ -427,7 +428,14 @@ export function createTimeoutFetch(input, init = {}, timeout = 10000) {
         ...requestInit,
         signal: controller.signal,
     });
-    const fetchPromise = cf ? fetch(request, { cf }) : fetch(request);
+    const fetchPromise = safeFetchNetworkUrl(request.url, {
+        ...requestInit,
+        method: request.method,
+        headers: request.headers,
+        signal: request.signal,
+        ...(request.body ? { body: request.body, duplex: 'half' } : {}),
+        ...(cf ? { cf } : {}),
+    });
 
     return fetchPromise.finally(() => {
         clearTimeout(timeoutId);
@@ -693,7 +701,17 @@ export async function readJsonWithLimit(request, limitBytes = JSON_BODY_LIMITS.n
         }
     }
 
-    const text = await request.text();
+    let text;
+    if (typeof request.body?.getReader === 'function') {
+        try {
+            text = new TextDecoder().decode(await readResponseBufferWithLimit(request, limitBytes));
+        } catch (error) {
+            if (error.message === 'Response content too large') throw new RequestBodyTooLargeError(limitBytes);
+            throw error;
+        }
+    } else {
+        text = await request.text();
+    }
     if (new TextEncoder().encode(text).length > limitBytes) {
         throw new RequestBodyTooLargeError(limitBytes);
     }

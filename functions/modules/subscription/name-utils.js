@@ -1,11 +1,9 @@
-/**
- * 生成唯一节点名称（统一 _1, _2 后缀策略）
- * @param {string} baseName
- * @param {Map<string, number>} usedNames
- * @returns {string}
- */
+/** Reserve original names and every emitted suffix in the same namespace. */
 export function getUniqueName(baseName, usedNames) {
-    const count = (usedNames.get(baseName) || 0) + 1;
-    usedNames.set(baseName, count);
-    return count === 1 ? baseName : `${baseName}_${count - 1}`;
+    let suffix = usedNames.get(baseName) || 0;
+    let name = suffix ? `${baseName}_${suffix}` : baseName;
+    while (usedNames.has(name)) name = `${baseName}_${++suffix}`;
+    usedNames.set(baseName, suffix + 1);
+    usedNames.set(name, 1);
+    return name;
 }

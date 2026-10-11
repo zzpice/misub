@@ -1,3 +1,4 @@
+import { SYSTEM_CONSTANTS, KV_KEY_SETTINGS } from '../config.js';
 /**
  * 调试处理器模块
  * 处理调试、订阅预览等开发相关API请求
@@ -55,7 +56,8 @@ export async function handleDebugSubscriptionRequest(request, env) {
             body: JSON.stringify(requestData),
         });
 
-        const nodeResult = await handleSubscriptionNodesRequest(nodeRequest, env);
+        const nodeResponse = await handleSubscriptionNodesRequest(nodeRequest, env);
+        const nodeResult = await nodeResponse.json();
 
         if (!nodeResult.success) {
             return createJsonResponse(
@@ -292,24 +294,26 @@ export async function handleExportDataRequest(request, env) {
         const exportData = {
             exportInfo: {
                 timestamp: new Date().toISOString(),
-                version: '2.0.0',
+                version: SYSTEM_CONSTANTS.VERSION,
                 storageType: await StorageFactory.getStorageType(env),
             },
             data: {},
         };
 
         if (includeSubscriptions) {
-            const subscriptions = (await storageAdapter.get('misub_subscriptions_v1')) || [];
+            const subscriptions = typeof storageAdapter.getAllSubscriptions === 'function'
+                ? await storageAdapter.getAllSubscriptions() : (await storageAdapter.get('misub_subscriptions_v1')) || [];
             exportData.data.subscriptions = redactSensitiveObject(subscriptions);
         }
 
         if (includeProfiles) {
-            const profiles = (await storageAdapter.get('misub_profiles_v1')) || [];
+            const profiles = typeof storageAdapter.getAllProfiles === 'function'
+                ? await storageAdapter.getAllProfiles() : (await storageAdapter.get('misub_profiles_v1')) || [];
             exportData.data.profiles = redactSensitiveObject(profiles);
         }
 
         if (includeSettings) {
-            const settings = (await storageAdapter.get('misub_settings_v1')) || {};
+            const settings = (await storageAdapter.get(KV_KEY_SETTINGS)) || {};
             exportData.data.settings = redactSensitiveObject(settings);
         }
 

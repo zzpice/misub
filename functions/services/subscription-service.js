@@ -18,11 +18,11 @@ import {
 } from '../utils/node-utils.js';
 import { runOperatorChain } from '../utils/operator-runner.js';
 import { createTimeoutFetch } from '../modules/utils.js';
-import { assertPublicNetworkUrl } from '../modules/security-utils.js';
+import { assertPublicNetworkUrl, safeFetchNetworkUrl, readResponseBufferWithLimit } from '../modules/security-utils.js';
 import { isSuspiciousNodeCountDrop } from './node-cache-service.js';
 import { isPersonalMode } from '../modules/personal-mode.js';
 import { resolveSourceSnapshot } from './source-snapshot-service.js';
-import { readRegionPreferences, fingerprintNode, correctedName } from './region-preferences.js';
+import { readRegionPreferences, fingerprintNode, correctedName, nodeRegionIdentity } from './region-preferences.js';
 import { resolveNodeRegion } from '../modules/utils/geo-utils.js';
 
 const PERSONAL_SOURCE_CACHE_MAX_AGE = 12 * 60 * 60 * 1000;
@@ -280,7 +280,7 @@ export async function fetchAirportSiteTitle(rootDomain, options = {}) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
-        const response = await fetch(`https://${domain}/`, {
+        const response = await safeFetchNetworkUrl(`https://${domain}/`, {
             method: 'GET',
             headers: {
                 'User-Agent':
@@ -293,7 +293,7 @@ export async function fetchAirportSiteTitle(rootDomain, options = {}) {
         if (!response.ok) return '';
 
         // 只读前 64KB，标题一定在 <head> 里
-        const text = (await response.text()).slice(0, 65536);
+        const text = new TextDecoder().decode(await readResponseBufferWithLimit(response, 1024 * 1024)).slice(0, 65536);
         const match = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
         if (!match) return '';
 
@@ -606,13 +606,23 @@ export async function fetchRemoteSourceSnapshot(sub, storage = null, context = n
         ? buildFetchProxyUrl(sub.fetchProxy, sub.url, userAgent)
         : sub.url;
     const safeUrl = assertPublicNetworkUrl(url).toString();
-    const response = await fetchWithRetry(safeUrl, {
-        headers: { 'User-Agent': userAgent },
-        redirect: 'follow',
-    }, { timeout: 12000, maxRetries: 0 });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const buffer = await response.arrayBuffer();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    let response;
+    let buffer;
+    try {
+        response = await safeFetchNetworkUrl(safeUrl, {
+            headers: { 'User-Agent': userAgent },
+            signal: controller.signal,
+        });
+        if (!response.ok) {
+            await response.body?.cancel();
+            throw new Error(`HTTP ${response.status}`);
+        }
+        buffer = await readResponseBufferWithLimit(response);
+    } finally {
+        clearTimeout(timeoutId);
+    }
     let text = await decodeBase64Content(new TextDecoder('utf-8').decode(buffer));
     let parsed = parseNodeList(text);
     if (!parsed.length) {
@@ -712,6 +722,13 @@ export async function generateCombinedNodeList(
                 subName: subSource?.name,
                 userAgent,
                 config,
+                nodeMetadataByUrl: new Map(currentNodes.map(url => {
+                    const hints = context.sourceRegionHints?.get(nodeRegionIdentity(url));
+                    const region = hints ? resolveNodeRegion(parseNodeInfo(url).name, {
+                        ...hints, regionOverrides: config.regionOverrides,
+                    }) : '';
+                    return [url, region ? { metadata: { regionZh: region } } : {}];
+                })),
             });
         }
 
@@ -1029,6 +1046,13 @@ export async function generateCombinedNodeList(
             subName: profilePrefixSettings?.name,
             userAgent,
             config,
+            nodeMetadataByUrl: new Map(currentLines.map(url => {
+                const hints = context.sourceRegionHints?.get(nodeRegionIdentity(url));
+                const region = hints ? resolveNodeRegion(parseNodeInfo(url).name, {
+                    ...hints, regionOverrides: config.regionOverrides,
+                }) : '';
+                return [url, region ? { metadata: { regionZh: region } } : {}];
+            })),
         });
     }
 

@@ -3,11 +3,11 @@
  * 将节点 URL 列表转换为基础可用的 sing-box JSON 配置。
  */
 
-import { urlToClashProxy, urlsToClashProxies } from '../../utils/url-to-clash.js';
+import { urlsToClashProxies } from '../../utils/url-to-clash.js';
 import { getUniqueName } from './name-utils.js';
-import { groupNodeLinesByRegion } from './region-groups.js';
 import {
     POLICY_GROUPS,
+    createReservedNameMap,
     getBuiltinRules,
     getRemoteProviderDefinitions,
     getSingboxDnsRuleSet,
@@ -274,10 +274,10 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
         .filter((line) => line && !line.startsWith('#'));
 
     const outbounds = [];
-    const usedNames = new Map();
     const nodeEntries = [];
 
     const proxies = urlsToClashProxies(nodeUrls, options);
+    const usedNames = createReservedNameMap(proxies, options);
 
     // 应用 UDP 开关
     // (已在 urlsToClashProxies 中全局处理)
@@ -289,7 +289,7 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
         const outbound = buildOutbound(clashProxy);
         if (outbound) {
             outbounds.push(outbound);
-            nodeEntries.push({ tag: outbound.tag, outbound });
+            nodeEntries.push({ tag: outbound.tag, outbound, metadata: clashProxy.metadata });
         }
     }
 
@@ -301,13 +301,14 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
     const levelKey = (ruleLevel || 'std').toUpperCase();
     // 获取内置策略组
     const policyGroupsFactory = POLICY_GROUPS[levelKey] || POLICY_GROUPS.STD;
-    let proxyGroups = policyGroupsFactory(outbounds, options);
+    let proxyGroups = policyGroupsFactory(nodeEntries, options);
     proxyGroups = pruneProxyGroups(proxyGroups, outbounds);
 
     if (levelKey === 'RELAY') {
+        proxyGroups.forEach(group => usedNames.set(group.name, 1));
         const chainOutbounds = nodeEntries.map(({ tag, outbound }) => ({
             ...outbound,
-            tag: `🔗 链式代理 - ${tag}`,
+            tag: getUniqueName(`🔗 链式代理 - ${tag}`, usedNames),
             detour: '入口节点',
         }));
         const chainTags = chainOutbounds.map((outbound) => outbound.tag);

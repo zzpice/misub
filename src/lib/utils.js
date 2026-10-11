@@ -203,7 +203,7 @@ export function extractHostAndPort(url) {
 
         throw new Error(t('utils.customParseFailed'));
     } catch (e) {
-        console.error('提取主机和端口失败:', url, e);
+        console.error('提取主机和端口失败:', e.name);
         return { host: t('utils.parseHostFailed'), port: 'N/A' };
     }
 }

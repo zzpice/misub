@@ -7,6 +7,7 @@
  * - WebDAV credentials and runtime secrets are never written into backup payloads.
  */
 
+import { isPersonalMode } from './personal-mode.js';
 import { StorageFactory, SettingsCache, STORAGE_TYPES } from '../storage-adapter.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS } from './config.js';
 import { KV_KEY_RULE_TEMPLATES, listRuleTemplates } from './rule-template-handler.js';
@@ -17,6 +18,13 @@ import {
     readJsonWithLimit,
 } from './utils.js';
 
+import { snapshotKey } from '../services/source-snapshot-service.js';
+import { regionPreferencesKey } from '../services/region-preferences.js';
+import { REGION_KEYWORDS } from './utils/geo-utils.js';
+import { profileCountKey, readProfileDownloadCount } from '../services/profile-download-counter.js';
+import { readResponseBufferWithLimit } from './security-utils.js';
+
+export const MAX_BACKUP_BYTES = 20 * 1024 * 1024;
 export const BACKUP_TYPE = 'misub-backup';
 export const BACKUP_VERSION = 1;
 export const BACKUP_SCOPES = {
@@ -59,7 +67,7 @@ function normalizeWebdavConfig(settings = {}) {
     return { ...DEFAULT_WEBDAV_CONFIG, ...(settings.webdavBackup || {}) };
 }
 
-function sanitizeRuntimeSecrets(settings = {}) {
+function sanitizeRuntimeSecrets(settings = {}, env = {}) {
     const sanitized = cloneJson(settings) || {};
     delete sanitized.webdavBackup;
     delete sanitized.adminPassword;
@@ -67,6 +75,12 @@ function sanitizeRuntimeSecrets(settings = {}) {
     delete sanitized.password;
     delete sanitized.cookieSecret;
     delete sanitized.COOKIE_SECRET;
+    delete sanitized.SUBSCRIPTION_TOKEN;
+    delete sanitized.PROFILE_TOKEN;
+    if (isPersonalMode(env)) {
+        delete sanitized.mytoken;
+        delete sanitized.profileToken;
+    }
     delete sanitized.sessionSecret;
     delete sanitized.lastBackupAt;
     delete sanitized.lastBackupStatus;
@@ -75,12 +89,12 @@ function sanitizeRuntimeSecrets(settings = {}) {
     return sanitized;
 }
 
-export function sanitizeSettingsForBackup(settings = {}) {
-    return sanitizeRuntimeSecrets(settings);
+export function sanitizeSettingsForBackup(settings = {}, env = {}) {
+    return sanitizeRuntimeSecrets(settings, env);
 }
 
-export function sanitizeSettingsForRestore(settings = {}) {
-    return sanitizeRuntimeSecrets(settings);
+export function sanitizeSettingsForRestore(settings = {}, env = {}) {
+    return sanitizeRuntimeSecrets(settings, env);
 }
 
 async function getStorage(env) {
@@ -99,7 +113,7 @@ async function readBusinessData(storageAdapter) {
         typeof storageAdapter.getAllProfiles === 'function'
             ? storageAdapter.getAllProfiles()
             : storageAdapter.get(KV_KEY_PROFILES).then((value) => value || []),
-        listRuleTemplates(storageAdapter).catch(() => []),
+        listRuleTemplates(storageAdapter),
     ]);
 
     return {
@@ -117,6 +131,19 @@ export async function buildBackupPayload(env, options = {}) {
     const scope = normalizeScope(options.scope || backupConfig.backupScope);
     const businessData = await readBusinessData(storageAdapter);
 
+    const durable = { sourceSnapshots: Object.create(null), regionPreferences: Object.create(null), downloadCounts: Object.create(null) };
+    await Promise.all(businessData.subscriptions.filter(s => s?.id && /^https?:\/\//i.test(s.url || '')).map(async source => {
+        const [snapshot, preferences] = await Promise.all([
+            storageAdapter.get(snapshotKey(source)), storageAdapter.get(regionPreferencesKey(source.id)),
+        ]);
+        if (snapshot?.sourceUrl === String(source.url).trim() && Array.isArray(snapshot.nodes) && snapshot.nodes.length) {
+            durable.sourceSnapshots[source.id] = snapshot;
+        }
+        if (preferences) durable.regionPreferences[source.id] = preferences;
+    }));
+    await Promise.all(businessData.profiles.filter(p => p?.id).map(async profile => {
+        durable.downloadCounts[profile.id] = await readProfileDownloadCount(storageAdapter, profile);
+    }));
     const payload = {
         version: BACKUP_VERSION,
         app: 'MiSub',
@@ -132,14 +159,44 @@ export async function buildBackupPayload(env, options = {}) {
             profiles: cloneJson(businessData.profiles),
             ruleTemplates: cloneJson(businessData.ruleTemplates),
             settings: null,
+            ...durable,
         },
     };
 
     if (scope === BACKUP_SCOPES.DATA_AND_SETTINGS) {
-        payload.data.settings = sanitizeSettingsForBackup(settings);
+        payload.data.settings = sanitizeSettingsForBackup(settings, env);
     }
 
+    // Leave room for the API's { payload } envelope. Reject explicitly before upload.
+    if (new TextEncoder().encode(JSON.stringify(payload)).byteLength > MAX_BACKUP_BYTES - 1024) {
+        throw new Error('备份超过 20 MiB 限制，请使用完整 D1 数据库备份');
+    }
     return payload;
+}
+
+function validateDurableData(data) {
+    const sources = new Map(data.subscriptions.filter(s => s?.id).map(s => [String(s.id), s]));
+    const profiles = new Set(data.profiles.filter(p => p?.id).map(p => String(p.id)));
+    for (const field of ['sourceSnapshots', 'regionPreferences', 'downloadCounts']) {
+        if (data[field] === undefined) continue; // Old exports remain compatible.
+        if (!data[field] || typeof data[field] !== 'object' || Array.isArray(data[field])) throw Error('无效的持久数据备份');
+        for (const [id, value] of Object.entries(data[field])) {
+            if (field === 'downloadCounts') {
+                if (!profiles.has(id) || !Number.isSafeInteger(value) || value < 0) throw Error('无效的订阅计数备份');
+                continue;
+            }
+            const source = sources.get(id);
+            if (!source || !/^https?:\/\//i.test(source.url || '') || !value || typeof value !== 'object' || Array.isArray(value)) throw Error('无效的订阅持久数据备份');
+            if (field === 'sourceSnapshots') {
+                if (value.sourceUrl !== String(source.url).trim() || !Array.isArray(value.nodes) || !value.nodes.length ||
+                    value.nodes.some(n => typeof n !== 'string' || !n.trim())) throw Error('无效的节点快照备份');
+            } else {
+                if (typeof value.version !== 'string' || !value.overrides || typeof value.overrides !== 'object' || Array.isArray(value.overrides) ||
+                    Object.keys(value.overrides).length > 3000 || Object.entries(value.overrides).some(([hash, region]) =>
+                        !/^[0-9a-f]{64}$/.test(hash) || !Object.hasOwn(REGION_KEYWORDS, region))) throw Error('无效的地区纠错备份');
+            }
+        }
+    }
 }
 
 export function normalizeBackupPayload(raw) {
@@ -149,10 +206,15 @@ export function normalizeBackupPayload(raw) {
 
     // New unified format.
     if (raw.type === BACKUP_TYPE && raw.data && typeof raw.data === 'object') {
+        if (!Array.isArray(raw.data.subscriptions) || !Array.isArray(raw.data.profiles) ||
+            (raw.data.ruleTemplates !== undefined && !Array.isArray(raw.data.ruleTemplates))) throw Error('无效的备份数据集合');
+        validateDurableData(raw.data);
         return {
             ...raw,
             scope: normalizeScope(raw.scope),
             data: {
+                ...Object.fromEntries(['sourceSnapshots', 'regionPreferences', 'downloadCounts']
+                    .filter(field => raw.data[field] !== undefined).map(field => [field, raw.data[field]])),
                 subscriptions: Array.isArray(raw.data.subscriptions) ? raw.data.subscriptions : [],
                 profiles: Array.isArray(raw.data.profiles) ? raw.data.profiles : [],
                 ruleTemplates: Array.isArray(raw.data.ruleTemplates) ? raw.data.ruleTemplates : [],
@@ -261,9 +323,20 @@ export async function restoreBackupPayload(env, rawPayload, options = {}) {
         Array.isArray(payload.data.ruleTemplates) ? payload.data.ruleTemplates : []
     );
 
+    // Only supplied records are restored. Old files never erase durable state
+    // they could not contain, and runtime leases/backoff records are excluded.
+    for (const [id, value] of Object.entries(payload.data.sourceSnapshots || {})) {
+        await storageAdapter.put(snapshotKey({ id }), value);
+    }
+    for (const [id, value] of Object.entries(payload.data.regionPreferences || {})) {
+        await storageAdapter.put(regionPreferencesKey(id), value);
+    }
+    for (const [id, value] of Object.entries(payload.data.downloadCounts || {})) {
+        await storageAdapter.put(profileCountKey({ id }), value);
+    }
     if (scope === BACKUP_SCOPES.DATA_AND_SETTINGS && payload.data.settings) {
         const currentSettings = (await storageAdapter.get(KV_KEY_SETTINGS)) || {};
-        const restoredSettings = sanitizeSettingsForRestore(payload.data.settings);
+        const restoredSettings = sanitizeSettingsForRestore(payload.data.settings, env);
         const finalSettings = {
             ...restoredSettings,
             webdavBackup: currentSettings.webdavBackup,
@@ -341,7 +414,19 @@ async function webdavFetch(config, path, init = {}) {
     const headers = new Headers(init.headers || {});
     headers.set('Authorization', `Basic ${toBasicAuth(config.username, config.password)}`);
     const url = joinWebdavPath(config.endpoint, path);
-    return fetch(url, { ...init, headers });
+    // Backup bodies contain credentials. Never replay them to a redirected origin.
+    let currentUrl = url;
+    for (let attempt = 0; attempt <= 3; attempt++) {
+        const response = await fetch(currentUrl, { ...init, headers, redirect: 'manual',
+            signal: init.signal || AbortSignal.timeout(15000) });
+        if (![301, 302, 303, 307, 308].includes(response.status)) return response;
+        await response.body?.cancel();
+        const next = new URL(response.headers.get('Location') || '', currentUrl);
+        if (attempt === 3 || next.origin !== new URL(url).origin || !response.headers.get('Location')) {
+            throw new Error('WebDAV redirect rejected');
+        }
+        currentUrl = next.toString();
+    }
 }
 
 async function ensureRemoteDirectory(config) {
@@ -374,8 +459,14 @@ export function formatBackupFilename(
 async function updateBackupStatus(env, patch) {
     const { storageAdapter } = await getStorage(env);
     const settings = (await storageAdapter.get(KV_KEY_SETTINGS)) || {};
-    const webdavBackup = { ...normalizeWebdavConfig(settings), ...patch };
-    await storageAdapter.put(KV_KEY_SETTINGS, { ...settings, webdavBackup });
+    const update = current => ({
+        ...current, webdavBackup: { ...normalizeWebdavConfig(current), ...patch },
+    });
+    const saved = typeof storageAdapter.updateSettingsByKey === 'function'
+        ? await storageAdapter.updateSettingsByKey(KV_KEY_SETTINGS, update)
+        : update(settings);
+    if (typeof storageAdapter.updateSettingsByKey !== 'function') await storageAdapter.put(KV_KEY_SETTINGS, saved);
+    const webdavBackup = saved.webdavBackup;
     SettingsCache.clear();
     return webdavBackup;
 }
@@ -502,7 +593,7 @@ export async function handleBackupExport(request, env) {
 export async function handleBackupRestore(request, env) {
     if (request.method !== 'POST') return createErrorResponse('Method Not Allowed', 405);
     try {
-        const body = await readJsonWithLimit(request, JSON_BODY_LIMITS.large);
+        const body = await readJsonWithLimit(request, MAX_BACKUP_BYTES);
         const payload = body?.payload || body?.backup || body;
         const result = await restoreBackupPayload(env, payload, { scope: body?.scope });
         return createJsonResponse(result);
@@ -525,7 +616,7 @@ export async function listWebdavBackupFiles(env) {
     });
     if (!response.ok) throw new Error(`列出 WebDAV 备份失败: HTTP ${response.status}`);
 
-    const xml = await response.text();
+    const xml = new TextDecoder().decode(await readResponseBufferWithLimit(response, 1024 * 1024));
     const hrefs = Array.from(xml.matchAll(/<[^:>]*:?href[^>]*>([^<]+)<\/[^:>]*:?href>/gi))
         .map((match) => normalizeWebdavHref(config.endpoint, match[1]))
         .filter(Boolean);
@@ -559,13 +650,13 @@ export async function fetchWebdavBackupFile(env, filePath) {
     const config = normalizeWebdavConfig(settings);
     const response = await webdavFetch(config, filePath, { method: 'GET' });
     if (!response.ok) throw new Error(`读取 WebDAV 备份失败: HTTP ${response.status}`);
-    return response.json();
+    return JSON.parse(new TextDecoder().decode(await readResponseBufferWithLimit(response, MAX_BACKUP_BYTES)));
 }
 
 export async function handleWebdavRestore(request, env) {
     if (request.method !== 'POST') return createErrorResponse('Method Not Allowed', 405);
     try {
-        const body = await readJsonWithLimit(request, JSON_BODY_LIMITS.large);
+        const body = await readJsonWithLimit(request, MAX_BACKUP_BYTES);
         const payload =
             body.payload || (body.file ? await fetchWebdavBackupFile(env, body.file) : null);
         const result = await restoreBackupPayload(env, payload, { scope: body.scope });

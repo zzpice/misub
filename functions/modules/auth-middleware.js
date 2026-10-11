@@ -13,6 +13,7 @@ import {
     readJsonWithLimit,
 } from './utils.js';
 import { StorageFactory } from '../storage-adapter.js';
+import { redactUrl } from './security-utils.js';
 import { isPersonalMode } from './personal-mode.js';
 
 export async function getSessionSigningKey(env) {
@@ -33,13 +34,13 @@ function normalizeSecret(value) {
 
 function buildRequestMeta(request, env) {
     return {
-        url: request?.url,
+        url: redactUrl(request?.url),
         method: request?.method,
         contentType: request?.headers?.get('Content-Type'),
         contentLength: request?.headers?.get('Content-Length'),
         userAgent: request?.headers?.get('User-Agent'),
         origin: request?.headers?.get('Origin'),
-        referer: request?.headers?.get('Referer'),
+        referer: redactUrl(request?.headers?.get('Referer')),
         cfRay: request?.headers?.get('CF-Ray'),
         hasKv: !!StorageFactory.resolveKV(env),
         hasD1: !!env?.MISUB_DB,

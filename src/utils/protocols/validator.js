@@ -27,7 +27,7 @@ export function validateGeneratedUrl(url) {
         // 1. 不应该包含多个 '?' (查询参数分隔符只能有一个)
         const questionMarkCount = (url.match(/\?/g) || []).length;
         if (questionMarkCount > 1) {
-            console.warn(`[URL Validation] 无效URL - 包含多个问号: ${url.substring(0, 100)}...`);
+            console.warn('[URL Validation] 无效URL - 包含多个问号');
             return false;
         }
 
