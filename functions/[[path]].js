@@ -257,6 +257,7 @@ export async function onRequest(context) {
                 // 否则伪装成的第三方页面会挂着 MiSub 的品牌图标，形成明显指纹。
                 // 仅在伪装开启时生效，且已登录用户仍可正常获取。
                 const isBrandAsset =
+                    url.pathname === '/brand.svg' ||
                     url.pathname === '/logo.png' ||
                     url.pathname === '/favicon.ico' ||
                     url.pathname === '/favicon.png';
