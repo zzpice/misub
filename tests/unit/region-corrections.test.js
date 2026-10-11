@@ -53,7 +53,7 @@ describe('unified region engine', () => {
     it('does not let a second group regex pass undo a finalized manual flag', () => {
         const groups = groupNodeLinesByRegion(
             [{ name: '🇺🇸 LA-vless-reality', tag: '🇺🇸 LA-vless-reality' }],
-            { regionOverrides: [{ pattern: 'LA', region: '老挝' }] }
+            { regionsAlreadyResolved: true, regionOverrides: [{ pattern: 'LA', region: '老挝' }] }
         );
         expect(groups[0].name).toBe('🇺🇸 美国节点');
     });
