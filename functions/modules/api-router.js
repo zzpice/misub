@@ -56,7 +56,6 @@ import {
     handleCleanNodesRequest,
     handleHealthCheckRequest,
 } from './handlers/node-handler.js';
-import { handleGithubReleaseRequest } from './handlers/github-proxy-handler.js'; // [NEW] Import handler
 import { handleParseSubscription } from './parse-subscription-handler.js';
 import { safeFetchPublicUrl, validatePublicFetchUrl } from './security-utils.js';
 import { normalizeSubconverterBackend } from './subscription/main-handler.js';
@@ -82,7 +81,7 @@ export async function handleApiRequest(request, env, context = null) {
     const path = url.pathname.replace(/^\/api/, '');
 
     // Removed public-page client catalog; keep all subscription format detection separate.
-    if (path === '/clients' || path.startsWith('/clients/')) {
+    if (path === '/github/release' || path === '/clients' || path.startsWith('/clients/')) {
         return createErrorResponse('Not Found', 404);
     }
 
@@ -95,7 +94,7 @@ export async function handleApiRequest(request, env, context = null) {
 
     if (
         isPersonalMode(env) &&
-        (path === '/github/release' || path === '/migrate' || path === '/migrate_to_d1')
+        (path === '/migrate' || path === '/migrate_to_d1')
     ) {
         return createErrorResponse('Not Found', 404);
     }
@@ -255,11 +254,6 @@ export async function handleApiRequest(request, env, context = null) {
         }
 
         return await handleDataRequest(env, context || { env });
-    }
-
-    // [New] GitHub Proxy Route (Public)
-    if (path === '/github/release') {
-        return await handleGithubReleaseRequest(request, env);
     }
 
     // Logout 无需认证（cookie 过期时也需能正常登出）
