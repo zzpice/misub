@@ -535,47 +535,81 @@ function parseHostPort(value) {
  * @param {string} nodeName - 节点名称
  * @returns {string} 识别出的地区，如未识别返回"其他"
  */
-export function extractNodeRegion(nodeName) {
-    if (!nodeName || typeof nodeName !== 'string') {
-        return '其他';
-    }
-
-    const normalizedNodeName = nodeName.toLowerCase();
-
-    // 遍历所有地区关键词
-    for (const [regionName, keywords] of Object.entries(REGION_KEYWORDS)) {
-        for (const keyword of keywords) {
-            const lowerKeyword = keyword.toLowerCase();
-
-            // 对于短关键词（2-3个字符的纯英文），要求匹配独立单词边界
-            // 避免 "kristi" 匹配 "kr"，"user" 匹配 "us" 等误匹配
-            if (lowerKeyword.length <= 3 && /^[a-z]+$/i.test(lowerKeyword)) {
-                // 使用更兼容的方式检查单词边界（不使用 lookbehind）
-                const idx = normalizedNodeName.indexOf(lowerKeyword);
-                if (idx !== -1) {
-                    // 检查前一个字符
-                    const charBefore = idx > 0 ? normalizedNodeName[idx - 1] : '';
-                    const isLetterBefore = charBefore && /[a-z]/i.test(charBefore);
-
-                    // 检查后一个字符
-                    const charAfter = normalizedNodeName[idx + lowerKeyword.length] || '';
-                    const isLetterAfter = charAfter && /[a-z]/i.test(charAfter);
-
-                    // 只有当前后都不是字母时才匹配
-                    if (!isLetterBefore && !isLetterAfter) {
-                        return regionName;
-                    }
-                }
-            } else {
-                // 对于长关键词或中文，直接使用 includes
-                if (normalizedNodeName.includes(lowerKeyword)) {
-                    return regionName;
-                }
-            }
+const AMBIGUOUS_REGION_CODES = new Set(['LA', 'CA', 'IN', 'FRA']);
+const FLAG_REGIONS = new Map(
+    Object.entries(REGION_EMOJI).filter(([region, flag]) => region !== '其他' && flag !== '🌍')
+        .map(([region, flag]) => [flag, region])
+);
+const REGION_ALIASES = Object.entries(REGION_KEYWORDS).flatMap(([region, words]) =>
+    words.map((word) => ({
+        region,
+        word: word.toLowerCase(),
+        short: /^[a-z]{2,3}$/i.test(word),
+        chinese: /[\u3400-\u9fff]/u.test(word),
+    }))
+);
+const TOKEN_BOUNDARY = '[^\\p{L}\\p{N}]';
+function matchesToken(text, token) {
+    const escaped = token.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+    return new RegExp('(?:^|' + TOKEN_BOUNDARY + ')' + escaped + '(?=$|' + TOKEN_BOUNDARY + ')', 'iu').test(text);
+}
+export function normalizeRegion(region) {
+    if (typeof region !== 'string') return '';
+    const value = region.trim();
+    if (Object.prototype.hasOwnProperty.call(REGION_KEYWORDS, value)) return value;
+    const matching = new Set(REGION_ALIASES.filter((item) =>
+        item.word === value.toLowerCase()).map((item) => item.region));
+    return matching.size === 1 ? [...matching][0] : '';
+}
+export function getRegionOptions() {
+    return Object.entries(REGION_KEYWORDS).map(([name, keywords]) => ({
+        name,
+        code: keywords.find((keyword) => /^[A-Z]{2}$/.test(keyword)) || '',
+        flag: getRegionEmoji(name),
+    }));
+}
+function detectAutomaticRegion(name) {
+    if (typeof name !== 'string' || !name.trim()) return '其他';
+    const flags = new Set(
+        [...name.matchAll(/[\u{1F1E6}-\u{1F1FF}]{2}/gu)]
+            .map((hit) => FLAG_REGIONS.get(hit[0])).filter(Boolean)
+    );
+    if (flags.size === 1) return [...flags][0];
+    if (flags.size > 1) return '其他';
+    const explicit = new Set(), codes = new Set();
+    for (const alias of REGION_ALIASES) {
+        if (alias.short) {
+            if (!AMBIGUOUS_REGION_CODES.has(alias.word.toUpperCase()) &&
+                matchesToken(name, alias.word)) codes.add(alias.region);
+        } else if (alias.chinese ? name.toLowerCase().includes(alias.word) : matchesToken(name, alias.word)) {
+            explicit.add(alias.region);
         }
     }
-
+    if (explicit.size === 1) return [...explicit][0];
+    if (explicit.size > 1) return '其他';
+    if (codes.size === 1) return [...codes][0];
+    if (codes.size > 1) return '其他';
+    if (/^LA[-_\s]+(?:vless|vmess|trojan|tuic|ss|ssr|hy2|hysteria2|reality)(?:[-_\s]|$)/i.test(name)) return '美国';
     return '其他';
+}
+export function resolveNodeRegion(name, options = {}) {
+    const manual = normalizeRegion(options.manualRegion);
+    if (manual) return manual;
+    for (const rule of Array.isArray(options.regionOverrides) ? options.regionOverrides : []) {
+        if (!rule?.pattern) continue;
+        try {
+            const flags = String(rule.flags || 'i').replace(/[gy]/g, '');
+            if (new RegExp(rule.pattern, flags).test(String(name || ''))) {
+                const value = normalizeRegion(rule.region);
+                if (value) return value;
+            }
+        } catch { /* ignore malformed legacy rules */ }
+    }
+    const detected = detectAutomaticRegion(name);
+    return detected !== '其他' ? detected : normalizeRegion(options.defaultRegion) || '其他';
+}
+export function extractNodeRegion(nodeName, options = {}) {
+    return resolveNodeRegion(nodeName, options);
 }
 
 /**
