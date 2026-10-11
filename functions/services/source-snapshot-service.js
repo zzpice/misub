@@ -137,6 +137,28 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
             };
             // Only publish the new snapshot after the full result has been fetched and validated.
             await storage.put(key, snapshot);
+            // Publish human-readable metadata only after the snapshot write is
+            // durable. The snapshot itself remains authoritative if this update
+            // fails or the source is concurrently edited by an administrator.
+            if (typeof storage.updateSubscriptionById === 'function') {
+                try {
+                    await storage.updateSubscriptionById(source.id, (current) => {
+                        if (!current || current.url !== source.url) return current;
+                        return {
+                            ...current,
+                            lastSuccessAt: updatedAt,
+                            lastUpdate: updatedAt,
+                            nodeCount: nodes.length,
+                            userInfo: fetched.userInfo || null,
+                            ...(fetched.detectedName ? { detectedName: fetched.detectedName } : {}),
+                            ...(nodes.length >= 10 ? { lastGoodNodeCount: nodes.length } : {}),
+                            lastError: null,
+                        };
+                    });
+                } catch (error) {
+                    console.warn('[SourceSnapshot] Subscription metadata update failed');
+                }
+            }
             try {
                 await storage.put(attemptKey(source), { lastAttemptAt: updatedAt, success: true });
             } catch (error) {

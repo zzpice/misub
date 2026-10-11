@@ -624,14 +624,6 @@ export async function fetchRemoteSourceSnapshot(sub, storage = null, context = n
         response.headers.get('subscription-userinfo')
     );
     const detectedName = parseSubscriptionProfileTitle(response.headers);
-    if (storage) {
-        scheduleSubscriptionRuntimeInfoUpdate(context, storage, sub, {
-            nodeCount: nodes.length,
-            userInfo,
-            ...(detectedName ? { detectedName } : {}),
-            ...(nodes.length >= 10 ? { lastGoodNodeCount: nodes.length } : {}),
-        });
-    }
     return { nodes, userInfo, detectedName };
 }
 
