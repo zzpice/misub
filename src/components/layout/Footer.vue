@@ -1,5 +1,6 @@
 <script setup>
     import { currentVersion, buildCommit } from '../../lib/build-info.js';
+    import { BRAND_MAINTAINER, BRAND_NAME } from '../../lib/brand.js';
 </script>
 
 <template>
@@ -13,12 +14,12 @@
                     target="_blank"
                     rel="noopener noreferrer"
                     class="font-semibold text-indigo-600/80 dark:text-indigo-400/80 hover:underline"
-                    >MiSub</a
+                    >{{ BRAND_NAME }}</a
                 >
-                · Maintained by zzpice
+                · by {{ BRAND_MAINTAINER }}
             </p>
             <span
-                :title="buildCommit || currentVersion"
+                :title="buildCommit ? `Version ${currentVersion}, commit ${buildCommit}` : `Version ${currentVersion}`"
                 class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/5 text-[9px] font-mono opacity-80"
             >
                 v{{ currentVersion
