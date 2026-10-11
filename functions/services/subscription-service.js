@@ -20,6 +20,7 @@ import { createTimeoutFetch } from '../modules/utils.js';
 import { assertPublicNetworkUrl } from '../modules/security-utils.js';
 import { isSuspiciousNodeCountDrop } from './node-cache-service.js';
 import { isPersonalMode } from '../modules/personal-mode.js';
+import { resolveSourceSnapshot } from './source-snapshot-service.js';
 
 const PERSONAL_SOURCE_CACHE_MAX_AGE = 12 * 60 * 60 * 1000;
 
@@ -586,6 +587,52 @@ function createConcurrencyLimiter(limit) {
         });
 }
 
+
+/**
+ * Fetch and parse a raw upstream source once with a stable server-side User-Agent.
+ * Source-level operators, profile rules and output conversion are intentionally not
+ * applied here, so every downstream client shares the same durable source snapshot.
+ */
+export async function fetchRemoteSourceSnapshot(sub, storage = null, context = null) {
+    assertPublicNetworkUrl(sub.url);
+    const customUserAgent = typeof sub.customUserAgent === 'string'
+        ? sub.customUserAgent.trim()
+        : '';
+    const userAgent = customUserAgent || getProcessedUserAgent('MiSub-Backend', sub.url);
+    const url = sub.fetchProxy
+        ? buildFetchProxyUrl(sub.fetchProxy, sub.url, userAgent)
+        : sub.url;
+    const safeUrl = assertPublicNetworkUrl(url).toString();
+    const response = await fetchWithRetry(safeUrl, {
+        headers: { 'User-Agent': userAgent },
+        redirect: 'follow',
+    }, { timeout: 12000, maxRetries: 0 });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const buffer = await response.arrayBuffer();
+    let text = await decodeBase64Content(new TextDecoder('utf-8').decode(buffer));
+    let parsed = parseNodeList(text);
+    if (!parsed.length) {
+        text = await decodeBase64Content(encodeArrayBufferToBase64(buffer));
+        parsed = parseNodeList(text);
+    }
+    const nodes = parsed.map((node) => node.url).filter(isRealProxyNode);
+    if (!nodes.length) throw new Error('No valid proxy nodes in upstream response');
+    const userInfo = parseSubscriptionUserInfoHeader(
+        response.headers.get('subscription-userinfo')
+    );
+    const detectedName = parseSubscriptionProfileTitle(response.headers);
+    if (storage) {
+        scheduleSubscriptionRuntimeInfoUpdate(context, storage, sub, {
+            nodeCount: nodes.length,
+            userInfo,
+            ...(detectedName ? { detectedName } : {}),
+            ...(nodes.length >= 10 ? { lastGoodNodeCount: nodes.length } : {}),
+        });
+    }
+    return { nodes, userInfo, detectedName };
+}
+
 /**
  * 生成组合节点列表
  * @param {Object} context - 请求上下文
@@ -727,162 +774,37 @@ export async function generateCombinedNodeList(
      * @returns {Promise<string>} - 处理后的节点列表
      */
     const fetchSingleSubscription = async (sub) => {
-        const cacheEnabled = sub?.enableNodeCache === true;
         const storage = context?.storage;
-        const recordEmptyRuntimeInfo = () => {
-            if (cacheEnabled) return;
-            const runtimeInfo = {
-                nodeCount: 0,
-                userInfo: null,
-            };
-            recordCurrentRequestRuntimeInfo(context, sub, runtimeInfo);
-            scheduleSubscriptionRuntimeInfoUpdate(context, storage, sub, runtimeInfo);
-        };
-        const personal = isPersonalMode(context?.env);
-        const readCachedNodes = async (usingFallback = false) => {
-            if (!cacheEnabled) return [];
-            const cached = await readSubscriptionNodeCache(storage, sub, personal);
-            if (usingFallback && personal && cached?.nodes?.length) {
-                const timestamp = Date.parse(cached.updatedAt);
-                context.cachedFallbackTimestamp = Math.min(context.cachedFallbackTimestamp ?? timestamp, timestamp);
+        const fetcher = (source) => fetchRemoteSourceSnapshot(source, storage, context);
+        let snapshot;
+        if (sub.id && context?.preloadedSourceSnapshots?.has(sub.id)) {
+            snapshot = context.preloadedSourceSnapshots.get(sub.id);
+        } else if (storage && sub.id) {
+            snapshot = await resolveSourceSnapshot({ storage, source: sub, context, fetcher });
+        } else {
+            // Authenticated one-off previews without a saved ID are explicit fetches.
+            try {
+                snapshot = await fetchRemoteSourceSnapshot(sub);
+            } catch {
+                snapshot = null;
             }
-            return cached?.nodes || [];
-        };
-
-        try {
-            const customUserAgent =
-                typeof sub.customUserAgent === 'string' ? sub.customUserAgent.trim() : '';
-            const processedUserAgent = customUserAgent || getProcessedUserAgent(userAgent, sub.url);
-            const requestHeaders = { 'User-Agent': processedUserAgent };
-
-            // [Fetch Proxy] 获取单点订阅专属拉取代理前缀
-            assertPublicNetworkUrl(sub.url);
-            let requestUrl = sub.url;
-
-            // 只有开启保护性缓存节点时才加时间戳绕过强缓存 (如 Cloudflare Edge Cache)
-            if (cacheEnabled) {
-                try {
-                    const parsedUrl = new URL(requestUrl);
-                    parsedUrl.searchParams.set('_t', Date.now().toString());
-                    requestUrl = parsedUrl.toString();
-                } catch (e) {
-                    requestUrl += (requestUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
-                }
-            }
-
-            if (sub.fetchProxy && typeof sub.fetchProxy === 'string' && sub.fetchProxy.trim()) {
-                requestUrl = buildFetchProxyUrl(sub.fetchProxy, sub.url, processedUserAgent);
-            }
-            requestUrl = assertPublicNetworkUrl(requestUrl).toString();
-
-            const response = await fetchWithRetry(requestUrl, {
-                headers: requestHeaders,
-                redirect: 'follow',
-                ...(skipCertVerify
-                    ? {
-                          cf: {
-                              insecureSkipVerify: true,
-                              allowUntrusted: true,
-                              validateCertificate: false,
-                          },
-                      }
-                    : {}),
-            });
-
-            if (!response.ok) {
-                recordEmptyRuntimeInfo();
-                return (await readCachedNodes(true)).join('\n');
-            }
-            const buffer = await response.arrayBuffer();
-            let text = new TextDecoder('utf-8').decode(buffer);
-
-            text = await decodeBase64Content(text);
-
-            // 使用统一的 node-parser 解析，确保与预览一致的过滤规则 (UUID校验, Hysteria1过滤, SS加密校验等)
-            const parsedObjects = parseNodeList(text);
-
-            let fallbackParsedObjects = parsedObjects;
-            if (parsedObjects.length === 0) {
-                const fallbackText = await decodeBase64Content(encodeArrayBufferToBase64(buffer));
-                const fallbackNodes = parseNodeList(fallbackText);
-                if (fallbackNodes.length > 0) {
-                    fallbackParsedObjects = fallbackNodes;
-                }
-            }
-
-            let validNodes = fallbackParsedObjects.map((node) => node.url);
-
-            // --- 统一转换治理 (算子 + 过滤 + 组级诊断) ---
-            validNodes = await applySubscriptionTransforms(validNodes, sub);
-
-            const realNodes = validNodes.filter(isRealProxyNode);
-            const knownNodeCount = Math.max(
-                Number(sub?.lastGoodNodeCount) || 0,
-                Number(sub?.nodeCount) || 0
-            );
-            if (
-                Number.isFinite(knownNodeCount) &&
-                isSuspiciousNodeCountDrop(knownNodeCount, realNodes.length)
-            ) {
-                const cachedNodes = await readCachedNodes(true);
-                console.warn(
-                    `[Subscription] Rejecting suspicious node-count drop for ${sub.id || '[subscription]'} (${knownNodeCount} known -> ${realNodes.length} fetched)`
-                );
-                if (cachedNodes.length > 0) return cachedNodes.join('\n');
-                // Do not write nodeCount=0 here: this response is suspicious,
-                // not evidence that the subscription has no usable nodes.
-                return '';
-            }
-            if (cacheEnabled && realNodes.length === 0) {
-                return (await readCachedNodes(true)).join('\n');
-            }
-            if (cacheEnabled) {
-                const cachedNodes = await readCachedNodes();
-                if (isSuspiciousNodeCountDrop(cachedNodes.length, realNodes.length)) {
-                    console.warn(
-                        `[SubscriptionCache] Refusing suspicious node-count drop for ${sub.id || '[subscription]'} (${cachedNodes.length} -> ${realNodes.length})`
-                    );
-                    return (await readCachedNodes(true)).join('\n');
-                }
-            }
-            if (!cacheEnabled && realNodes.length === 0) {
-                recordEmptyRuntimeInfo();
-            }
-
-            if (cacheEnabled) {
-                await writeSubscriptionNodeCache(storage, sub, realNodes);
-            }
-
-            if (realNodes.length > 0) {
-                upstreamSuccessCount++;
-                const userInfo = parseSubscriptionUserInfoHeader(
-                    response.headers.get('subscription-userinfo')
-                );
-                // 机场识别：仅使用响应头自报名称（零额外请求）。
-                // 官网标题兜底改为「按需触发」——见 /api/detect_airport_name，
-                // 避免每次刷新订阅都多发一次外部请求（拖慢整体、增加失败面）。
-                const detectedName = parseSubscriptionProfileTitle(response.headers);
-                const runtimeInfo = {
-                    nodeCount: realNodes.length,
-                    userInfo,
-                    ...(detectedName ? { detectedName } : {}),
-                    ...(realNodes.length >= 10 ? { lastGoodNodeCount: realNodes.length } : {}),
-                };
-                recordCurrentRequestRuntimeInfo(context, sub, runtimeInfo);
-                scheduleSubscriptionRuntimeInfoUpdate(context, storage, sub, runtimeInfo);
-            }
-
-            // 判断是否启用订阅前缀（智能重命名启用时跳过）
-            const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
-            const shouldAddSubPrefix = shouldPrependSubscriptions && !skipPrefixDueToRenaming;
-
-            return shouldAddSubPrefix && sub.name
-                ? validNodes.map((node) => prependNodeName(node, sub.name)).join('\n')
-                : validNodes.join('\n');
-        } catch (e) {
-            recordEmptyRuntimeInfo();
-            return (await readCachedNodes(true)).join('\n');
         }
+        if (!snapshot?.nodes?.length) return '';
+
+        // Persisted source data stays unmodified; source and profile transformations
+        // run on a fresh copy on every downstream generation.
+        recordCurrentRequestRuntimeInfo(context, sub, {
+            nodeCount: snapshot.nodeCount,
+            userInfo: snapshot.userInfo || null,
+            ...(snapshot.detectedName ? { detectedName: snapshot.detectedName } : {}),
+        });
+        upstreamSuccessCount++;
+        const validNodes = await applySubscriptionTransforms(snapshot.nodes, sub);
+        const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
+        const shouldAddSubPrefix = shouldPrependSubscriptions && !skipPrefixDueToRenaming;
+        return (shouldAddSubPrefix && sub.name
+            ? validNodes.map((node) => prependNodeName(node, sub.name))
+            : validNodes).join('\n');
     };
 
     // 使用并发控制器限制同时请求数量，避免网络拥塞

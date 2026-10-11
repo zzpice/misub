@@ -134,9 +134,6 @@
         addSubscriptionsFromBulk,
         handleUpdateNodeCount,
         batchUpdateAllSubscriptions,
-        startAutoUpdate,
-        stopAutoUpdate,
-        restartAutoUpdate,
         reorderSubscriptions,
     } = useSubscriptions(markDirty);
 
@@ -282,25 +279,11 @@
         if (savedViewMode) {
             manualNodeViewMode.value = savedViewMode;
         }
-        // 启动订阅自动更新定时器（每30分钟）
-        startAutoUpdate();
     });
 
     onUnmounted(() => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
-        // 停止订阅自动更新定时器
-        stopAutoUpdate();
     });
-
-    // 监听设置变更，重启自动更新定时器
-    watch(
-        () => settings.value?.autoUpdateInterval,
-        (newInterval) => {
-            if (newInterval !== undefined) {
-                restartAutoUpdate(newInterval);
-            }
-        }
-    );
 
     const setViewMode = (mode) => {
         manualNodeViewMode.value = mode;

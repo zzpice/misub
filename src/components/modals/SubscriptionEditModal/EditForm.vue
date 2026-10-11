@@ -25,6 +25,11 @@
         (newSub) => {
             if (newSub) {
                 useFetchProxy.value = !!newSub.fetchProxy;
+                if (typeof newSub.autoUpdateEnabled !== 'boolean')
+                    newSub.autoUpdateEnabled = true;
+                if (!Number.isFinite(Number(newSub.autoUpdateIntervalMinutes)) ||
+                    Number(newSub.autoUpdateIntervalMinutes) < 5)
+                    newSub.autoUpdateIntervalMinutes = 60;
             }
         },
         { immediate: true }
@@ -86,6 +91,37 @@
             placeholder="https://..."
             class="font-mono"
         />
+    </div>
+
+    <!-- Independent update policy for each HTTP source. -->
+    <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    自动更新上游快照
+                </span>
+                <p class="text-xs text-gray-500 mt-1">
+                    下游访问时按需检查；关闭后只能手动抓取，不需要保持管理页面打开。
+                </p>
+            </div>
+            <Switch v-model="editingSubscription.autoUpdateEnabled" />
+        </div>
+        <label
+            v-if="editingSubscription.autoUpdateEnabled"
+            class="mt-3 flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300"
+        >
+            更新间隔（分钟）
+            <input
+                v-model.number="editingSubscription.autoUpdateIntervalMinutes"
+                type="number"
+                min="5"
+                step="5"
+                class="w-28 rounded-lg border border-gray-200 dark:border-gray-600 bg-transparent px-3 py-2"
+                @blur="editingSubscription.autoUpdateIntervalMinutes = Math.max(
+                    5, Math.floor(Number(editingSubscription.autoUpdateIntervalMinutes) || 60)
+                )"
+            />
+        </label>
     </div>
 
     <!-- 专属拉取代理 -->

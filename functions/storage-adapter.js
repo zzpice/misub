@@ -646,6 +646,11 @@ class D1StorageAdapter {
             if (String(key).startsWith(DATA_KEYS.PROFILE_DOWNLOAD_COUNT_PREFIX)) {
                 return { table: 'settings', queryField: 'key', queryValue: key };
             }
+            if (String(key).startsWith('misub_source_snapshot_v1_') ||
+                String(key).startsWith('misub_source_attempt_v1_') ||
+                String(key).startsWith('misub_source_lock_v1_')) {
+                return { table: 'settings', queryField: 'key', queryValue: key };
+            }
             if (String(key).startsWith('tmp_external_nodes:')) {
                 return { table: 'settings', queryField: 'key', queryValue: key };
             }

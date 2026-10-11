@@ -6,7 +6,8 @@ import {
     migrateProfileIds,
     base64EncodeUtf8,
 } from '../utils.js';
-import { generateCombinedNodeList } from '../../services/subscription-service.js';
+import { generateCombinedNodeList, fetchRemoteSourceSnapshot } from '../../services/subscription-service.js';
+import { resolveSourceSnapshot } from '../../services/source-snapshot-service.js';
 import {
     KV_KEY_SUBS,
     KV_KEY_PROFILES,
@@ -785,11 +786,47 @@ export async function handleMisubRequest(context) {
             resolvedGlobalLevel;
     }
 
+    // Check each upstream update policy on every downstream request, even when
+    // an aggregate output cache is fresh. No downstream User-Agent is forwarded
+    // to upstream fetching; the snapshots are source-scoped rather than client-scoped.
+    const sourceSnapshots = new Map();
+    const remoteSources = targetMisubs.filter(
+        (sub) => sub?.enabled && sub?.id && /^https?:\/\//i.test(String(sub.url || ''))
+    );
+    await Promise.all(remoteSources.map(async (sub) => {
+        try {
+            const snapshot = await resolveSourceSnapshot({
+                storage: storageAdapter,
+                source: sub,
+                context,
+                fetcher: (source) => fetchRemoteSourceSnapshot(source, storageAdapter, context),
+            });
+            sourceSnapshots.set(sub.id, snapshot);
+        } catch (error) {
+            console.warn('[MiSub] Source snapshot unavailable:', error?.message);
+            sourceSnapshots.set(sub.id, null);
+        }
+    }));
+    context.preloadedSourceSnapshots = sourceSnapshots;
+
+    // An aggregate cache includes the snapshot versions AND the requested
+    // transform variant. Different profiles, filters, formats and user agents
+    // must not replace one another's aggregate content.
+    const variant = JSON.stringify({
+        targetFormat, userAgentHeader, urlInclude, urlExclude, urlRename, urlEmoji,
+        sources: remoteSources.map((sub) => [sub.id, sourceSnapshots.get(sub.id)?.updatedAt || 'none']),
+    });
+    let variantHash = 2166136261;
+    for (let i = 0; i < variant.length; i++) {
+        variantHash ^= variant.charCodeAt(i);
+        variantHash = Math.imul(variantHash, 16777619);
+    }
+
     // === 缓存机制：快速响应客户端请求 ===
     const cacheKey = generateCacheKey(
         profileIdentifier ? 'profile' : 'token',
         profileIdentifier || token
-    );
+    ) + '_v_' + (variantHash >>> 0).toString(36);
 
     // 检查是否强制刷新（通过 URL 参数）
     const forceRefresh =

@@ -222,6 +222,14 @@ export async function resetSettings() {
  * @param {string[]} subscriptionIds - 要更新的订阅ID数组
  * @returns {Promise<Object>} - 更新结果
  */
+export async function refreshSourceSnapshot(subscriptionId) {
+    try {
+        return await api.post('/api/source_snapshot/refresh', { subscriptionId });
+    } catch (error) {
+        return handleApiError(error, 'refreshSourceSnapshot');
+    }
+}
+
 export async function batchUpdateNodes(subscriptionIds) {
     let timeoutId;
     try {

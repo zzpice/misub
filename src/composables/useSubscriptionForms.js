@@ -21,6 +21,8 @@ export function useSubscriptionForms({ addSubscription, updateSubscription }) {
             customUserAgent: '',
             fetchProxy: '',
             enableNodeCache: true,
+            autoUpdateEnabled: true,
+            autoUpdateIntervalMinutes: 60,
             plusAsSpace: false,
             excludeTraffic: false,
             website: '',
