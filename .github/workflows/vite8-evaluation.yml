@@ -31,11 +31,30 @@ jobs:
           du -sk dist | awk '{ print "baseline build KB: " $1 }'
       - name: Test Vite 8 and compatible Vue plugin without changing manifests
         run: npm install --no-save --package-lock=false --no-audit --no-fund 'vite@^8.1.0' '@vitejs/plugin-vue@^6.0.9'
-      - name: Candidate tests and build (Vite 8)
+      - name: Candidate tests and build with default Rolldown chunking
         run: |
           node -e 'console.log("Vite candidate:", require("./node_modules/vite/package.json").version)'
           npm run test:run
-          npm run build
+          cat > .vite8-evaluation.config.mjs <<'VITE_CONFIG'
+          import base from './vite.config.js';
+          // Rolldown does not accept the old object-form manualChunks.
+          // Remove it only for this temporary evaluation build.
+          export default {
+            ...base,
+            build: {
+              ...base.build,
+              rollupOptions: {
+                ...base.build.rollupOptions,
+                output: {
+                  ...base.build.rollupOptions.output,
+                  manualChunks: undefined,
+                },
+              },
+            },
+          };
+          VITE_CONFIG
+          npx vite build --config .vite8-evaluation.config.mjs
+          rm .vite8-evaluation.config.mjs
           du -sk dist | awk '{ print "Vite 8 build KB: " $1 }'
       - name: Confirm manifest and lockfile remain untouched
         run: git diff --exit-code -- package.json package-lock.json vite.config.js
