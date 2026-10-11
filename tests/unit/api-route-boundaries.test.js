@@ -67,7 +67,7 @@ describe('API route access boundaries', () => {
         }
     });
 
-    it('keeps login configuration and client catalog reachable without an admin session', async () => {
+    it('keeps login configuration reachable while removing the public client catalog', async () => {
         const env = { MISUB_KV: createKv() };
 
         const loginConfig = await handleApiRequest(
@@ -81,7 +81,7 @@ describe('API route access boundaries', () => {
 
         expect(loginConfig.status).toBe(200);
 
-        expect(publicClients.status).toBe(200);
+        expect(publicClients.status).toBe(404);
     });
 
     it('does not expose the custom login path through public configuration', async () => {

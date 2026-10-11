@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import BasicSettings from '../../src/components/settings/sections/BasicSettings.vue';
-import ClientSettings from '../../src/components/settings/sections/ClientSettings.vue';
 import TransformCard from '../../src/components/settings/sections/ServiceSettings/TransformCard.vue';
 import RuleTemplateManager from '../../src/components/settings/sections/ServiceSettings/RuleTemplateManager.vue';
 import SystemSettings from '../../src/components/settings/sections/SystemSettings.vue';
@@ -95,19 +94,6 @@ describe('settings page English translations', () => {
         expect(wrapper.text()).not.toContain('Web Access Control');
         expect(wrapper.text()).not.toContain('Disguise strategy');
         expect(wrapper.text()).toContain('English');
-    });
-
-    it('renders ClientSettings management copy in English', async () => {
-        const wrapper = mount(ClientSettings, englishMountOptions());
-        await flushPromises();
-
-        expect(wrapper.text()).toContain('Client Management');
-        expect(wrapper.text()).toContain('Reset defaults');
-        expect(wrapper.text()).toContain('Add client');
-        expect(wrapper.text()).toContain('Up');
-        expect(wrapper.text()).toContain('Down');
-        expect(wrapper.text()).toContain('Edit');
-        expectNoChineseOrKeys(wrapper.text());
     });
 
     it('renders service cards in English without leaking keys', async () => {

@@ -320,7 +320,7 @@ describe('independent personal deployment', () => {
         }
         expect(
             (await handleApiRequest(new Request('https://example.com/api/clients'), env)).status
-        ).toBe(401);
+        ).toBe(404);
     });
 
     it('rejects settings reset and token changes that would desynchronize the vault', async () => {

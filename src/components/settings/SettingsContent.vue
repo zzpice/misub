@@ -6,7 +6,6 @@
     import BasicSettings from './sections/BasicSettings.vue';
     import GlobalSettings from './sections/GlobalSettings.vue';
     import ServiceSettings from './sections/ServiceSettings.vue';
-    import ClientSettings from './sections/ClientSettings.vue';
     import WebdavBackupSettings from './sections/WebdavBackupSettings.vue';
     import SystemSettings from './sections/SystemSettings.vue';
 
@@ -99,8 +98,6 @@
                 return t('settings.tabs.global');
             case 'service':
                 return t('settings.tabs.service');
-            case 'client':
-                return t('settings.tabs.client');
             case 'system':
                 return t('settings.tabs.system');
             default:
@@ -187,7 +184,6 @@
             />
             <GlobalSettings v-show="activeTab === 'global'" :settings="settings" />
             <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
-            <ClientSettings v-show="activeTab === 'client'" />
             <div v-show="activeTab === 'system'" class="space-y-6">
                 <WebdavBackupSettings :settings="settings" />
                 <SystemSettings
