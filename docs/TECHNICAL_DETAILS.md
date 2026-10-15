@@ -39,4 +39,4 @@ KV 不具备 D1 的事务或跨实例锁保障；其兼容路径只提供尽力�
 
 使用合成节点、本地 SQLite 和隔离浏览器测试；协议变更还需要真实 Mihomo/sing-box 配置校验。SQLite 能验证 SQL 与并发逻辑，不等同于 Cloudflare 全球运行验证。生产绑定、Secrets、数据及资源不用于测试或修复。
 
-更多维护约束见 [PERSONAL-MAINTENANCE](PERSONAL-MAINTENANCE.md)，本轮结果见 [2026-10-11 审计](audits/2026-10-11-reliability.md)。
+更多维护约束见 [PERSONAL-MAINTENANCE](PERSONAL-MAINTENANCE.md)，本轮结果见 [Zzp Sub 重构说明](refactor.md)。
