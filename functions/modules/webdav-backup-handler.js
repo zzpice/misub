@@ -670,7 +670,9 @@ export async function listWebdavBackupFiles(env) {
     const settings = (await storageAdapter.get(KV_KEY_SETTINGS)) || {};
     const config = normalizeWebdavConfig(settings);
     const remoteDir = String(config.remotePath || '/Zzp-Sub').replace(/\/+$/, '');
-    const filenamePrefix = config.filenameTemplate.split('{')[0];
+    const filenamePrefix = String(
+        config.filenameTemplate || DEFAULT_WEBDAV_CONFIG.filenameTemplate
+    ).split('{')[0];
     const response = await webdavFetch(config, remoteDir || '/', {
         method: 'PROPFIND',
         headers: { Depth: '1' },
