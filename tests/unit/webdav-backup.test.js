@@ -253,7 +253,7 @@ describe('WebDAV backup payload and restore', () => {
                     `<?xml version="1.0"?>
         <d:multistatus xmlns:d="DAV:">
           <d:response><d:href>/remote.php/dav/files/user/MiSub/</d:href></d:response>
-          <d:response><d:href>https://dav.example/remote.php/dav/files/user/MiSub/misub-backup-2026-08-09%2012-00-00.json</d:href></d:response>
+          <d:response><d:href>https://dav.example/remote.php/dav/files/user/MiSub/zzp-sub-backup-2026-08-09%2012-00-00.json</d:href></d:response>
         </d:multistatus>`,
                     { status: 207 }
                 )
@@ -283,8 +283,8 @@ describe('WebDAV backup payload and restore', () => {
 
         expect(files).toEqual([
             {
-                path: '/MiSub/misub-backup-2026-08-09 12-00-00.json',
-                name: 'misub-backup-2026-08-09 12-00-00.json',
+                path: '/MiSub/zzp-sub-backup-2026-08-09 12-00-00.json',
+                name: 'zzp-sub-backup-2026-08-09 12-00-00.json',
             },
         ]);
 
@@ -294,8 +294,38 @@ describe('WebDAV backup payload and restore', () => {
             'https://dav.example/remote.php/dav/files/user/MiSub'
         );
         expect(fetchMock.mock.calls[1][0]).toBe(
-            'https://dav.example/remote.php/dav/files/user/MiSub/misub-backup-2026-08-09%2012-00-00.json'
+            'https://dav.example/remote.php/dav/files/user/MiSub/zzp-sub-backup-2026-08-09%2012-00-00.json'
         );
+    });
+
+    it('lists backups using the configured filename prefix', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue(
+                new Response(
+                    `<d:multistatus xmlns:d="DAV:">
+              <d:response><d:href>/Zzp-Sub/daily-2026-10-15.json</d:href></d:response>
+              <d:response><d:href>/Zzp-Sub/unrelated.json</d:href></d:response>
+            </d:multistatus>`,
+                    { status: 207 }
+                )
+            )
+        );
+        const { listWebdavBackupFiles } =
+            await import('../../functions/modules/webdav-backup-handler.js');
+        const env = createEnv({
+            webdavBackup: {
+                enabled: true,
+                endpoint: 'https://dav.example',
+                username: 'user',
+                password: 'secret',
+                remotePath: '/Zzp-Sub',
+                filenameTemplate: 'daily-{datetime}.json',
+            },
+        });
+        expect(await listWebdavBackupFiles(env)).toEqual([
+            { path: '/Zzp-Sub/daily-2026-10-15.json', name: 'daily-2026-10-15.json' },
+        ]);
     });
 
     it('formats backup filenames in UTC+8', async () => {

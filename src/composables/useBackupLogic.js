@@ -43,7 +43,7 @@ export function useBackupLogic() {
                 .replace(/:/g, '-');
             downloadJson(
                 result.exportData,
-                `misub-backup-${result.exportData.scope || scope}-${timestamp}.json`
+                `zzp-sub-backup-${result.exportData.scope || scope}-${timestamp}.json`
             );
             showToast(t('backup.exportSuccess'), 'success');
         } catch (error) {

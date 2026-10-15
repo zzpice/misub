@@ -33,7 +33,6 @@ export const BACKUP_SCOPES = {
 };
 
 const RESTORE_SNAPSHOT_KEY = 'misub_restore_snapshot_latest';
-const BACKUP_FILENAME_PREFIX = 'misub-backup-';
 const BACKUP_TIMEZONE_OFFSET_MS = 8 * 60 * 60 * 1000;
 const DEFAULT_WEBDAV_CONFIG = {
     enabled: false,
@@ -41,7 +40,7 @@ const DEFAULT_WEBDAV_CONFIG = {
     username: '',
     password: '',
     remotePath: '/Zzp-Sub',
-    filenameTemplate: 'misub-backup-{datetime}.json',
+    filenameTemplate: 'zzp-sub-backup-{datetime}.json',
     backupScope: BACKUP_SCOPES.DATA_ONLY,
     autoBackup: false,
     interval: 'daily',
@@ -671,6 +670,7 @@ export async function listWebdavBackupFiles(env) {
     const settings = (await storageAdapter.get(KV_KEY_SETTINGS)) || {};
     const config = normalizeWebdavConfig(settings);
     const remoteDir = String(config.remotePath || '/Zzp-Sub').replace(/\/+$/, '');
+    const filenamePrefix = config.filenameTemplate.split('{')[0];
     const response = await webdavFetch(config, remoteDir || '/', {
         method: 'PROPFIND',
         headers: { Depth: '1' },
@@ -682,7 +682,9 @@ export async function listWebdavBackupFiles(env) {
         .map((match) => normalizeWebdavHref(config.endpoint, match[1]))
         .filter(Boolean);
     const files = hrefs
-        .filter((href) => href.endsWith('.json') && href.includes(BACKUP_FILENAME_PREFIX))
+        .filter(
+            (href) => href.endsWith('.json') && href.split('/').pop().startsWith(filenamePrefix)
+        )
         .map((href) => ({
             path: href,
             name: href.split('/').filter(Boolean).pop(),

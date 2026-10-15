@@ -29,7 +29,7 @@
                 username: '',
                 password: '',
                 remotePath: '/Zzp Sub',
-                filenameTemplate: 'misub-backup-{datetime}.json',
+                filenameTemplate: 'zzp-sub-backup-{datetime}.json',
                 backupScope: 'dataOnly',
                 autoBackup: false,
                 interval: 'daily',
@@ -252,7 +252,7 @@
                 <Input
                     :label="t('settings.webdavFilenameTemplate')"
                     v-model="settings.webdavBackup.filenameTemplate"
-                    placeholder="misub-backup-{datetime}.json"
+                    placeholder="zzp-sub-backup-{datetime}.json"
                 />
                 <Input
                     :label="t('settings.webdavRetentionCount')"

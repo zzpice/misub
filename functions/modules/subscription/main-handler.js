@@ -549,7 +549,7 @@ export async function handleMisubRequest(context) {
             }
 
             if (isProfileExpired) {
-                subName = String(profile.name || config.FileName || 'MiSub'); // Still use profile name for filename
+                subName = String(profile.name || config.FileName || defaultSettings.FileName); // Still use profile name for filename
                 targetMisubs = [
                     {
                         id: 'expired-node',
@@ -559,7 +559,7 @@ export async function handleMisubRequest(context) {
                     },
                 ]; // Set expired node as the only targetMisub
             } else {
-                subName = String(profile.name || config.FileName || 'MiSub');
+                subName = String(profile.name || config.FileName || defaultSettings.FileName);
                 targetMisubs = [];
                 const relatedIds = [
                     ...(Array.isArray(profile.subscriptions)

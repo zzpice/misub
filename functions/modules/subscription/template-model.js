@@ -1,7 +1,7 @@
 export function createUnifiedTemplateModel(input = {}) {
     return {
         meta: {
-            name: input.meta?.name || 'MiSub',
+            name: input.meta?.name || 'Zzp-Sub',
             source: input.meta?.source || 'builtin',
             target: input.meta?.target || 'clash',
             ruleLevel: input.meta?.ruleLevel || 'std',
