@@ -83,7 +83,7 @@
         </div>
         <!-- Group Filter -->
         <div
-            class="flex items-center gap-2 mb-2 p-1.5 misub-radius-md border-b border-gray-100 dark:border-gray-700/50 overflow-x-auto no-scrollbar mask-gradient-r"
+            class="flex items-center gap-2 mb-2 p-1.5 sub-radius-md border-b border-gray-100 dark:border-gray-700/50 overflow-x-auto no-scrollbar mask-gradient-r"
         >
             <button
                 @click="emit('update:groupFilter', null)"
@@ -127,7 +127,7 @@
                 type="text"
                 v-model="searchModel"
                 :placeholder="t('manualNodes.searchPlaceholder')"
-                class="w-full pl-9 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 misub-radius-md shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-indigo-500 focus:border-indigo-500"
+                class="w-full pl-9 pr-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 sub-radius-md shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-indigo-500 focus:border-indigo-500"
                 :aria-label="t('manualNodes.searchPlaceholder')"
             />
             <svg
@@ -146,7 +146,7 @@
             </svg>
         </div>
         <div
-            class="overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-900/50 misub-radius-md border dark:border-gray-700 h-36 lg:h-64"
+            class="overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-900/50 sub-radius-md border dark:border-gray-700 h-36 lg:h-64"
         >
             <div v-for="node in filteredNodes" :key="node.id">
                 <label class="flex items-center space-x-3 cursor-pointer">
@@ -180,7 +180,7 @@
                 item-key="id"
                 handle=".drag-handle"
                 ghost-class="opacity-40"
-                class="space-y-1 p-2 bg-indigo-50 dark:bg-indigo-900/20 misub-radius-md border border-indigo-200 dark:border-indigo-800 h-32 lg:h-48 overflow-y-auto"
+                class="space-y-1 p-2 bg-indigo-50 dark:bg-indigo-900/20 sub-radius-md border border-indigo-200 dark:border-indigo-800 h-32 lg:h-48 overflow-y-auto"
             >
                 <template #item="{ element, index }">
                     <div
@@ -240,7 +240,7 @@
     </div>
     <div
         v-else
-        class="text-center text-sm text-gray-500 p-4 bg-gray-50 dark:bg-gray-900/50 misub-radius-md flex items-center justify-center h-full"
+        class="text-center text-sm text-gray-500 p-4 bg-gray-50 dark:bg-gray-900/50 sub-radius-md flex items-center justify-center h-full"
     >
         {{ t('profileModal.noAvailableNodes') }}
     </div>

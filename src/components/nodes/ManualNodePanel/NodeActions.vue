@@ -64,14 +64,12 @@
 </script>
 
 <template>
-    <div
-        class="mb-4 min-w-0 rounded-xl border border-gray-100/80 bg-white/85 p-4 shadow-sm dark:border-white/10 dark:bg-gray-900/70"
-    >
+    <div class="section-toolbar">
         <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex min-w-0 flex-wrap items-center gap-3">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
                     {{ t('manualNodes.title') }}
-                </h2>
+                </h1>
                 <span
                     class="rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-200"
                     >{{ manualNodesCount }}</span
@@ -84,7 +82,7 @@
                 >
                     <button
                         @click="emit('set-group-filter', null)"
-                        class="px-2.5 py-1 text-xs font-medium misub-radius-md transition-all border shrink-0 whitespace-nowrap"
+                        class="px-2.5 py-1 text-xs font-medium sub-radius-md transition-all border shrink-0 whitespace-nowrap"
                         :class="
                             !activeGroupFilter
                                 ? 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-300 dark:border-indigo-700'
@@ -95,7 +93,7 @@
                     </button>
                     <button
                         @click="emit('set-group-filter', DEFAULT_GROUP_KEY)"
-                        class="px-2.5 py-1 text-xs font-medium misub-radius-md transition-all border shrink-0 whitespace-nowrap"
+                        class="px-2.5 py-1 text-xs font-medium sub-radius-md transition-all border shrink-0 whitespace-nowrap"
                         :class="
                             activeGroupFilter === DEFAULT_GROUP_KEY
                                 ? 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-300 dark:border-indigo-700'
@@ -110,7 +108,7 @@
                         @click="
                             emit('set-group-filter', activeGroupFilter === group ? null : group)
                         "
-                        class="px-2.5 py-1 text-xs font-medium misub-radius-md transition-all border shrink-0 whitespace-nowrap"
+                        class="px-2.5 py-1 text-xs font-medium sub-radius-md transition-all border shrink-0 whitespace-nowrap"
                         :class="
                             activeGroupFilter === group
                                 ? 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-300 dark:border-indigo-700'
@@ -165,11 +163,11 @@
                     </svg>
                 </div>
                 <div
-                    class="p-0.5 bg-gray-200 dark:bg-gray-700 misub-radius-md flex items-center shrink-0"
+                    class="p-0.5 bg-gray-200 dark:bg-gray-700 sub-radius-md flex items-center shrink-0"
                 >
                     <button
                         @click="emit('update:viewMode', 'card')"
-                        class="view-mode-toggle p-1.5 misub-radius-sm transition-colors flex items-center justify-center touch-target"
+                        class="view-mode-toggle p-1.5 sub-radius-sm transition-colors flex items-center justify-center touch-target"
                         :class="
                             viewMode === 'card'
                                 ? 'bg-white dark:bg-gray-900 text-indigo-600'
@@ -190,7 +188,7 @@
                     </button>
                     <button
                         @click="emit('update:viewMode', 'list')"
-                        class="view-mode-toggle p-1.5 misub-radius-sm transition-colors flex items-center justify-center touch-target"
+                        class="view-mode-toggle p-1.5 sub-radius-sm transition-colors flex items-center justify-center touch-target"
                         :class="
                             viewMode === 'list'
                                 ? 'bg-white dark:bg-gray-900 text-indigo-600'
@@ -314,7 +312,7 @@
         >
             <button
                 @click="emit('set-group-filter', null)"
-                class="px-3 py-1 text-xs font-medium misub-radius-md transition-all border shrink-0"
+                class="px-3 py-1 text-xs font-medium sub-radius-md transition-all border shrink-0"
                 :class="
                     !activeGroupFilter
                         ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700/50 dark:text-indigo-300'
@@ -325,7 +323,7 @@
             </button>
             <button
                 @click="emit('set-group-filter', DEFAULT_GROUP_KEY)"
-                class="px-3 py-1 text-xs font-medium misub-radius-md transition-all border shrink-0"
+                class="px-3 py-1 text-xs font-medium sub-radius-md transition-all border shrink-0"
                 :class="
                     activeGroupFilter === DEFAULT_GROUP_KEY
                         ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700/50 dark:text-indigo-300'
@@ -338,7 +336,7 @@
                 v-for="group in manualNodeGroups"
                 :key="group"
                 @click="emit('set-group-filter', activeGroupFilter === group ? null : group)"
-                class="px-3 py-1 text-xs font-medium misub-radius-md transition-all border shrink-0"
+                class="px-3 py-1 text-xs font-medium sub-radius-md transition-all border shrink-0"
                 :class="
                     activeGroupFilter === group
                         ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-700/50 dark:text-indigo-300'

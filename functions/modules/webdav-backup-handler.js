@@ -40,7 +40,7 @@ const DEFAULT_WEBDAV_CONFIG = {
     endpoint: '',
     username: '',
     password: '',
-    remotePath: '/MiSub',
+    remotePath: '/Zzp-Sub',
     filenameTemplate: 'misub-backup-{datetime}.json',
     backupScope: BACKUP_SCOPES.DATA_ONLY,
     autoBackup: false,
@@ -131,22 +131,42 @@ export async function buildBackupPayload(env, options = {}) {
     const scope = normalizeScope(options.scope || backupConfig.backupScope);
     const businessData = await readBusinessData(storageAdapter);
 
-    const durable = { sourceSnapshots: Object.create(null), regionPreferences: Object.create(null), downloadCounts: Object.create(null) };
-    await Promise.all(businessData.subscriptions.filter(s => s?.id && /^https?:\/\//i.test(s.url || '')).map(async source => {
-        const [snapshot, preferences] = await Promise.all([
-            storageAdapter.get(snapshotKey(source)), storageAdapter.get(regionPreferencesKey(source.id)),
-        ]);
-        if (snapshot?.sourceUrl === String(source.url).trim() && Array.isArray(snapshot.nodes) && snapshot.nodes.length) {
-            durable.sourceSnapshots[source.id] = snapshot;
-        }
-        if (preferences) durable.regionPreferences[source.id] = preferences;
-    }));
-    await Promise.all(businessData.profiles.filter(p => p?.id).map(async profile => {
-        durable.downloadCounts[profile.id] = await readProfileDownloadCount(storageAdapter, profile);
-    }));
+    const durable = {
+        sourceSnapshots: Object.create(null),
+        regionPreferences: Object.create(null),
+        downloadCounts: Object.create(null),
+    };
+    await Promise.all(
+        businessData.subscriptions
+            .filter((s) => s?.id && /^https?:\/\//i.test(s.url || ''))
+            .map(async (source) => {
+                const [snapshot, preferences] = await Promise.all([
+                    storageAdapter.get(snapshotKey(source)),
+                    storageAdapter.get(regionPreferencesKey(source.id)),
+                ]);
+                if (
+                    snapshot?.sourceUrl === String(source.url).trim() &&
+                    Array.isArray(snapshot.nodes) &&
+                    snapshot.nodes.length
+                ) {
+                    durable.sourceSnapshots[source.id] = snapshot;
+                }
+                if (preferences) durable.regionPreferences[source.id] = preferences;
+            })
+    );
+    await Promise.all(
+        businessData.profiles
+            .filter((p) => p?.id)
+            .map(async (profile) => {
+                durable.downloadCounts[profile.id] = await readProfileDownloadCount(
+                    storageAdapter,
+                    profile
+                );
+            })
+    );
     const payload = {
         version: BACKUP_VERSION,
-        app: 'MiSub',
+        app: 'Zzp Sub',
         type: BACKUP_TYPE,
         scope,
         exportedAt: new Date().toISOString(),
@@ -175,25 +195,48 @@ export async function buildBackupPayload(env, options = {}) {
 }
 
 function validateDurableData(data) {
-    const sources = new Map(data.subscriptions.filter(s => s?.id).map(s => [String(s.id), s]));
-    const profiles = new Set(data.profiles.filter(p => p?.id).map(p => String(p.id)));
+    const sources = new Map(data.subscriptions.filter((s) => s?.id).map((s) => [String(s.id), s]));
+    const profiles = new Set(data.profiles.filter((p) => p?.id).map((p) => String(p.id)));
     for (const field of ['sourceSnapshots', 'regionPreferences', 'downloadCounts']) {
         if (data[field] === undefined) continue; // Old exports remain compatible.
-        if (!data[field] || typeof data[field] !== 'object' || Array.isArray(data[field])) throw Error('无效的持久数据备份');
+        if (!data[field] || typeof data[field] !== 'object' || Array.isArray(data[field]))
+            throw Error('无效的持久数据备份');
         for (const [id, value] of Object.entries(data[field])) {
             if (field === 'downloadCounts') {
-                if (!profiles.has(id) || !Number.isSafeInteger(value) || value < 0) throw Error('无效的订阅计数备份');
+                if (!profiles.has(id) || !Number.isSafeInteger(value) || value < 0)
+                    throw Error('无效的订阅计数备份');
                 continue;
             }
             const source = sources.get(id);
-            if (!source || !/^https?:\/\//i.test(source.url || '') || !value || typeof value !== 'object' || Array.isArray(value)) throw Error('无效的订阅持久数据备份');
+            if (
+                !source ||
+                !/^https?:\/\//i.test(source.url || '') ||
+                !value ||
+                typeof value !== 'object' ||
+                Array.isArray(value)
+            )
+                throw Error('无效的订阅持久数据备份');
             if (field === 'sourceSnapshots') {
-                if (value.sourceUrl !== String(source.url).trim() || !Array.isArray(value.nodes) || !value.nodes.length ||
-                    value.nodes.some(n => typeof n !== 'string' || !n.trim())) throw Error('无效的节点快照备份');
+                if (
+                    value.sourceUrl !== String(source.url).trim() ||
+                    !Array.isArray(value.nodes) ||
+                    !value.nodes.length ||
+                    value.nodes.some((n) => typeof n !== 'string' || !n.trim())
+                )
+                    throw Error('无效的节点快照备份');
             } else {
-                if (typeof value.version !== 'string' || !value.overrides || typeof value.overrides !== 'object' || Array.isArray(value.overrides) ||
-                    Object.keys(value.overrides).length > 3000 || Object.entries(value.overrides).some(([hash, region]) =>
-                        !/^[0-9a-f]{64}$/.test(hash) || !Object.hasOwn(REGION_KEYWORDS, region))) throw Error('无效的地区纠错备份');
+                if (
+                    typeof value.version !== 'string' ||
+                    !value.overrides ||
+                    typeof value.overrides !== 'object' ||
+                    Array.isArray(value.overrides) ||
+                    Object.keys(value.overrides).length > 3000 ||
+                    Object.entries(value.overrides).some(
+                        ([hash, region]) =>
+                            !/^[0-9a-f]{64}$/.test(hash) || !Object.hasOwn(REGION_KEYWORDS, region)
+                    )
+                )
+                    throw Error('无效的地区纠错备份');
             }
         }
     }
@@ -206,15 +249,22 @@ export function normalizeBackupPayload(raw) {
 
     // New unified format.
     if (raw.type === BACKUP_TYPE && raw.data && typeof raw.data === 'object') {
-        if (!Array.isArray(raw.data.subscriptions) || !Array.isArray(raw.data.profiles) ||
-            (raw.data.ruleTemplates !== undefined && !Array.isArray(raw.data.ruleTemplates))) throw Error('无效的备份数据集合');
+        if (
+            !Array.isArray(raw.data.subscriptions) ||
+            !Array.isArray(raw.data.profiles) ||
+            (raw.data.ruleTemplates !== undefined && !Array.isArray(raw.data.ruleTemplates))
+        )
+            throw Error('无效的备份数据集合');
         validateDurableData(raw.data);
         return {
             ...raw,
             scope: normalizeScope(raw.scope),
             data: {
-                ...Object.fromEntries(['sourceSnapshots', 'regionPreferences', 'downloadCounts']
-                    .filter(field => raw.data[field] !== undefined).map(field => [field, raw.data[field]])),
+                ...Object.fromEntries(
+                    ['sourceSnapshots', 'regionPreferences', 'downloadCounts']
+                        .filter((field) => raw.data[field] !== undefined)
+                        .map((field) => [field, raw.data[field]])
+                ),
                 subscriptions: Array.isArray(raw.data.subscriptions) ? raw.data.subscriptions : [],
                 profiles: Array.isArray(raw.data.profiles) ? raw.data.profiles : [],
                 ruleTemplates: Array.isArray(raw.data.ruleTemplates) ? raw.data.ruleTemplates : [],
@@ -230,7 +280,7 @@ export function normalizeBackupPayload(raw) {
     if (Array.isArray(raw.subscriptions)) {
         return {
             version: BACKUP_VERSION,
-            app: 'MiSub',
+            app: 'Zzp Sub',
             type: BACKUP_TYPE,
             scope: BACKUP_SCOPES.DATA_ONLY,
             exportedAt: raw.exportedAt || new Date().toISOString(),
@@ -417,12 +467,20 @@ async function webdavFetch(config, path, init = {}) {
     // Backup bodies contain credentials. Never replay them to a redirected origin.
     let currentUrl = url;
     for (let attempt = 0; attempt <= 3; attempt++) {
-        const response = await fetch(currentUrl, { ...init, headers, redirect: 'manual',
-            signal: init.signal || AbortSignal.timeout(15000) });
+        const response = await fetch(currentUrl, {
+            ...init,
+            headers,
+            redirect: 'manual',
+            signal: init.signal || AbortSignal.timeout(15000),
+        });
         if (![301, 302, 303, 307, 308].includes(response.status)) return response;
         await response.body?.cancel();
         const next = new URL(response.headers.get('Location') || '', currentUrl);
-        if (attempt === 3 || next.origin !== new URL(url).origin || !response.headers.get('Location')) {
+        if (
+            attempt === 3 ||
+            next.origin !== new URL(url).origin ||
+            !response.headers.get('Location')
+        ) {
             throw new Error('WebDAV redirect rejected');
         }
         currentUrl = next.toString();
@@ -430,7 +488,7 @@ async function webdavFetch(config, path, init = {}) {
 }
 
 async function ensureRemoteDirectory(config) {
-    const parts = String(config.remotePath || '/MiSub')
+    const parts = String(config.remotePath || '/Zzp-Sub')
         .split('/')
         .filter(Boolean);
     let current = '';
@@ -459,13 +517,16 @@ export function formatBackupFilename(
 async function updateBackupStatus(env, patch) {
     const { storageAdapter } = await getStorage(env);
     const settings = (await storageAdapter.get(KV_KEY_SETTINGS)) || {};
-    const update = current => ({
-        ...current, webdavBackup: { ...normalizeWebdavConfig(current), ...patch },
+    const update = (current) => ({
+        ...current,
+        webdavBackup: { ...normalizeWebdavConfig(current), ...patch },
     });
-    const saved = typeof storageAdapter.updateSettingsByKey === 'function'
-        ? await storageAdapter.updateSettingsByKey(KV_KEY_SETTINGS, update)
-        : update(settings);
-    if (typeof storageAdapter.updateSettingsByKey !== 'function') await storageAdapter.put(KV_KEY_SETTINGS, saved);
+    const saved =
+        typeof storageAdapter.updateSettingsByKey === 'function'
+            ? await storageAdapter.updateSettingsByKey(KV_KEY_SETTINGS, update)
+            : update(settings);
+    if (typeof storageAdapter.updateSettingsByKey !== 'function')
+        await storageAdapter.put(KV_KEY_SETTINGS, saved);
     const webdavBackup = saved.webdavBackup;
     SettingsCache.clear();
     return webdavBackup;
@@ -482,7 +543,7 @@ export async function performWebdavBackup(env, options = {}) {
         trigger: options.trigger || 'manual',
     });
     const filename = formatBackupFilename(config.filenameTemplate);
-    const remotePath = `${String(config.remotePath || '/MiSub').replace(/\/+$/, '')}/${filename}`;
+    const remotePath = `${String(config.remotePath || '/Zzp-Sub').replace(/\/+$/, '')}/${filename}`;
     const body = JSON.stringify(payload, null, 2);
 
     try {
@@ -609,7 +670,7 @@ export async function listWebdavBackupFiles(env) {
     const { storageAdapter } = await getStorage(env);
     const settings = (await storageAdapter.get(KV_KEY_SETTINGS)) || {};
     const config = normalizeWebdavConfig(settings);
-    const remoteDir = String(config.remotePath || '/MiSub').replace(/\/+$/, '');
+    const remoteDir = String(config.remotePath || '/Zzp-Sub').replace(/\/+$/, '');
     const response = await webdavFetch(config, remoteDir || '/', {
         method: 'PROPFIND',
         headers: { Depth: '1' },
@@ -650,7 +711,9 @@ export async function fetchWebdavBackupFile(env, filePath) {
     const config = normalizeWebdavConfig(settings);
     const response = await webdavFetch(config, filePath, { method: 'GET' });
     if (!response.ok) throw new Error(`读取 WebDAV 备份失败: HTTP ${response.status}`);
-    return JSON.parse(new TextDecoder().decode(await readResponseBufferWithLimit(response, MAX_BACKUP_BYTES)));
+    return JSON.parse(
+        new TextDecoder().decode(await readResponseBufferWithLimit(response, MAX_BACKUP_BYTES))
+    );
 }
 
 export async function handleWebdavRestore(request, env) {

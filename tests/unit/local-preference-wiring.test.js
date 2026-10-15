@@ -28,7 +28,6 @@ const STORAGE_OWNERS = [
     'src/utils/local-preference.js', // localStorage：偏好读写 + 回读校验
     'src/utils/session-preference.js', // sessionStorage：会话偏好读写 + 回读校验
     'src/utils/chunk-reload.js', // sessionStorage：chunk 重载循环保护（需原子读写）
-    'src/utils/cache-helper.js', // sessionStorage：带 TTL 的会话缓存
 ];
 
 const allowedFiles = new Set(STORAGE_OWNERS.map((file) => path.resolve(process.cwd(), file)));

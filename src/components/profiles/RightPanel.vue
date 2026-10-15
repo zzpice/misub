@@ -1,7 +1,6 @@
 <script setup>
     import { ref, computed, onUnmounted } from 'vue';
     import { useToastStore } from '../../stores/toast.js';
-    import { useUIStore } from '../../stores/ui.js';
     import { useI18n } from '../../i18n/index.js';
 
     const props = defineProps({
@@ -16,7 +15,6 @@
     const emit = defineEmits(['qrcode']);
 
     const { showToast } = useToastStore();
-    const uiStore = useUIStore();
     const { t } = useI18n();
 
     const copied = ref(false);
@@ -128,7 +126,7 @@
 <template>
     <div>
         <div
-            class="bg-white/90 dark:bg-gray-900/80 backdrop-blur-md misub-radius-lg border border-gray-100/80 dark:border-white/10 shadow-sm transition-all duration-300"
+            class="bg-white/90 dark:bg-gray-900/80 backdrop-blur-md sub-radius-lg border border-gray-100/80 dark:border-white/10 shadow-sm transition-all duration-300"
             :class="compact ? 'p-4' : 'p-6'"
         >
             <h3
@@ -141,7 +139,7 @@
 
             <div
                 v-if="hasSetupTasks"
-                class="mb-4 rounded-[var(--misub-radius-md)] border border-amber-200/80 bg-amber-50/80 p-3 text-amber-800 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200 list-item-animation"
+                class="mb-4 rounded-[var(--sub-radius-md)] border border-amber-200/80 bg-amber-50/80 p-3 text-amber-800 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200 list-item-animation"
                 style="--delay-index: 1"
             >
                 <p class="text-sm font-semibold">{{ t('dashboard.linkCard.setupTitle') }}</p>
@@ -150,7 +148,7 @@
                         v-for="task in setupTasks"
                         :key="task.id"
                         :to="task.to"
-                        class="block rounded-[var(--misub-radius-sm)] border border-current/15 bg-white/50 px-3 py-2 text-xs hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/15 transition-colors"
+                        class="block rounded-[var(--sub-radius-sm)] border border-current/15 bg-white/50 px-3 py-2 text-xs hover:bg-white/80 dark:bg-white/10 dark:hover:bg-white/15 transition-colors"
                     >
                         <span class="block font-semibold">{{ task.title }}</span>
                         <span class="mt-0.5 block opacity-80">{{ task.description }}</span>
@@ -164,7 +162,7 @@
                 }}</label>
                 <select
                     v-model="selectedId"
-                    class="w-full px-3 py-2.5 bg-white/80 dark:bg-gray-800/70 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/40 focus:border-primary-500 text-sm text-gray-900 dark:text-white input-enhanced"
+                    class="w-full px-3 py-2.5 bg-white/80 dark:bg-gray-800/70 border border-gray-200/80 dark:border-white/10 sub-radius-lg shadow-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/40 focus:border-primary-500 text-sm text-gray-900 dark:text-white input-enhanced"
                 >
                     <option value="default">
                         {{ t('dashboard.linkCard.defaultSubscription') }}
@@ -189,7 +187,7 @@
                         :key="format"
                         @click="selectedFormat = format"
                         :aria-pressed="selectedFormat === format"
-                        class="min-h-11 px-3 py-2.5 text-xs font-medium misub-radius-lg border transition-colors flex justify-center items-center text-center list-item-animation"
+                        class="min-h-11 px-3 py-2.5 text-xs font-medium sub-radius-lg border transition-colors flex justify-center items-center text-center list-item-animation"
                         :style="{ '--delay-index': index }"
                         :class="[
                             selectedFormat === format
@@ -208,7 +206,7 @@
                     :value="subLink"
                     readonly
                     :disabled="!isLinkValid"
-                    class="w-full min-h-12 text-sm text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800/60 misub-radius-lg pl-3 pr-24 py-3 border border-gray-200/70 dark:border-white/10 focus-visible:outline-hidden focus-visible:ring-2 font-mono input-enhanced"
+                    class="w-full min-h-12 text-sm text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800/60 sub-radius-lg pl-3 pr-24 py-3 border border-gray-200/70 dark:border-white/10 focus-visible:outline-hidden focus-visible:ring-2 font-mono input-enhanced"
                     :class="{
                         'focus-visible:ring-primary-500': isLinkValid,
                         'focus-visible:ring-red-500 cursor-not-allowed': !isLinkValid,
@@ -220,7 +218,7 @@
                     <button
                         @click="$emit('qrcode', subLink, t('dashboard.linkCard.qrTitle'))"
                         :disabled="!isLinkValid"
-                        class="flex h-11 w-11 items-center justify-center misub-radius-md text-gray-500 dark:text-gray-400 transition-colors duration-200"
+                        class="flex h-11 w-11 items-center justify-center sub-radius-md text-gray-500 dark:text-gray-400 transition-colors duration-200"
                         :class="
                             isLinkValid
                                 ? 'hover:text-primary-600 hover:bg-white/80 dark:hover:bg-gray-800'
@@ -252,7 +250,7 @@
                     <button
                         @click="copyToClipboard"
                         :disabled="!isLinkValid"
-                        class="flex h-11 w-11 items-center justify-center misub-radius-md text-gray-500 dark:text-gray-400 transition-colors duration-200"
+                        class="flex h-11 w-11 items-center justify-center sub-radius-md text-gray-500 dark:text-gray-400 transition-colors duration-200"
                         :class="
                             isLinkValid
                                 ? 'hover:text-primary-600 hover:bg-white/80 dark:hover:bg-gray-800'

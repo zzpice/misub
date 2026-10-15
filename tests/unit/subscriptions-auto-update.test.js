@@ -33,13 +33,16 @@ describe('removed global browser-side automatic update interval', () => {
         vi.useRealTimers();
         vi.restoreAllMocks();
     });
-    it.each([0, 5, 60])('never installs a browser interval for legacy setting %i', async (interval) => {
-        mocks.dataStore.settings = { autoUpdateInterval: interval };
-        const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
-        const { useSubscriptions } = await import('../../src/composables/useSubscriptions.js');
-        const instance = useSubscriptions(vi.fn());
-        expect(instance.startAutoUpdate).toBeUndefined();
-        expect(instance.stopAutoUpdate).toBeUndefined();
-        expect(setIntervalSpy).not.toHaveBeenCalled();
-    });
+    it.each([0, 5, 60])(
+        'never installs a browser interval for legacy setting %i',
+        async (interval) => {
+            mocks.dataStore.settings = { autoUpdateInterval: interval };
+            const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
+            const { useSubscriptions } = await import('../../src/composables/useSubscriptions.js');
+            const instance = useSubscriptions(vi.fn());
+            expect(instance.startAutoUpdate).toBeUndefined();
+            expect(instance.stopAutoUpdate).toBeUndefined();
+            expect(setIntervalSpy).not.toHaveBeenCalled();
+        }
+    );
 });

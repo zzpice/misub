@@ -4,7 +4,9 @@ export function isPersonalAssetPath(pathname) {
     if (pathname === '/index.html' || pathname.endsWith('/index.html')) return false;
     if (pathname.startsWith('/cdn-cgi/')) return true;
     if (/^\/(assets|icons|fonts)\//.test(pathname)) return true;
-    return /\.(?:js|mjs|css|map|png|jpe?g|gif|webp|svg|ico|avif|woff2?|ttf|otf|webmanifest|txt|json)$/i.test(pathname);
+    return /\.(?:js|mjs|css|map|png|jpe?g|gif|webp|svg|ico|avif|woff2?|ttf|otf|webmanifest|txt|json)$/i.test(
+        pathname
+    );
 }
 
 export function classifyPersonalRequest(pathname, { mytoken, profileToken } = {}) {

@@ -15,7 +15,7 @@
     <Transition name="slide-fade">
         <div
             v-if="isDirty || saveState === 'success'"
-            class="fixed bottom-24 left-1/2 -translate-x-1/2 z-[70] w-[95%] max-w-2xl px-4 py-3 rounded-2xl flex flex-row items-center justify-between transition-all duration-300 gap-4 shadow-2xl backdrop-blur-xl border border-white/20 dark:border-white/10"
+            class="save-prompt fixed bottom-24 left-1/2 -translate-x-1/2 z-[70] w-[95%] max-w-2xl px-4 py-3 rounded-2xl flex flex-row items-center justify-between transition-all duration-300 gap-4 shadow-2xl backdrop-blur-xl border border-white/20 dark:border-white/10"
             :class="
                 saveState === 'success'
                     ? 'bg-teal-50 dark:bg-teal-900/30 ring-1 ring-teal-500/20'
@@ -25,7 +25,7 @@
             <div class="flex items-center gap-3">
                 <span class="flex h-3 w-3 relative">
                     <span
-                        class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                        class="hidden"
                         :class="saveState === 'success' ? 'bg-teal-400' : 'bg-orange-400'"
                     ></span>
                     <span
@@ -52,15 +52,16 @@
             <div class="flex items-center gap-3 w-full sm:w-auto">
                 <button
                     v-if="saveState !== 'success'"
+                    :disabled="saveState === 'saving'"
                     @click="$emit('discard')"
-                    class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors hover:bg-black/5 dark:hover:bg-white/5 misub-radius-md whitespace-nowrap"
+                    class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors hover:bg-black/5 dark:hover:bg-white/5 sub-radius-md whitespace-nowrap"
                 >
                     {{ t('actions.discard') }}
                 </button>
                 <button
                     @click.prevent="$emit('save')"
                     :disabled="saveState !== 'idle'"
-                    class="flex-1 sm:flex-none px-6 py-2 text-sm text-white font-bold misub-radius-lg flex items-center justify-center transition-all duration-300 transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap"
+                    class="flex-1 sm:flex-none px-6 py-2 text-sm text-white font-bold sub-radius-lg flex items-center justify-center transition-all duration-300 transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap"
                     :class="{
                         'bg-primary-600 hover:bg-primary-500': saveState === 'idle',
                         'bg-gray-500': saveState === 'saving',
@@ -97,12 +98,14 @@
 <style scoped>
     .slide-fade-enter-active,
     .slide-fade-leave-active {
-        transition: all 0.3s ease-out;
+        transition:
+            opacity var(--duration-fast) ease-out,
+            translate var(--duration-fast) ease-out;
     }
 
     .slide-fade-enter-from,
     .slide-fade-leave-to {
-        transform: translateY(-20px);
+        translate: 0 6px;
         opacity: 0;
     }
 </style>

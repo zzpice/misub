@@ -65,17 +65,17 @@
     // 尺寸映射支持
     const sizeMap = {
         sm: {
-            input: 'py-1.5 text-xs misub-radius-md px-2',
+            input: 'py-1.5 text-xs sub-radius-md px-2',
             label: 'text-xs mb-1 ml-1',
             icon: 'h-4 w-4',
         },
         md: {
-            input: 'py-2 text-sm misub-radius-md px-3',
+            input: 'py-2 text-sm sub-radius-md px-3',
             label: 'text-sm mb-1.5 ml-1',
             icon: 'h-4 w-4',
         },
         lg: {
-            input: 'py-3 text-base misub-radius-lg px-4',
+            input: 'py-3 text-base sub-radius-lg px-4',
             label: 'text-sm mb-1.5 ml-1',
             icon: 'h-5 w-5',
         },
@@ -153,7 +153,7 @@
 
             <!-- Focus Glow -->
             <div
-                class="absolute inset-0 misub-radius-md pointer-events-none transition-opacity duration-150 opacity-0 group-focus-within:opacity-100 ring-1 ring-primary-500/20"
+                class="absolute inset-0 sub-radius-md pointer-events-none transition-opacity duration-150 opacity-0 group-focus-within:opacity-100 ring-1 ring-primary-500/20"
             ></div>
         </div>
 

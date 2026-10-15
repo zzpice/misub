@@ -25,7 +25,9 @@ function createStorage(sources) {
     const storage = {
         getAllSubscriptions: vi.fn(async () => subscriptions),
         get: vi.fn(async (key) => structuredClone(records.get(key) ?? null)),
-        put: vi.fn(async (key, value) => { records.set(key, structuredClone(value)); }),
+        put: vi.fn(async (key, value) => {
+            records.set(key, structuredClone(value));
+        }),
         updateSubscriptionById: vi.fn(async (id, updater) => {
             const index = subscriptions.findIndex((item) => item.id === id);
             if (index !== -1) subscriptions[index] = updater(subscriptions[index]);
@@ -55,18 +57,26 @@ describe('unified cron snapshot refresh', () => {
             { id: 's1', name: 'Active', url: 'https://example.com/sub', enabled: true },
             { id: 's2', name: 'Disabled', url: 'https://example.com/other', enabled: false },
         ]);
-        const { handleCronTrigger } = await import('../../functions/modules/subscription-refresh.js');
+        const { handleCronTrigger } =
+            await import('../../functions/modules/subscription-refresh.js');
         const payload = await (await handleCronTrigger({})).json();
 
         expect(payload.summary).toMatchObject({
-            total: 1, updated: 1, failed: 0, skipped: 0, changes: true,
+            total: 1,
+            updated: 1,
+            failed: 0,
+            skipped: 0,
+            changes: true,
         });
         expect(storage.getAllSubscriptions).toHaveBeenCalledTimes(1);
         expect(storage.records.get('misub_source_snapshot_v1_s1')).toMatchObject({
-            sourceUrl: 'https://example.com/sub', nodes: [nodeA, nodeB], nodeCount: 2,
+            sourceUrl: 'https://example.com/sub',
+            nodes: [nodeA, nodeB],
+            nodeCount: 2,
         });
         expect(storage.subscriptions[0]).toMatchObject({
-            nodeCount: 2, userInfo: { upload: 1, download: 2, total: 10 },
+            nodeCount: 2,
+            userInfo: { upload: 1, download: 2, total: 10 },
         });
         expect(storage.putAllSubscriptions).not.toHaveBeenCalled();
         expect(mocks.fetchRemoteSourceSnapshot).toHaveBeenCalledTimes(1);
@@ -77,16 +87,24 @@ describe('unified cron snapshot refresh', () => {
             { id: 's1', name: 'Failing', url: 'https://example.com/sub', enabled: true },
         ]);
         storage.records.set('misub_source_snapshot_v1_s1', {
-            sourceId: 's1', sourceUrl: 'https://example.com/sub',
-            nodes: [nodeA], nodeCount: 1, updatedAt: '2020-01-01T00:00:00.000Z',
+            sourceId: 's1',
+            sourceUrl: 'https://example.com/sub',
+            nodes: [nodeA],
+            nodeCount: 1,
+            updatedAt: '2020-01-01T00:00:00.000Z',
         });
         mocks.fetchRemoteSourceSnapshot.mockRejectedValue(new Error('HTTP 403'));
 
-        const { handleCronTrigger } = await import('../../functions/modules/subscription-refresh.js');
+        const { handleCronTrigger } =
+            await import('../../functions/modules/subscription-refresh.js');
         const payload = await (await handleCronTrigger({})).json();
 
         expect(payload.summary).toMatchObject({
-            total: 1, updated: 0, failed: 1, preserved: 1, changes: false,
+            total: 1,
+            updated: 0,
+            failed: 1,
+            preserved: 1,
+            changes: false,
         });
         expect(storage.records.get('misub_source_snapshot_v1_s1').nodes).toEqual([nodeA]);
         expect(storage.putAllSubscriptions).not.toHaveBeenCalled();
@@ -94,21 +112,40 @@ describe('unified cron snapshot refresh', () => {
 
     it('respects disabled auto-update, fresh snapshots and retry backoff', async () => {
         const storage = createStorage([
-            { id: 'off', name: 'Off', url: 'https://example.com/off', enabled: true, autoUpdateEnabled: false },
-            { id: 'fresh', name: 'Fresh', url: 'https://example.com/fresh', enabled: true, autoUpdateIntervalMinutes: 60 },
+            {
+                id: 'off',
+                name: 'Off',
+                url: 'https://example.com/off',
+                enabled: true,
+                autoUpdateEnabled: false,
+            },
+            {
+                id: 'fresh',
+                name: 'Fresh',
+                url: 'https://example.com/fresh',
+                enabled: true,
+                autoUpdateIntervalMinutes: 60,
+            },
             { id: 'retry', name: 'Retry', url: 'https://example.com/retry', enabled: true },
         ]);
         storage.records.set('misub_source_snapshot_v1_fresh', {
-            sourceUrl: 'https://example.com/fresh', nodes: [nodeA], nodeCount: 1,
+            sourceUrl: 'https://example.com/fresh',
+            nodes: [nodeA],
+            nodeCount: 1,
             updatedAt: new Date().toISOString(),
         });
         storage.records.set('misub_source_attempt_v1_retry', {
-            lastAttemptAt: new Date().toISOString(), success: false,
+            lastAttemptAt: new Date().toISOString(),
+            success: false,
         });
-        const { handleCronTrigger } = await import('../../functions/modules/subscription-refresh.js');
+        const { handleCronTrigger } =
+            await import('../../functions/modules/subscription-refresh.js');
         const payload = await (await handleCronTrigger({})).json();
         expect(payload.summary).toMatchObject({
-            total: 3, updated: 0, skipped: 3, failed: 0,
+            total: 3,
+            updated: 0,
+            skipped: 3,
+            failed: 0,
         });
         expect(mocks.fetchRemoteSourceSnapshot).not.toHaveBeenCalled();
     });

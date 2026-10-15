@@ -59,9 +59,9 @@ describe('subscription card remaining traffic', () => {
         expect(wrapper.text()).toContain('0 B / 10 GB');
         expect(wrapper.text()).toContain('已用 12 GB');
         expect(wrapper.text()).toContain('剩余 0.0%');
-        expect(wrapper.get('[data-testid="traffic-remaining-progress"]').attributes('style')).toContain(
-            'width: 0%'
-        );
+        expect(
+            wrapper.get('[data-testid="traffic-remaining-progress"]').attributes('style')
+        ).toContain('width: 0%');
     });
 
     it.each([

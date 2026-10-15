@@ -1,7 +1,7 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
 import router from '../router';
-import { fetchInitialData, login as apiLogin, fetchLoginConfig } from '../lib/api';
+import { fetchInitialData, login as apiLogin } from '../lib/api';
 import { api } from '../lib/http.js';
 import { handleError } from '../utils/errorHandler.js';
 import { useDataStore } from './useDataStore';
@@ -12,24 +12,8 @@ export const useSessionStore = defineStore('session', () => {
     const initialData = ref(null);
     const subscriptionConfig = ref({}); // [NEW] Added subscriptionConfig
     const securityWarning = ref(null);
-    const loginConfig = ref({ isLoginPath: false });
-    const hasLoadedLoginConfig = ref(false);
-
     async function checkSession() {
-        // Parallel fetch of initial data (auth check) and login config
-        const [dataResult, pConfigResult] = await Promise.all([
-            fetchInitialData(),
-            fetchLoginConfig(),
-        ]);
-
-        // Update login config
-        if (pConfigResult.success) {
-            loginConfig.value = pConfigResult.data;
-            hasLoadedLoginConfig.value = true;
-        } else if (!hasLoadedLoginConfig.value) {
-            // Fail closed on the first load; preserve a known-good config on later retries.
-            loginConfig.value = { isLoginPath: false };
-        }
+        const dataResult = await fetchInitialData();
 
         if (dataResult.success) {
             initialData.value = dataResult.data;
@@ -87,6 +71,7 @@ export const useSessionStore = defineStore('session', () => {
         sessionState.value = 'loggedOut';
         initialData.value = null;
         securityWarning.value = null;
+        subscriptionConfig.value = {};
         useDataStore().clearCachedData();
         return true;
     }
@@ -117,6 +102,7 @@ export const useSessionStore = defineStore('session', () => {
 
         // 清除缓存数据
         const dataStore = useDataStore();
+        subscriptionConfig.value = {};
         dataStore.clearCachedData();
 
         // 退出后返回入口。
@@ -126,7 +112,6 @@ export const useSessionStore = defineStore('session', () => {
     return {
         sessionState,
         initialData,
-        loginConfig,
         subscriptionConfig,
         securityWarning,
         checkSession,

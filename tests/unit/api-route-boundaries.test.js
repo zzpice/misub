@@ -53,6 +53,11 @@ describe('API route access boundaries', () => {
                 '/system/error_report',
                 '/public_config',
                 '/config',
+                '/login_config',
+                '/migrate',
+                '/migrate_to_d1',
+                '/detect_legacy_d1',
+                '/migrate_legacy_d1',
             ]) {
                 for (const method of ['GET', 'POST']) {
                     for (const headers of [{}, { Cookie: cookie }]) {
@@ -65,62 +70,6 @@ describe('API route access boundaries', () => {
                 }
             }
         }
-    });
-
-    it('keeps login configuration reachable while removing the public client catalog', async () => {
-        const env = { MISUB_KV: createKv() };
-
-        const loginConfig = await handleApiRequest(
-            new Request('https://example.com/api/login_config'),
-            env
-        );
-        const publicClients = await handleApiRequest(
-            new Request('https://example.com/api/clients'),
-            env
-        );
-
-        expect(loginConfig.status).toBe(200);
-
-        expect(publicClients.status).toBe(404);
-    });
-
-    it('does not expose the custom login path through public configuration', async () => {
-        const env = {
-            MISUB_KV: createKv({
-                worker_settings_v1: JSON.stringify({ customLoginPath: 'admin-login' }),
-            }),
-        };
-
-        const response = await handleApiRequest(
-            new Request('https://example.com/api/login_config'),
-            env
-        );
-        const body = await response.json();
-
-        expect(response.status).toBe(200);
-        expect(body).not.toHaveProperty('customLoginPath');
-        expect(body.isLoginPath).toBe(false);
-    });
-
-    it('marks the current configured login path without returning the path', async () => {
-        const env = {
-            MISUB_KV: createKv({
-                worker_settings_v1: JSON.stringify({ customLoginPath: 'admin-login' }),
-            }),
-        };
-
-        SettingsCache.clear();
-        const response = await handleApiRequest(
-            new Request('https://example.com/api/login_config', {
-                headers: { 'X-MiSub-Path': '/admin-login' },
-            }),
-            env
-        );
-        const body = await response.json();
-
-        expect(response.status).toBe(200);
-        expect(body.isLoginPath).toBe(true);
-        expect(body).not.toHaveProperty('customLoginPath');
     });
 
     it('returns unauthenticated metadata for /api/data without exposing management data', async () => {

@@ -132,7 +132,7 @@
                     <div class="relative">
                         <select
                             v-model="settings.defaultPrefixSettings.enableManualNodes"
-                            class="w-full bg-gray-50 dark:bg-gray-800 border border-transparent dark:border-gray-700 misub-radius-md py-2.5 px-4 text-xs text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:outline-none transition-all appearance-none"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border border-transparent dark:border-gray-700 sub-radius-md py-2.5 px-4 text-xs text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:outline-none transition-all appearance-none"
                         >
                             <option
                                 v-for="option in prefixToggleOptions"
@@ -166,7 +166,7 @@
                     <div class="relative">
                         <select
                             v-model="settings.defaultPrefixSettings.enableSubscriptions"
-                            class="w-full bg-gray-50 dark:bg-gray-800 border border-transparent dark:border-gray-700 misub-radius-md py-2 px-4 text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:outline-none transition-all appearance-none"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border border-transparent dark:border-gray-700 sub-radius-md py-2 px-4 text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:outline-none transition-all appearance-none"
                         >
                             <option
                                 v-for="option in prefixToggleOptions"
@@ -199,7 +199,7 @@
                     <div class="relative">
                         <select
                             v-model="settings.enableFlagEmoji"
-                            class="w-full bg-gray-50 dark:bg-gray-800 border border-transparent dark:border-gray-700 misub-radius-md py-2 px-4 text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:outline-none transition-all appearance-none"
+                            class="w-full bg-gray-50 dark:bg-gray-800 border border-transparent dark:border-gray-700 sub-radius-md py-2 px-4 text-sm text-gray-900 dark:text-white focus-visible:ring-2 focus-visible:ring-blue-500/20 focus-visible:outline-none transition-all appearance-none"
                         >
                             <option
                                 v-for="option in prefixToggleOptions"
@@ -338,10 +338,7 @@
                 >
             </div>
 
-            <OperatorChain
-                v-model="settings.defaultOperators"
-                :legacy-data="settings.defaultNodeTransform"
-            />
+            <OperatorChain v-model="settings.defaultOperators" />
         </div>
     </div>
 </template>

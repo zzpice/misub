@@ -1,5 +1,5 @@
 <script setup>
-    import { computed, ref } from 'vue';
+    import { computed } from 'vue';
     import { useI18n } from '@/i18n/index.js';
 
     const { t } = useI18n();
@@ -56,10 +56,8 @@
     );
     const hasProfileWarning = computed(() => props.activeProfilesCount === 0);
 
-    const isVisible = ref(true);
-
     const cardBaseClass =
-        'stat-card group w-full text-left bg-white/90 dark:bg-gray-900/70 p-4 misub-radius-lg shadow-sm border transition-all duration-500 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/30';
+        'stat-card group w-full text-left p-4 sub-radius-lg border transition-colors duration-150 hover:border-primary-300 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-500/30';
     const normalCardClass = 'border-gray-100/80 dark:border-white/10';
     const warningCardClass =
         'border-amber-200/80 bg-amber-50/70 dark:border-amber-400/20 dark:bg-amber-500/10';
@@ -74,11 +72,7 @@
         <button
             type="button"
             data-testid="stat-card-traffic"
-            :class="[
-                cardBaseClass,
-                hasTrafficWarning ? warningCardClass : normalCardClass,
-                { 'stat-card-visible': isVisible },
-            ]"
+            :class="[cardBaseClass, hasTrafficWarning ? warningCardClass : normalCardClass]"
             style="--delay: 0ms"
             @click="
                 navigate(
@@ -92,7 +86,7 @@
                     {{ t('dashboard.remainingTraffic') }}
                 </h3>
                 <span
-                    class="p-1.5 misub-radius-md"
+                    class="p-1.5 sub-radius-md"
                     :class="
                         hasTrafficWarning
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
@@ -158,11 +152,7 @@
         <button
             type="button"
             data-testid="stat-card-subscriptions"
-            :class="[
-                cardBaseClass,
-                hasSubscriptionWarning ? warningCardClass : normalCardClass,
-                { 'stat-card-visible': isVisible },
-            ]"
+            :class="[cardBaseClass, hasSubscriptionWarning ? warningCardClass : normalCardClass]"
             style="--delay: 100ms"
             @click="
                 navigate(
@@ -178,7 +168,7 @@
                     {{ t('dashboard.activeSubscriptions') }}
                 </h3>
                 <span
-                    class="p-1.5 misub-radius-md"
+                    class="p-1.5 sub-radius-md"
                     :class="
                         hasSubscriptionWarning
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
@@ -219,9 +209,7 @@
             >
                 <span
                     class="inline-block w-2 h-2 rounded-full"
-                    :class="
-                        hasSubscriptionWarning ? 'bg-amber-500' : 'bg-green-500 animate-ping-slow'
-                    "
+                    :class="hasSubscriptionWarning ? 'bg-amber-500' : 'bg-green-500'"
                 ></span>
                 <span>{{
                     hasSubscriptionWarning
@@ -234,11 +222,7 @@
         <button
             type="button"
             data-testid="stat-card-nodes"
-            :class="[
-                cardBaseClass,
-                hasNodeWarning ? warningCardClass : normalCardClass,
-                { 'stat-card-visible': isVisible },
-            ]"
+            :class="[cardBaseClass, hasNodeWarning ? warningCardClass : normalCardClass]"
             style="--delay: 200ms"
             @click="
                 navigate('/dashboard/subscriptions', hasNodeWarning ? { status: 'zero-nodes' } : {})
@@ -249,7 +233,7 @@
                     {{ t('dashboard.totalNodes') }}
                 </h3>
                 <span
-                    class="p-1.5 misub-radius-md"
+                    class="p-1.5 sub-radius-md"
                     :class="
                         hasNodeWarning
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
@@ -296,11 +280,7 @@
         <button
             type="button"
             data-testid="stat-card-profiles"
-            :class="[
-                cardBaseClass,
-                hasProfileWarning ? warningCardClass : normalCardClass,
-                { 'stat-card-visible': isVisible },
-            ]"
+            :class="[cardBaseClass, hasProfileWarning ? warningCardClass : normalCardClass]"
             style="--delay: 300ms"
             @click="
                 navigate('/dashboard/subscriptions', hasProfileWarning ? { focus: 'profiles' } : {})
@@ -311,7 +291,7 @@
                     {{ t('dashboard.combinedSubscriptions') }}
                 </h3>
                 <span
-                    class="p-1.5 misub-radius-md"
+                    class="p-1.5 sub-radius-md"
                     :class="
                         hasProfileWarning
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'
@@ -356,52 +336,3 @@
         </button>
     </div>
 </template>
-
-<style scoped>
-    .stat-card {
-        opacity: 0;
-        transform: translateY(20px) scale(0.95);
-        transition:
-            opacity 0.6s ease-out,
-            transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-            box-shadow 0.2s ease,
-            border-color 0.2s ease;
-        transition-delay: 0ms;
-    }
-
-    .stat-card-visible {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-
-    @keyframes ping-slow {
-        0% {
-            opacity: 1;
-            transform: scale(1);
-        }
-        50% {
-            opacity: 0.5;
-            transform: scale(1.5);
-        }
-        100% {
-            opacity: 0;
-            transform: scale(2);
-        }
-    }
-
-    .animate-ping-slow {
-        animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .stat-card {
-            opacity: 1;
-            transform: none;
-            transition: none;
-        }
-
-        .animate-ping-slow {
-            animation: none;
-        }
-    }
-</style>

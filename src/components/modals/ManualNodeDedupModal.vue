@@ -45,7 +45,7 @@
                 </div>
                 <div
                     v-if="previewList.length > 0"
-                    class="border border-gray-200 dark:border-gray-700 misub-radius-md"
+                    class="border border-gray-200 dark:border-gray-700 sub-radius-md"
                 >
                     <div
                         class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700"

@@ -102,15 +102,12 @@
 <template>
     <div>
         <div class="list-item-animation mb-4" style="--delay-index: 0">
-            <div
-                class="rounded-xl border border-gray-100/80 bg-white/85 shadow-sm dark:border-white/10 dark:bg-gray-900/70"
-                :class="compact ? 'p-3' : 'p-4'"
-            >
+            <div class="section-toolbar" :class="compact ? 'py-3' : 'py-4'">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div class="flex items-center gap-3 shrink-0">
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
                             {{ t('profiles.title') }}
-                        </h2>
+                        </h1>
                         <span
                             class="rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-200"
                             >{{ profiles.length }}</span

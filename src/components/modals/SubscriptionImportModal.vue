@@ -270,7 +270,7 @@
         <template #footer>
             <button
                 @click="emit('update:show', false)"
-                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold text-sm misub-radius-lg transition-colors"
+                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold text-sm sub-radius-lg transition-colors"
             >
                 {{ t('actions.cancel') }}
             </button>
@@ -278,7 +278,7 @@
                 v-if="activeTab === 'url'"
                 @click="importSubscription"
                 :disabled="isLoading || !subscriptionUrl.trim()"
-                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm misub-radius-lg transition-colors disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:opacity-70 disabled:cursor-not-allowed"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm sub-radius-lg transition-colors disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 {{ t('actions.import') }}
             </button>
@@ -286,10 +286,10 @@
         <template #body>
             <div class="space-y-4">
                 <!-- 来源切换 -->
-                <div class="grid grid-cols-2 gap-1 p-1 bg-gray-100 dark:bg-white/5 misub-radius-lg">
+                <div class="grid grid-cols-2 gap-1 p-1 bg-gray-100 dark:bg-white/5 sub-radius-lg">
                     <button
                         type="button"
-                        class="py-1.5 text-sm font-medium misub-radius-md transition-colors"
+                        class="py-1.5 text-sm font-medium sub-radius-md transition-colors"
                         :class="
                             activeTab === 'url'
                                 ? 'bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-xs'
@@ -301,7 +301,7 @@
                     </button>
                     <button
                         type="button"
-                        class="py-1.5 text-sm font-medium misub-radius-md transition-colors"
+                        class="py-1.5 text-sm font-medium sub-radius-md transition-colors"
                         :class="
                             activeTab === 'file'
                                 ? 'bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-xs'

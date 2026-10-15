@@ -1,6 +1,6 @@
 {
-    "name": "misub",
-    "version": "1.0.0",
+    "name": "zzp-sub",
+    "version": "1.1.0",
     "private": true,
     "type": "module",
     "scripts": {
@@ -11,8 +11,8 @@
         "test": "vitest",
         "test:run": "vitest run",
         "test:coverage": "vitest run --coverage",
-        "format": "prettier --write \"functions/**/*.js\" \"src/**/*.{js,vue}\" \"tests/**/*.js\" \"docs/**/*.md\"",
-        "format:check": "prettier --check \"functions/**/*.js\" \"src/**/*.{js,vue}\" \"tests/**/*.js\" \"docs/**/*.md\"",
+        "format": "prettier --write \"functions/**/*.js\" \"src/**/*.{js,vue,css}\" \"tests/**/*.js\" \"docs/**/*.md\" \"scripts/*.mjs\" \"*.{js,json,html,md}\" \".github/workflows/*.yml\"",
+        "format:check": "prettier --check \"functions/**/*.js\" \"src/**/*.{js,vue,css}\" \"tests/**/*.js\" \"docs/**/*.md\" \"scripts/*.mjs\" \"*.{js,json,html,md}\" \".github/workflows/*.yml\"",
         "test:browser": "node scripts/browser-smoke.mjs"
     },
     "dependencies": {
@@ -28,11 +28,9 @@
         "@vitejs/plugin-vue": "^6.0.1",
         "@vue/test-utils": "^2.4.6",
         "happy-dom": "^20.0.11",
-        "jsdom": "^27.4.0",
         "playwright": "^1.60.0",
         "prettier": "^3.9.6",
         "tailwindcss": "^4.1.12",
-        "terser": "^5.48.0",
         "vite": "^7.1.2",
         "vitest": "^4.0.16",
         "wrangler": "^4.56.0"
@@ -40,5 +38,8 @@
     "overrides": {
         "undici": "^7.30.0",
         "sharp": "^0.35.5"
+    },
+    "engines": {
+        "node": ">=24 <25"
     }
 }

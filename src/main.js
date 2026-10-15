@@ -14,7 +14,6 @@ import { readSessionPreference, writeSessionPreference } from './utils/session-p
 
 // 全局错误处理
 if (typeof window !== 'undefined') {
-    console.debug('[MiSub] Error Handler Loaded (v2026-01-11-fix-link-error)');
     // 处理未捕获的Promise拒绝
     window.addEventListener('unhandledrejection', (event) => {
         const message = event.reason?.message || '';
@@ -26,7 +25,7 @@ if (typeof window !== 'undefined') {
         }
         // 浏览器扩展注入脚本 / 跨域第三方脚本导致的拒绝与自己无关（如扩展的
         // reportAllChanges TypeError）。静默丢弃：preventDefault 同时抑制
-        // 浏览器默认的控制台报错输出，避免与 MiSub 无关的噪音。
+        // 浏览器默认的控制台报错输出，避免与 Zzp Sub 无关的噪音。
         if (isForeignRejection(event.reason)) {
             event.preventDefault();
             return;

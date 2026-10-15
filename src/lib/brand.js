@@ -1,4 +1,5 @@
-/** Independent project branding; the upstream baseline is documented in README. */
-export const BRAND_NAME = 'MiSub';
+/** Public branding. Persistence identifiers and subscription routes are independent. */
+export const BRAND_NAME = 'Zzp Sub';
 export const BRAND_MAINTAINER = 'zzpice';
-export const BRAND_TITLE = 'MiSub · zzpice';
+export const BRAND_TITLE = BRAND_NAME;
+export const BRAND_REPOSITORY = 'https://github.com/zzpice/zzp-sub';

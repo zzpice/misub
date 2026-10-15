@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, watch, nextTick, onUnmounted, computed } from 'vue';
+    import { ref, watch, nextTick, onUnmounted, computed, useId } from 'vue';
     import { useI18n } from '@/i18n/index.js';
     import { useBackdropDismiss } from '@/composables/useBackdropDismiss.js';
 
@@ -45,7 +45,7 @@
 
     const confirmInput = ref('');
     const modalPanelRef = ref(null);
-    const titleId = `modal-title-${Math.random().toString(36).slice(2, 10)}`;
+    const titleId = useId();
 
     // 记录打开弹窗前的焦点元素，关闭时还原
     let previouslyFocused = null;
@@ -67,6 +67,8 @@
 
     // Focus trap：Tab / Shift+Tab 循环限制在弹窗内，Escape 关闭
     const handleKeydown = (e) => {
+        const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+        if (dialogs.length && !dialogs[dialogs.length - 1].contains(modalPanelRef.value)) return;
         if (e.key === 'Escape') {
             emit('update:show', false);
             return;
@@ -117,10 +119,14 @@
                     previouslyFocused = null;
                 }
             }
-        }
+        },
+        { immediate: true }
     );
 
-    onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
+    onUnmounted(() => {
+        window.removeEventListener('keydown', handleKeydown);
+        if (previouslyFocused?.isConnected) previouslyFocused.focus();
+    });
 
     const handleConfirm = async () => {
         await emit('confirm');
@@ -152,7 +158,7 @@
                         v-if="show"
                         ref="modalPanelRef"
                         tabindex="-1"
-                        class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl misub-radius-lg shadow-2xl w-full text-left ring-1 ring-black/5 dark:ring-white/10 flex flex-col max-h-[85vh] lg:max-h-[90vh] border border-white/20 dark:border-white/5 focus-visible:outline-none"
+                        class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl sub-radius-lg shadow-2xl w-full text-left ring-1 ring-black/5 dark:ring-white/10 flex flex-col max-h-[85vh] lg:max-h-[90vh] border border-white/20 dark:border-white/5 focus-visible:outline-none"
                         :class="{
                             'max-w-sm': size === 'sm',
                             'max-w-md': size === 'md',
@@ -188,7 +194,7 @@
                             <slot name="footer">
                                 <button
                                     @click="emit('update:show', false)"
-                                    class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold text-sm misub-radius-lg transition-colors"
+                                    class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold text-sm sub-radius-lg transition-colors"
                                 >
                                     {{ cancelLabel }}
                                 </button>
@@ -199,7 +205,7 @@
                                         (confirmKeyword && confirmInput !== confirmKeyword)
                                     "
                                     :title="confirmDisabled ? confirmTitle : t('actions.confirm')"
-                                    class="px-4 py-2 text-white font-semibold text-sm misub-radius-lg transition-colors disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:opacity-70 disabled:cursor-not-allowed"
+                                    class="px-4 py-2 text-white font-semibold text-sm sub-radius-lg transition-colors disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:opacity-70 disabled:cursor-not-allowed"
                                     :class="
                                         confirmVariant === 'danger'
                                             ? 'bg-red-600 hover:bg-red-700'
@@ -220,35 +226,21 @@
 <style scoped>
     .modal-fade-enter-active,
     .modal-fade-leave-active {
-        transition: opacity 0.2s ease;
+        transition: opacity var(--duration-fast) ease;
     }
-
     .modal-fade-enter-from,
     .modal-fade-leave-to {
         opacity: 0;
     }
-
     .modal-inner-enter-active,
     .modal-inner-leave-active {
-        transition: all 0.3s ease-out;
+        transition:
+            opacity var(--duration-normal) ease,
+            transform var(--duration-normal) var(--ease-standard);
     }
-
-    .modal-inner-enter-active,
-    .modal-inner-leave-active {
-        transition: all 0.25s ease;
-    }
-
     .modal-inner-enter-from,
     .modal-inner-leave-to {
         opacity: 0;
-        transform: translateY(50px);
-    }
-
-    @media (min-width: 768px) {
-        .modal-inner-enter-from,
-        .modal-inner-leave-to {
-            opacity: 0;
-            transform: scale(0.95);
-        }
+        transform: translateY(6px);
     }
 </style>

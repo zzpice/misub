@@ -17,17 +17,23 @@ function createContext(path, headers = {}) {
         MISUB_DB: {
             prepare() {
                 return {
-                    bind() { return this; },
-                    async first() { return null; },
+                    bind() {
+                        return this;
+                    },
+                    async first() {
+                        return null;
+                    },
                 };
             },
         },
         ASSETS: {
             fetch(request) {
                 const name = new URL(request.url).pathname;
-                return Promise.resolve(new Response(name === '/' ? '<html>app</html>' : 'asset', {
-                    headers: { 'Content-Type': name === '/' ? 'text/html' : 'text/plain' },
-                }));
+                return Promise.resolve(
+                    new Response(name === '/' ? '<html>app</html>' : 'asset', {
+                        headers: { 'Content-Type': name === '/' ? 'text/html' : 'text/plain' },
+                    })
+                );
             },
         },
     };
@@ -41,25 +47,55 @@ function createContext(path, headers = {}) {
 describe('single web entry in personal mode', () => {
     it('separates the root document from protected APIs, subscriptions and static files', () => {
         const config = { mytoken: secrets.SUBSCRIPTION_TOKEN, profileToken: secrets.PROFILE_TOKEN };
-        for (const path of ['/login', '/dashboard', '/dashboard/settings', '/explore', '/settings', '/unknown', '/index.html']) {
+        for (const path of [
+            '/login',
+            '/dashboard',
+            '/dashboard/settings',
+            '/explore',
+            '/settings',
+            '/unknown',
+            '/index.html',
+        ]) {
             expect(classifyPersonalRequest(path, config)).toBe('forbidden');
         }
-        for (const path of ['/api/data', '/api/login', '/sub/test', '/cron', `/${config.mytoken}/clash`, `/${config.profileToken}/profile`]) {
+        for (const path of [
+            '/api/data',
+            '/api/login',
+            '/sub/test',
+            '/cron',
+            `/${config.mytoken}/clash`,
+            `/${config.profileToken}/profile`,
+        ]) {
             expect(classifyPersonalRequest(path, config)).toBe('business');
         }
-        for (const path of ['/assets/main.js', '/favicon.ico', '/logo.png', '/fonts/site.woff2', '/app.webmanifest']) {
+        for (const path of [
+            '/assets/main.js',
+            '/favicon.ico',
+            '/logo.png',
+            '/fonts/site.woff2',
+            '/app.webmanifest',
+        ]) {
             expect(classifyPersonalRequest(path, config)).toBe('asset');
         }
         expect(classifyPersonalRequest('/', config)).toBe('root');
     });
 
     it('returns empty HTTP 403 without redirect for non-root web paths', async () => {
-        for (const path of ['/login', '/dashboard', '/explore', '/settings', '/dashboard/nodes', '/index.html']) {
-            const response = await onRequest(createContext(path, {
-                Accept: 'text/html',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Dest': 'document',
-            }));
+        for (const path of [
+            '/login',
+            '/dashboard',
+            '/explore',
+            '/settings',
+            '/dashboard/nodes',
+            '/index.html',
+        ]) {
+            const response = await onRequest(
+                createContext(path, {
+                    Accept: 'text/html',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Dest': 'document',
+                })
+            );
             expect(response.status).toBe(403);
             expect(response.headers.get('Location')).toBeNull();
             expect(await response.text()).toBe('');

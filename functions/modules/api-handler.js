@@ -12,7 +12,6 @@ import {
     isUsingDefaultPassword,
     createJsonResponse,
     createErrorResponse,
-    migrateProfileIds,
     JSON_BODY_LIMITS,
     readJsonWithLimit,
 } from './utils.js';
@@ -36,12 +35,6 @@ import { listRuleTemplates } from './rule-template-handler.js';
 
 import { readProfileDownloadCount } from '../services/profile-download-counter.js';
 
-function normalizeLoginPath(customLoginPath) {
-    if (typeof customLoginPath !== 'string') return '/login';
-    const normalized = customLoginPath.trim().replace(/^\/+/, '');
-    return normalized && normalized !== 'login' ? `/${normalized}` : '/login';
-}
-
 function normalizeProfile(profile = {}) {
     const normalized = { ...profile };
     normalized.subscriptions = Array.isArray(profile.subscriptions) ? profile.subscriptions : [];
@@ -55,9 +48,7 @@ async function attachProfileDownloadCounts(storageAdapter, profiles) {
     if (!Array.isArray(profiles) || profiles.length === 0) return profiles;
 
     const counts = await Promise.all(
-        profiles.map((profile) =>
-            readProfileDownloadCount(storageAdapter, profile)
-        )
+        profiles.map((profile) => readProfileDownloadCount(storageAdapter, profile))
     );
 
     return profiles.map((profile, index) =>
@@ -203,14 +194,6 @@ export async function handleDataRequest(env, context = null) {
         ]);
         const profiles = await attachProfileDownloadCounts(storageAdapter, rawProfiles);
 
-        // 自动迁移旧版 profile ID（去除 'profile_' 前缀）
-        if (migrateProfileIds(profiles)) {
-            storageAdapter
-                .put(KV_KEY_PROFILES, profiles)
-                .catch((err) =>
-                    console.error('[Migration] Failed to persist migrated profile IDs:', err)
-                );
-        }
         const config = {
             ...defaultSettings,
             ...settings,
@@ -219,7 +202,9 @@ export async function handleDataRequest(env, context = null) {
         try {
             const taskContext = context || { env };
             const runPromise = maybeRunScheduledTasks(taskContext, { source: 'admin-api' });
-            const checked = runPromise.catch(() => { console.warn('[ScheduledTasks] lazy check failed'); });
+            const checked = runPromise.catch(() => {
+                console.warn('[ScheduledTasks] lazy check failed');
+            });
             if (typeof taskContext.waitUntil === 'function') taskContext.waitUntil(checked);
         } catch (taskError) {
             console.warn(
@@ -227,7 +212,12 @@ export async function handleDataRequest(env, context = null) {
                 taskError?.message || taskError
             );
         }
-        return createJsonResponse({ misubs, profiles, ruleTemplates, config: redactSettingsForResponse(config) });
+        return createJsonResponse({
+            misubs,
+            profiles,
+            ruleTemplates,
+            config: redactSettingsForResponse(config),
+        });
     } catch (e) {
         console.error('[API Error /data] Failed to read from storage', {
             error: e?.message,
@@ -341,13 +331,20 @@ export async function handleMisubsSave(request, env) {
         }
 
         if (Array.isArray(finalProfiles) && (!diff || diff.profiles)) {
-            const oldProfiles = typeof storageAdapter.getAllProfiles === 'function'
-                ? await storageAdapter.getAllProfiles() : await storageAdapter.get(KV_KEY_PROFILES) || [];
-            const oldMap = new Map(oldProfiles.map(p => [p.id, p]));
-            finalProfiles = await Promise.all(finalProfiles.map(async p => ({ ...p,
-                downloadCount: Math.max(Number(p.downloadCount) || 0,
-                    await readProfileDownloadCount(storageAdapter, oldMap.get(p.id) || p)),
-            })));
+            const oldProfiles =
+                typeof storageAdapter.getAllProfiles === 'function'
+                    ? await storageAdapter.getAllProfiles()
+                    : (await storageAdapter.get(KV_KEY_PROFILES)) || [];
+            const oldMap = new Map(oldProfiles.map((p) => [p.id, p]));
+            finalProfiles = await Promise.all(
+                finalProfiles.map(async (p) => ({
+                    ...p,
+                    downloadCount: Math.max(
+                        Number(p.downloadCount) || 0,
+                        await readProfileDownloadCount(storageAdapter, oldMap.get(p.id) || p)
+                    ),
+                }))
+            );
         }
         if (Array.isArray(finalProfiles)) {
             finalProfiles = finalProfiles.map((p, index) => ({
@@ -409,7 +406,13 @@ export async function handleMisubsSave(request, env) {
 
                 const saveTasks = [];
                 if (diff.subscriptions && !subsHandled) {
-                    if (!(await syncCollectionRowLevel(storageAdapter, 'subscriptions', finalMisubs)))
+                    if (
+                        !(await syncCollectionRowLevel(
+                            storageAdapter,
+                            'subscriptions',
+                            finalMisubs
+                        ))
+                    )
                         saveTasks.push(storageAdapter.put(KV_KEY_SUBS, finalMisubs));
                 }
                 if (diff.profiles && !profilesHandled) {
@@ -641,7 +644,10 @@ export async function handleSettingsSave(request, env) {
                 const d1Adapter = StorageFactory.createAdapter(env, STORAGE_TYPES.D1);
                 await d1Adapter.put(KV_KEY_SETTINGS, finalSettings);
             } catch (syncError) {
-                console.warn('[API] Failed to sync settings to D1:', syncError?.message || syncError);
+                console.warn(
+                    '[API] Failed to sync settings to D1:',
+                    syncError?.message || syncError
+                );
             }
         }
         if (!isPersonalMode(env)) {
@@ -721,33 +727,6 @@ export async function handleSettingsReset(env) {
     } catch (e) {
         console.error('[API Error /settings/reset]', e);
         return createErrorResponse('重置设置失败', 500);
-    }
-}
-
-export async function handleLoginConfig(request, env) {
-    try {
-        const storageAdapter = await getStorageAdapter(env);
-        const settings = (await storageAdapter.get(KV_KEY_SETTINGS)) || {};
-
-        // 登录路径只返回当前路径是否匹配，不公开管理员入口。
-        const mergedSettings = applyPersonalSettings({ ...defaultSettings, ...settings }, env);
-        const configuredLoginPath = normalizeLoginPath(mergedSettings.customLoginPath);
-        let isLoginPath = configuredLoginPath === '/login';
-        try {
-            const clientPath = request?.headers?.get('X-MiSub-Path');
-            const referer = request?.headers?.get('Referer');
-            const sourcePath = clientPath || (referer ? new URL(referer).pathname : '');
-            if (sourcePath) {
-                isLoginPath = new URL(sourcePath, request.url).pathname === configuredLoginPath;
-            }
-        } catch {
-            // Keep the safe default when the browser sends an invalid/missing path.
-        }
-
-        return createJsonResponse({ isLoginPath });
-    } catch (e) {
-        console.error('[API Error /login_config]', e);
-        return createErrorResponse('获取登录配置失败', 500);
     }
 }
 

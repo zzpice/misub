@@ -21,7 +21,6 @@ const SOURCE_EXISTS_SQL = `(
         AND NOT EXISTS (SELECT 1 FROM subscriptions WHERE id = ?))
 )`;
 
-
 function sourceKey(source) {
     const id = String(source?.id || '').trim();
     if (!id) throw new Error('Subscription ID is required');
@@ -79,13 +78,27 @@ export async function readSourceSnapshot(storage, source) {
     };
     if (storage.db) {
         // Migration must never replace a snapshot published while the legacy row was read.
-        await storage.db.prepare(`
+        await storage.db
+            .prepare(
+                `
             INSERT OR IGNORE INTO settings (key, value)
             SELECT ?, ? WHERE ${SOURCE_EXISTS_SQL}
-        `).bind(snapshotKey(source), JSON.stringify(migrated), source.id, source.url, source.id, source.url, source.id).run();
+        `
+            )
+            .bind(
+                snapshotKey(source),
+                JSON.stringify(migrated),
+                source.id,
+                source.url,
+                source.id,
+                source.url,
+                source.id
+            )
+            .run();
         const saved = await storage.get(snapshotKey(source));
         return saved?.sourceUrl === currentUrl && Array.isArray(saved.nodes) && saved.nodes.length
-            ? saved : null;
+            ? saved
+            : null;
     }
     await storage.put(snapshotKey(source), migrated);
     return migrated;
@@ -102,7 +115,7 @@ async function acquireLock(storage, source) {
         .run();
     if (inserted?.meta?.changes === 1) return expires;
     const changed = await storage.db
-        .prepare("UPDATE settings SET value = ? WHERE key = ? AND CAST(value AS INTEGER) <= ?")
+        .prepare('UPDATE settings SET value = ? WHERE key = ? AND CAST(value AS INTEGER) <= ?')
         .bind(expires, key, now)
         .run();
     return changed?.meta?.changes === 1 ? expires : null;
@@ -118,13 +131,18 @@ async function releaseLock(storage, source, lease) {
 
 async function recordAttempt(storage, source, lease, value) {
     if (!storage.db) return storage.put(attemptKey(source), value);
-    return storage.db.prepare(`
+    return storage.db
+        .prepare(
+            `
         INSERT INTO settings (key, value, updated_at)
         SELECT ?, ?, CURRENT_TIMESTAMP
         WHERE EXISTS (SELECT 1 FROM settings WHERE key = ? AND value = ?
             AND CAST(value AS INTEGER) > ?)
         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-    `).bind(attemptKey(source), JSON.stringify(value), lockKey(source), lease, Date.now()).run();
+    `
+        )
+        .bind(attemptKey(source), JSON.stringify(value), lockKey(source), lease, Date.now())
+        .run();
 }
 
 function safeMessage(error) {
@@ -137,7 +155,10 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
     const key = snapshotKey(source);
     const scope = storage.db || storage.kv || storage;
     let pending = pendingByStorage.get(scope);
-    if (!pending) { pending = new Map(); pendingByStorage.set(scope, pending); }
+    if (!pending) {
+        pending = new Map();
+        pendingByStorage.set(scope, pending);
+    }
     const pendingKey = key + ':' + String(source.url || '');
     const inFlight = pending.get(pendingKey);
     if (inFlight) return inFlight;
@@ -155,7 +176,8 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
             if (!nodes.length) throw new Error('Invalid or empty upstream subscription');
             const historicalCount = Math.max(
                 Number(existing?.nodeCount || existing?.nodes?.length || 0),
-                Number(source?.lastGoodNodeCount || 0), Number(source?.nodeCount || 0)
+                Number(source?.lastGoodNodeCount || 0),
+                Number(source?.nodeCount || 0)
             );
             if (isSuspiciousNodeCountDrop(historicalCount, nodes.length)) {
                 throw new Error('Suspicious reduction in upstream nodes');
@@ -172,7 +194,9 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
             };
             // Only publish the new snapshot after the full result has been fetched and validated.
             if (storage.db) {
-                const published = await storage.db.prepare(`
+                const published = await storage.db
+                    .prepare(
+                        `
                     INSERT INTO settings (key, value, updated_at)
                     SELECT ?, ?, CURRENT_TIMESTAMP
                     WHERE EXISTS (SELECT 1 FROM settings WHERE key = ? AND value = ?
@@ -180,10 +204,27 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
                     AND ${SOURCE_EXISTS_SQL}
                     ON CONFLICT(key) DO UPDATE SET value = excluded.value,
                         updated_at = excluded.updated_at
-                `).bind(key, JSON.stringify(snapshot), lockKey(source), lease, Date.now(),
-                    source.id, source.url, source.id, source.url, source.id).run();
+                `
+                    )
+                    .bind(
+                        key,
+                        JSON.stringify(snapshot),
+                        lockKey(source),
+                        lease,
+                        Date.now(),
+                        source.id,
+                        source.url,
+                        source.id,
+                        source.url,
+                        source.id
+                    )
+                    .run();
                 if (published?.meta?.changes !== 1) {
-                    return { success: false, busy: true, snapshot: await readSourceSnapshot(storage, source) };
+                    return {
+                        success: false,
+                        busy: true,
+                        snapshot: await readSourceSnapshot(storage, source),
+                    };
                 }
             } else {
                 await storage.put(key, snapshot);
@@ -211,7 +252,10 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
                 }
             }
             try {
-                await recordAttempt(storage, source, lease, { lastAttemptAt: updatedAt, success: true });
+                await recordAttempt(storage, source, lease, {
+                    lastAttemptAt: updatedAt,
+                    success: true,
+                });
             } catch (error) {
                 console.warn('[SourceSnapshot] Unable to record successful attempt:', error);
             }
@@ -254,11 +298,14 @@ export async function refreshSourceSnapshot({ storage, source, fetcher }) {
  */
 export async function isSourceRefreshDue(storage, source, snapshot = null) {
     if (source.autoUpdateEnabled === false) return false;
-    const current = snapshot || await readSourceSnapshot(storage, source);
+    const current = snapshot || (await readSourceSnapshot(storage, source));
     const now = Date.now();
     const lastSuccess = Date.parse(current?.updatedAt || '');
-    if (current && Number.isFinite(lastSuccess) &&
-        now - lastSuccess < getSourceUpdateInterval(source) * 60 * 1000) {
+    if (
+        current &&
+        Number.isFinite(lastSuccess) &&
+        now - lastSuccess < getSourceUpdateInterval(source) * 60 * 1000
+    ) {
         return false;
     }
     const attempt = await storage.get(attemptKey(source));

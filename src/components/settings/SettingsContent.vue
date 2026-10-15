@@ -1,25 +1,16 @@
 <script setup>
-    import { computed } from 'vue';
+    import { computed, defineAsyncComponent } from 'vue';
     import { useI18n } from '../../i18n/index.js';
     import SettingsLayout from '../layout/SettingsLayout.vue';
     import SettingsSidebar from './SettingsSidebar.vue';
-    import BasicSettings from './sections/BasicSettings.vue';
-    import GlobalSettings from './sections/GlobalSettings.vue';
-    import ServiceSettings from './sections/ServiceSettings.vue';
-    import WebdavBackupSettings from './sections/WebdavBackupSettings.vue';
-    import SystemSettings from './sections/SystemSettings.vue';
+    const BasicSettings = defineAsyncComponent(() => import('./sections/BasicSettings.vue'));
+    const GlobalSettings = defineAsyncComponent(() => import('./sections/GlobalSettings.vue'));
+    const ServiceSettings = defineAsyncComponent(() => import('./sections/ServiceSettings.vue'));
+    const WebdavBackupSettings = defineAsyncComponent(
+        () => import('./sections/WebdavBackupSettings.vue')
+    );
+    const SystemSettings = defineAsyncComponent(() => import('./sections/SystemSettings.vue'));
 
-    /**
-     * 设置界面的共享内容区。
-     *
-     * 此前 SettingsView.vue（独立页面）与 SettingsPanel.vue（弹窗）各自实现了一份，
-     * 约 90% 逐行相同，导致「弹窗漏渲染 custom-page」「弹窗漏传 handleReset」两个缺陷
-     * —— 改了一边忘了另一边。现在两者的 section 列表、头部信息卡、加载态与保存按钮
-     * 都收敛到这里，各自只保留外壳差异。
-     *
-     * 注意：useSettingsLogic() 是工厂函数（每次调用创建独立的 ref 状态），
-     * 所以数据一律由父组件通过 props 传入，本组件不再自行调用，避免出现两份状态。
-     */
     const { t } = useI18n();
 
     const props = defineProps({
@@ -43,10 +34,6 @@
             type: Boolean,
             default: false,
         },
-        restartCountdown: {
-            type: Number,
-            default: null,
-        },
         hasWhitespace: {
             type: Boolean,
             default: false,
@@ -61,10 +48,6 @@
             default: '',
         },
         /** 弹窗内空间有限、没有页面级标题，头部信息卡需要常显；独立页面在移动端隐藏它 */
-        alwaysShowHeader: {
-            type: Boolean,
-            default: false,
-        },
         layoutClass: {
             type: String,
             default: 'h-full',
@@ -83,26 +66,11 @@
         },
     });
 
-    const emit = defineEmits(['update:activeTab', 'save', 'migrate', 'reload-now']);
+    const emit = defineEmits(['update:activeTab', 'save']);
 
     const activeTabModel = computed({
         get: () => props.activeTab,
         set: (value) => emit('update:activeTab', value),
-    });
-
-    const currentTabLabel = computed(() => {
-        switch (props.activeTab) {
-            case 'basic':
-                return t('settings.tabs.basic');
-            case 'global':
-                return t('settings.tabs.global');
-            case 'service':
-                return t('settings.tabs.service');
-            case 'system':
-                return t('settings.tabs.system');
-            default:
-                return t('settings.title');
-        }
     });
 
     const saveDisabled = computed(
@@ -141,57 +109,21 @@
         </div>
 
         <div v-else class="space-y-6 max-w-6xl w-full mx-auto">
-            <div
-                class="flex-wrap items-center justify-between gap-3 p-4 bg-white/70 dark:bg-gray-900/60 border border-gray-100/80 dark:border-white/10 misub-radius-lg shadow-sm"
-                :class="alwaysShowHeader ? 'flex' : 'hidden md:flex'"
-            >
-                <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                        {{ t('settings.currentModule') }}
-                    </p>
-                    <p class="text-lg font-semibold text-gray-900 dark:text-white">
-                        {{ currentTabLabel }}
-                    </p>
-                </div>
-                <div
-                    class="text-xs text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-white/5 border border-gray-200/60 dark:border-white/10 px-3 py-1.5 misub-radius-pill"
-                >
-                    {{ t('settings.saveHint') }}
-                </div>
-            </div>
-
-            <div
-                v-if="restartCountdown !== null"
-                class="flex items-center justify-between gap-3 rounded-xl border border-amber-300/60 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-100"
-                role="status"
-                aria-live="polite"
-            >
-                <span>{{ t('settings.reloadCountdown', { seconds: restartCountdown }) }}</span>
-                <button
-                    type="button"
-                    class="shrink-0 rounded-lg px-3 py-1.5 font-medium hover:bg-amber-100 dark:hover:bg-white/10"
-                    @click="$emit('reload-now')"
-                >
-                    {{ t('settings.reloadNow') }}
-                </button>
-            </div>
-
             <BasicSettings
-                v-show="activeTab === 'basic'"
+                v-if="activeTab === 'basic'"
                 :settings="settings"
                 :disguiseConfig="disguiseConfig"
                 :highlighted-focus-id="highlightedFocusId"
             />
-            <GlobalSettings v-show="activeTab === 'global'" :settings="settings" />
-            <ServiceSettings v-show="activeTab === 'service'" :settings="settings" />
-            <div v-show="activeTab === 'system'" class="space-y-6">
+            <GlobalSettings v-if="activeTab === 'global'" :settings="settings" />
+            <ServiceSettings v-if="activeTab === 'service'" :settings="settings" />
+            <div v-if="activeTab === 'system'" class="space-y-6">
                 <WebdavBackupSettings :settings="settings" />
                 <SystemSettings
                     :settings="settings"
                     :exportBackup="exportBackup"
                     :importBackup="importBackup"
                     :handleReset="handleReset"
-                    @migrate="emit('migrate')"
                 />
             </div>
         </div>
@@ -200,7 +132,7 @@
             <button
                 @click="emit('save')"
                 :disabled="saveDisabled"
-                class="px-6 py-2.5 misub-radius-lg text-white text-sm font-medium shadow-sm transition-all flex items-center gap-2"
+                class="px-6 py-2.5 sub-radius-lg text-white text-sm font-medium shadow-sm transition-all flex items-center gap-2"
                 :class="
                     isSaving
                         ? 'bg-gray-400 cursor-not-allowed'

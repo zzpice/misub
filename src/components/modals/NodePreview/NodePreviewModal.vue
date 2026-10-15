@@ -75,13 +75,15 @@
     const savingRegions = ref(false);
     const visibleRegionOptions = computed(() => {
         const query = regionSearch.value.trim().toLowerCase();
-        return regionOptions.value.filter((item) =>
-            !query || item.name.includes(query) || item.code.toLowerCase().includes(query)
+        return regionOptions.value.filter(
+            (item) => !query || item.name.includes(query) || item.code.toLowerCase().includes(query)
         );
     });
     const openRegionEditor = (nodes) => {
         if (!props.subscriptionId) return;
-        regionTargets.value = nodes.filter((node) => node.fingerprint && node.sourceId === props.subscriptionId);
+        regionTargets.value = nodes.filter(
+            (node) => node.fingerprint && node.sourceId === props.subscriptionId
+        );
         if (!regionTargets.value.length) {
             showToast(t('nodePreview.regionSelectValid'), 'warning');
             return;
@@ -97,7 +99,9 @@
         if (!props.subscriptionId || savingRegions.value) return;
         savingRegions.value = true;
         try {
-            const targets = [...new Map(regionTargets.value.map((node) => [node.fingerprint, node])).values()];
+            const targets = [
+                ...new Map(regionTargets.value.map((node) => [node.fingerprint, node])).values(),
+            ];
             for (let start = 0; start < targets.length; start += 200) {
                 const batch = targets.slice(start, start + 200);
                 const result = await api.post('/api/node_regions', {
@@ -111,7 +115,10 @@
             selectedUrls.value.clear();
             // Local D1 snapshot preview only; no upstream subscription request.
             await loadNodes();
-            showToast(region ? t('nodePreview.regionSaved') : t('nodePreview.regionReset'), 'success');
+            showToast(
+                region ? t('nodePreview.regionSaved') : t('nodePreview.regionReset'),
+                'success'
+            );
         } catch (err) {
             showToast(err?.message || t('nodePreview.regionSaveFailed'), 'error');
         } finally {
@@ -614,10 +621,17 @@
                     <button
                         v-if="subscriptionId && !profileId"
                         type="button"
-                        @click="regionBulkMode = !regionBulkMode; selectedUrls.clear()"
+                        @click="
+                            regionBulkMode = !regionBulkMode;
+                            selectedUrls.clear();
+                        "
                         class="px-4 py-2 text-xs font-bold rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-700/50 dark:text-gray-200 hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
                     >
-                        {{ regionBulkMode ? t('nodePreview.regionBulkExit') : t('nodePreview.regionBulkEdit') }}
+                        {{
+                            regionBulkMode
+                                ? t('nodePreview.regionBulkExit')
+                                : t('nodePreview.regionBulkEdit')
+                        }}
                     </button>
                     <button
                         v-if="profileId"
@@ -976,38 +990,98 @@
         </template>
     </Modal>
 
-    <div v-if="show && regionBulkMode && subscriptionId"
-        class="fixed bottom-4 left-1/2 z-[60] flex w-[94%] max-w-xl -translate-x-1/2 flex-wrap items-center justify-between gap-3 rounded-2xl bg-indigo-600 p-4 text-white shadow-2xl">
-        <span class="text-sm font-bold">{{ t('nodePreview.regionSelected', { count: selectedUrls.size }) }}</span>
+    <div
+        v-if="show && regionBulkMode && subscriptionId"
+        class="fixed bottom-4 left-1/2 z-[60] flex w-[94%] max-w-xl -translate-x-1/2 flex-wrap items-center justify-between gap-3 rounded-2xl bg-indigo-600 p-4 text-white shadow-2xl"
+    >
+        <span class="text-sm font-bold">{{
+            t('nodePreview.regionSelected', { count: selectedUrls.size })
+        }}</span>
         <div class="flex items-center gap-2">
-            <button type="button" @click="selectAll" class="rounded-lg bg-white/15 px-3 py-2 text-xs">{{ t('nodePreview.regionSelectFiltered') }}</button>
-            <button type="button" @click="clearSelection" class="rounded-lg bg-white/15 px-3 py-2 text-xs">{{ t('common.clear') }}</button>
-            <button type="button" :disabled="!selectedUrls.size" @click="editSelectedRegions"
-                class="rounded-lg bg-white px-3 py-2 text-xs font-bold text-indigo-700 disabled:opacity-50">{{ t('nodePreview.regionSet') }}</button>
+            <button
+                type="button"
+                @click="selectAll"
+                class="rounded-lg bg-white/15 px-3 py-2 text-xs"
+            >
+                {{ t('nodePreview.regionSelectFiltered') }}
+            </button>
+            <button
+                type="button"
+                @click="clearSelection"
+                class="rounded-lg bg-white/15 px-3 py-2 text-xs"
+            >
+                {{ t('common.clear') }}
+            </button>
+            <button
+                type="button"
+                :disabled="!selectedUrls.size"
+                @click="editSelectedRegions"
+                class="rounded-lg bg-white px-3 py-2 text-xs font-bold text-indigo-700 disabled:opacity-50"
+            >
+                {{ t('nodePreview.regionSet') }}
+            </button>
         </div>
     </div>
-    <div v-if="show && regionEditorOpen" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
-        @click.self="!savingRegions && (regionEditorOpen = false)">
-        <section class="flex max-h-[82vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-800"
-            role="dialog" aria-modal="true" :aria-label="t('nodePreview.regionSet')">
+    <div
+        v-if="show && regionEditorOpen"
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+        @click.self="!savingRegions && (regionEditorOpen = false)"
+    >
+        <section
+            class="flex max-h-[82vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white p-5 shadow-2xl dark:bg-gray-800"
+            role="dialog"
+            aria-modal="true"
+            :aria-label="t('nodePreview.regionSet')"
+        >
             <div class="mb-3 flex items-center justify-between gap-3">
-                <h3 class="text-base font-bold text-gray-900 dark:text-white">{{ t('nodePreview.regionDialogTitle', { count: regionTargets.length }) }}</h3>
-                <button type="button" @click="regionEditorOpen = false" :disabled="savingRegions"
-                    class="text-gray-500 dark:text-gray-300" :aria-label="t('common.close')">✕</button>
+                <h3 class="text-base font-bold text-gray-900 dark:text-white">
+                    {{ t('nodePreview.regionDialogTitle', { count: regionTargets.length }) }}
+                </h3>
+                <button
+                    type="button"
+                    @click="regionEditorOpen = false"
+                    :disabled="savingRegions"
+                    class="text-gray-500 dark:text-gray-300"
+                    :aria-label="t('common.close')"
+                >
+                    ✕
+                </button>
             </div>
-            <input v-model="regionSearch" type="search" autofocus
-                :placeholder="t('nodePreview.regionSearch')" class="mb-3 w-full rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:text-white" />
+            <input
+                v-model="regionSearch"
+                type="search"
+                autofocus
+                :placeholder="t('nodePreview.regionSearch')"
+                class="mb-3 w-full rounded-xl border border-gray-200 bg-transparent px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:text-white"
+            />
             <div class="min-h-0 flex-1 space-y-1 overflow-y-auto">
-                <button v-for="item in visibleRegionOptions" :key="item.name" type="button"
-                    :disabled="savingRegions" @click="saveRegionChange(item.name)"
-                    class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-800 hover:bg-indigo-50 disabled:opacity-50 dark:text-gray-100 dark:hover:bg-indigo-500/15">
-                    <span>{{ item.flag }}</span><span class="flex-1">{{ item.name }}</span>
+                <button
+                    v-for="item in visibleRegionOptions"
+                    :key="item.name"
+                    type="button"
+                    :disabled="savingRegions"
+                    @click="saveRegionChange(item.name)"
+                    class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-800 hover:bg-indigo-50 disabled:opacity-50 dark:text-gray-100 dark:hover:bg-indigo-500/15"
+                >
+                    <span>{{ item.flag }}</span
+                    ><span class="flex-1">{{ item.name }}</span>
                     <span class="text-xs text-gray-400">{{ item.code }}</span>
                 </button>
-                <div v-if="!visibleRegionOptions.length" class="p-4 text-center text-sm text-gray-500">{{ t('nodePreview.regionNoMatch') }}</div>
+                <div
+                    v-if="!visibleRegionOptions.length"
+                    class="p-4 text-center text-sm text-gray-500"
+                >
+                    {{ t('nodePreview.regionNoMatch') }}
+                </div>
             </div>
-            <button type="button" :disabled="savingRegions" @click="saveRegionChange(null)"
-                class="mt-3 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-indigo-600 disabled:opacity-50 dark:border-gray-600 dark:text-indigo-300">{{ t('nodePreview.regionRestoreAuto') }}</button>
+            <button
+                type="button"
+                :disabled="savingRegions"
+                @click="saveRegionChange(null)"
+                class="mt-3 rounded-xl border border-gray-200 px-3 py-2 text-sm font-bold text-indigo-600 disabled:opacity-50 dark:border-gray-600 dark:text-indigo-300"
+            >
+                {{ t('nodePreview.regionRestoreAuto') }}
+            </button>
         </section>
     </div>
     <!-- [New] Floating Selection Bar -->

@@ -86,7 +86,7 @@
 
 <template>
     <!-- 包含/排除节点 -->
-    <div class="border border-gray-200 dark:border-gray-700 misub-radius-md overflow-hidden">
+    <div class="border border-gray-200 dark:border-gray-700 sub-radius-md overflow-hidden">
         <!-- 折叠头部 -->
         <div
             class="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
@@ -158,7 +158,7 @@
                             @click="ruleModeModel = 'exclude'"
                             :aria-pressed="ruleModeModel === 'exclude'"
                             :class="[
-                                'flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium misub-radius-md transition-all !min-h-0 !min-w-0',
+                                'flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium sub-radius-md transition-all !min-h-0 !min-w-0',
                                 ruleModeModel === 'exclude'
                                     ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
                                     : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
@@ -170,7 +170,7 @@
                             @click="ruleModeModel = 'keep'"
                             :aria-pressed="ruleModeModel === 'keep'"
                             :class="[
-                                'flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium misub-radius-md transition-all !min-h-0 !min-w-0',
+                                'flex-1 sm:flex-none px-3 py-1.5 text-xs sm:text-sm font-medium sub-radius-md transition-all !min-h-0 !min-w-0',
                                 ruleModeModel === 'keep'
                                     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
                                     : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
@@ -192,7 +192,7 @@
                                 @click="toggleTag(tag, 'region')"
                                 :aria-pressed="isSelected(tag.pattern)"
                                 :class="[
-                                    'px-2.5 py-1 text-xs sm:text-sm font-medium misub-radius-md transition-all !min-h-0 !min-w-0',
+                                    'px-2.5 py-1 text-xs sm:text-sm font-medium sub-radius-md transition-all !min-h-0 !min-w-0',
                                     isSelected(tag.pattern)
                                         ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 ring-1 ring-indigo-300 dark:ring-indigo-700'
                                         : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
@@ -215,7 +215,7 @@
                                 @click="toggleTag(tag, 'protocol')"
                                 :aria-pressed="isSelected(tag.pattern)"
                                 :class="[
-                                    'px-2.5 py-1 text-xs sm:text-sm font-medium misub-radius-md transition-all !min-h-0 !min-w-0',
+                                    'px-2.5 py-1 text-xs sm:text-sm font-medium sub-radius-md transition-all !min-h-0 !min-w-0',
                                     isSelected(tag.pattern)
                                         ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 ring-1 ring-indigo-300 dark:ring-indigo-700'
                                         : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
@@ -238,7 +238,7 @@
                                 @click="toggleTag(tag, 'keyword')"
                                 :aria-pressed="isSelected(tag.pattern)"
                                 :class="[
-                                    'px-2.5 py-1 text-xs sm:text-sm font-medium misub-radius-md transition-all !min-h-0 !min-w-0',
+                                    'px-2.5 py-1 text-xs sm:text-sm font-medium sub-radius-md transition-all !min-h-0 !min-w-0',
                                     isSelected(tag.pattern)
                                         ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-200 ring-1 ring-indigo-300 dark:ring-indigo-700'
                                         : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600',
@@ -260,12 +260,12 @@
                                 v-model="customKeywordModel"
                                 @keyup.enter="addCustomKeyword"
                                 :placeholder="t('subscriptions.keywordPlaceholder')"
-                                class="w-full sm:flex-1 min-w-0 px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 misub-radius-md focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-indigo-500 dark:text-white"
+                                class="w-full sm:flex-1 min-w-0 px-3 py-1.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 sub-radius-md focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-indigo-500 dark:text-white"
                                 :aria-label="t('subscriptions.keywordPlaceholder')"
                             />
                             <button
                                 @click="addCustomKeyword"
-                                class="w-full sm:w-auto flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 misub-radius-md transition-colors !min-h-0 !min-w-0"
+                                class="w-full sm:w-auto flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 sub-radius-md transition-colors !min-h-0 !min-w-0"
                             >
                                 {{ t('subscriptions.addKeyword') }}
                             </button>
@@ -292,13 +292,13 @@
                             </span>
                         </div>
                         <div
-                            class="flex flex-wrap gap-1.5 p-2 bg-gray-50 dark:bg-gray-800/50 misub-radius-md"
+                            class="flex flex-wrap gap-1.5 p-2 bg-gray-50 dark:bg-gray-800/50 sub-radius-md"
                         >
                             <span
                                 v-for="(rule, index) in selectedRules"
                                 :key="index"
                                 :class="[
-                                    'inline-flex items-center gap-1 px-2.5 py-1 text-xs sm:text-sm font-medium misub-radius-md !min-h-0 !min-w-0',
+                                    'inline-flex items-center gap-1 px-2.5 py-1 text-xs sm:text-sm font-medium sub-radius-md !min-h-0 !min-w-0',
                                     rule.type === 'region'
                                         ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
                                         : rule.type === 'protocol'
@@ -360,7 +360,7 @@
                         :placeholder="t('subscriptions.excludePlaceholder')"
                         rows="8"
                         :class="[
-                            'w-full px-3 py-2 misub-radius-md sm:text-sm font-mono dark:text-white leading-6 resize-none bg-white dark:bg-gray-800',
+                            'w-full px-3 py-2 sub-radius-md sm:text-sm font-mono dark:text-white leading-6 resize-none bg-white dark:bg-gray-800',
                             excludeRuleState.errors.length
                                 ? 'border border-red-400 focus-visible:ring-1 focus-visible:ring-red-500 focus-visible:outline-hidden'
                                 : 'border border-gray-300 dark:border-gray-600 focus-visible:ring-1 focus-visible:ring-indigo-500 focus-visible:outline-hidden',

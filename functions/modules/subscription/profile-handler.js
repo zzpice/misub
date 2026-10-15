@@ -2,7 +2,6 @@ import { StorageFactory } from '../../storage-adapter.js';
 import { createJsonResponse } from '../utils.js';
 import { parseNodeInfo } from '../utils/geo-utils.js';
 import { calculateProtocolStats, calculateRegionStats } from '../utils/node-parser.js';
-import { applyNodeTransformPipeline } from '../../utils/node-transformer.js';
 import { runOperatorChain } from '../../utils/operator-runner.js';
 import { KV_KEY_SUBS, KV_KEY_PROFILES, KV_KEY_SETTINGS, DEFAULT_SETTINGS } from '../config.js';
 import { fetchPreviewSourceNodes, SNAPSHOT_MISSING_MESSAGE } from './preview-source.js';
@@ -21,73 +20,6 @@ function ensureArray(data) {
         }
     }
     return [];
-}
-
-function adaptLegacyTransform(config) {
-    if (!config || !config.enabled) return [];
-
-    const ops = [];
-    const filter = config.filter;
-    if (
-        filter &&
-        (filter.include?.enabled ||
-            filter.exclude?.enabled ||
-            filter.protocols?.enabled ||
-            filter.regions?.enabled ||
-            filter.script?.enabled ||
-            filter.useless?.enabled)
-    ) {
-        ops.push({ id: 'legacy-filter', type: 'filter', enabled: true, params: { ...filter } });
-    }
-
-    const regex = config.rename?.regex;
-    if (regex?.enabled && regex.rules?.length > 0) {
-        ops.push({
-            id: 'legacy-rename-regex',
-            type: 'rename',
-            enabled: true,
-            params: { regex: { ...regex } },
-        });
-    }
-
-    const template = config.rename?.template;
-    if (template?.enabled) {
-        ops.push({
-            id: 'legacy-rename-template',
-            type: 'rename',
-            enabled: true,
-            params: {
-                template: {
-                    enabled: true,
-                    template: template.template || '{emoji}{region}-{protocol}-{index}',
-                    offset: template.indexStart || 1,
-                    indexScope: template.indexScope || 'region',
-                },
-            },
-        });
-    }
-
-    const renameScript = config.rename?.script;
-    if (renameScript?.enabled && renameScript.expression) {
-        ops.push({
-            id: 'legacy-rename-script',
-            type: 'script',
-            enabled: true,
-            params: { dsl: [{ action: 'rename', template: renameScript.expression }] },
-        });
-    }
-
-    const dedup = config.dedup;
-    if (dedup?.enabled) {
-        ops.push({ id: 'legacy-dedup', type: 'dedup', enabled: true, params: { ...dedup } });
-    }
-
-    const sort = config.sort;
-    if (sort?.enabled && sort.keys?.length > 0) {
-        ops.push({ id: 'legacy-sort', type: 'sort', enabled: true, params: { ...sort } });
-    }
-
-    return ops;
 }
 
 /**
@@ -195,23 +127,52 @@ export async function handleProfileMode(
     // 保留其他部署模式原来的实时预览方式。
     const subscriptionResults = await Promise.all(
         targetSubscriptions.map(async (sub) => {
-            const result = await fetchPreviewSourceNodes(storageAdapter, env, sub, userAgent, skipCertVerify);
-            const operators = ensureArray(sub.operators?.length ? sub.operators : sub.nodeTransform?.operators);
+            const result = await fetchPreviewSourceNodes(
+                storageAdapter,
+                env,
+                sub,
+                userAgent,
+                skipCertVerify
+            );
+            const operators = ensureArray(sub.operators);
             if (!applyTransform || !result.success || !operators.length) return result;
-            const metadata = new Map(result.nodes.map(node => [node.url, {
-                metadata: { ...node.metadata, regionZh: node.region },
-            }]));
-            const urls = await runOperatorChain(result.nodes.map(node => node.url), operators, {
-                subName: sub.name, userAgent, config: settings, nodeMetadataByUrl: metadata,
-            });
-            const originals = new Map(await Promise.all(result.nodes.map(async node =>
-                [await fingerprintNode(node.url), node])));
-            return { ...result, nodes: await Promise.all(urls.map(async url => {
-                const original = originals.get(await fingerprintNode(url));
-                return { ...original, ...parseNodeInfo(url), url,
-                    ...(original ? { region: original.region } : {}),
-                };
-            })) };
+            const metadata = new Map(
+                result.nodes.map((node) => [
+                    node.url,
+                    {
+                        metadata: { ...node.metadata, regionZh: node.region },
+                    },
+                ])
+            );
+            const urls = await runOperatorChain(
+                result.nodes.map((node) => node.url),
+                operators,
+                {
+                    subName: sub.name,
+                    userAgent,
+                    config: settings,
+                    nodeMetadataByUrl: metadata,
+                }
+            );
+            const originals = new Map(
+                await Promise.all(
+                    result.nodes.map(async (node) => [await fingerprintNode(node.url), node])
+                )
+            );
+            return {
+                ...result,
+                nodes: await Promise.all(
+                    urls.map(async (url) => {
+                        const original = originals.get(await fingerprintNode(url));
+                        return {
+                            ...original,
+                            ...parseNodeInfo(url),
+                            url,
+                            ...(original ? { region: original.region } : {}),
+                        };
+                    })
+                ),
+            };
         })
     );
 
@@ -245,43 +206,24 @@ export async function handleProfileMode(
 
     // 如果需要应用转换规则，则处理节点名称
     let processedNodes = allNodes;
-    const presetNodeTransform = profile.nodeTransformPresetId
-        ? Array.isArray(settings.nodeTransformPresets)
-            ? settings.nodeTransformPresets.find(
-                  (item) => item?.id === profile.nodeTransformPresetId
-              )?.config
-            : null
-        : null;
-    const effectiveNodeTransform = profile.nodeTransform?.enabled
-        ? profile.nodeTransform
-        : presetNodeTransform;
-
     if (applyTransform) {
         const nodeUrls = allNodes.map((node) => node.url);
         const nodeMetadataByUrl = new Map(
-            allNodes.map((node) => [node.url, { group: node.group || '',
-                ...(node.region ? { metadata: { ...node.metadata, regionZh: node.region } } : {}),
-            }])
+            allNodes.map((node) => [
+                node.url,
+                {
+                    group: node.group || '',
+                    ...(node.region
+                        ? { metadata: { ...node.metadata, regionZh: node.region } }
+                        : {}),
+                },
+            ])
         );
 
         let activeOperators = ensureArray(profile?.operators);
-        if (
-            !activeOperators.length &&
-            profile?.nodeTransform?.enabled &&
-            profile.nodeTransform?.operators
-        ) {
-            activeOperators = ensureArray(profile.nodeTransform.operators);
-        }
         if (!activeOperators.length && settings?.defaultOperators) {
             activeOperators = ensureArray(settings.defaultOperators);
         }
-        if (!activeOperators.length && effectiveNodeTransform?.enabled) {
-            activeOperators = adaptLegacyTransform({
-                ...effectiveNodeTransform,
-                enableEmoji: settings.enableFlagEmoji !== false,
-            });
-        }
-
         let transformedUrls = nodeUrls;
         if (activeOperators.length > 0) {
             transformedUrls = await runOperatorChain(nodeUrls, activeOperators, {
@@ -290,20 +232,12 @@ export async function handleProfileMode(
                 config: settings,
                 nodeMetadataByUrl,
             });
-        } else if (effectiveNodeTransform?.enabled) {
-            const defaultTemplate = '{emoji}{region}-{protocol}-{index}';
-            const effectiveTemplate =
-                effectiveNodeTransform.rename?.template?.template || defaultTemplate;
-            transformedUrls = applyNodeTransformPipeline(nodeUrls, {
-                ...effectiveNodeTransform,
-                enableEmoji:
-                    settings.enableFlagEmoji !== false && effectiveTemplate.includes('{emoji}'),
-            });
         }
 
         // Only propagate metadata by complete connection identity; hostname+port
         // alone would accidentally cross-bind different credentials/sources.
-        const indexed = new Map(), ambiguous = new Set();
+        const indexed = new Map(),
+            ambiguous = new Set();
         for (const node of allNodes) {
             const key = await fingerprintNode(node.url);
             if (indexed.has(key) && indexed.get(key)?.sourceId !== node.sourceId) {
@@ -312,21 +246,26 @@ export async function handleProfileMode(
                 indexed.set(key, node);
             }
         }
-        processedNodes = await Promise.all(transformedUrls.map(async (transformedUrl) => {
-            const nodeInfo = parseNodeInfo(transformedUrl);
-            const key = await fingerprintNode(transformedUrl);
-            const original = ambiguous.has(key) ? null : indexed.get(key);
-            return {
-                ...nodeInfo,
-                ...(original ? {
-                    region: original.region,
-                    sourceId: original.sourceId,
-                    fingerprint: original.fingerprint,
-                    regionSource: original.regionSource,
-                } : {}),
-                subscriptionName: original?.subscriptionName || nodeInfo.subscriptionName || '未知',
-            };
-        }));
+        processedNodes = await Promise.all(
+            transformedUrls.map(async (transformedUrl) => {
+                const nodeInfo = parseNodeInfo(transformedUrl);
+                const key = await fingerprintNode(transformedUrl);
+                const original = ambiguous.has(key) ? null : indexed.get(key);
+                return {
+                    ...nodeInfo,
+                    ...(original
+                        ? {
+                              region: original.region,
+                              sourceId: original.sourceId,
+                              fingerprint: original.fingerprint,
+                              regionSource: original.regionSource,
+                          }
+                        : {}),
+                    subscriptionName:
+                        original?.subscriptionName || nodeInfo.subscriptionName || '未知',
+                };
+            })
+        );
     }
 
     // 生成统计信息（使用处理后的节点）

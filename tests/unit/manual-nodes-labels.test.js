@@ -31,7 +31,7 @@ describe('manual nodes labels', () => {
         const navItem = MAIN_NAV_ITEMS.find((item) => item.path === '/dashboard/nodes');
         const wrapper = mountNodeActions();
 
-        const panelTitle = wrapper.find('h2').text();
+        const panelTitle = wrapper.find('h1').text();
         expect(navItem?.name).toBe(panelTitle);
     });
 

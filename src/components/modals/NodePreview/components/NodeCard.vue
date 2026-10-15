@@ -95,12 +95,17 @@
                             >
                                 {{ parseNodeInfo(node).protocol }}
                             </span>
-                            <button v-if="editableRegions && node.fingerprint && !selectionMode"
-                                type="button" @click.stop="emit('edit-region', node)"
-                                class="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+                            <button
+                                v-if="editableRegions && node.fingerprint && !selectionMode"
+                                type="button"
+                                @click.stop="emit('edit-region', node)"
+                                class="rounded-lg bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"
+                            >
                                 {{ node.region }}{{ node.regionSource === 'manual' ? ' ✎' : '' }}
                             </button>
-                            <span class="truncate text-[10px] text-gray-500 dark:text-gray-400 font-mono tracking-tighter uppercase">
+                            <span
+                                class="truncate text-[10px] text-gray-500 dark:text-gray-400 font-mono tracking-tighter uppercase"
+                            >
                                 {{ parseNodeInfo(node).server.split('.').slice(-2).join('.') }} :
                                 {{ parseNodeInfo(node).port }}
                             </span>
@@ -208,13 +213,20 @@
                                 >
                                     {{ parseNodeInfo(node).protocol }}
                                 </span>
-                                <button type="button"
-                                    :disabled="!editableRegions || !node.fingerprint || selectionMode"
+                                <button
+                                    type="button"
+                                    :disabled="
+                                        !editableRegions || !node.fingerprint || selectionMode
+                                    "
                                     @click.stop="emit('edit-region', node)"
                                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-gray-50 text-gray-500 dark:bg-white/5 dark:text-gray-400 disabled:cursor-default"
-                                    :class="{ 'hover:bg-indigo-100 dark:hover:bg-indigo-500/20': editableRegions }"
+                                    :class="{
+                                        'hover:bg-indigo-100 dark:hover:bg-indigo-500/20':
+                                            editableRegions,
+                                    }"
                                 >
-                                    {{ parseNodeInfo(node).region || 'UNKNOWN' }}{{ node.regionSource === 'manual' ? ' ✎' : '' }}
+                                    {{ parseNodeInfo(node).region || 'UNKNOWN'
+                                    }}{{ node.regionSource === 'manual' ? ' ✎' : '' }}
                                 </button>
                             </div>
                         </div>

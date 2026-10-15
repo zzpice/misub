@@ -10,7 +10,20 @@
 export const REGION_KEYWORDS = {
     香港: ['HK', 'HKG', 'HKT', '香港', 'Hong Kong', 'HongKong'],
     澳门: ['MO', 'MAC', '澳门', '澳門', 'Macao', 'Macau'],
-    中国: ['CN', 'CHN', '中国', '中國', 'China', 'Beijing', 'Shanghai', '北京', '上海', 'BJS', 'PEK', 'PVG'],
+    中国: [
+        'CN',
+        'CHN',
+        '中国',
+        '中國',
+        'China',
+        'Beijing',
+        'Shanghai',
+        '北京',
+        '上海',
+        'BJS',
+        'PEK',
+        'PVG',
+    ],
     台湾: ['TW', 'TPE', '台湾', '台北', 'Taiwan', 'Taipei'],
     新加坡: ['SG', 'SIN', '新加坡', '狮城', '獅城', 'Singapore'],
     日本: [
@@ -542,12 +555,16 @@ function parseHostPort(value) {
 const AMBIGUOUS_REGION_CODES = new Set(['LA', 'CA', 'IN', 'FRA']);
 // Derive flags from ISO-style two-letter entries, not from presentation aliases.
 const FLAG_REGIONS = new Map(
-    Object.entries(REGION_KEYWORDS).map(([region, aliases]) => {
-        const code = aliases.find((value) => /^[A-Z]{2}$/.test(value));
-        if (!code) return [null, region];
-        const flag = String.fromCodePoint(...Array.from(code, (ch) => ch.charCodeAt(0) + 127397));
-        return [flag, region];
-    }).filter(([flag]) => flag)
+    Object.entries(REGION_KEYWORDS)
+        .map(([region, aliases]) => {
+            const code = aliases.find((value) => /^[A-Z]{2}$/.test(value));
+            if (!code) return [null, region];
+            const flag = String.fromCodePoint(
+                ...Array.from(code, (ch) => ch.charCodeAt(0) + 127397)
+            );
+            return [flag, region];
+        })
+        .filter(([flag]) => flag)
 );
 const REGION_ALIASES = Object.entries(REGION_KEYWORDS).flatMap(([region, words]) =>
     words.map((word) => ({
@@ -560,14 +577,20 @@ const REGION_ALIASES = Object.entries(REGION_KEYWORDS).flatMap(([region, words])
 const TOKEN_BOUNDARY = '[^\\p{L}\\p{N}]';
 function matchesToken(text, token) {
     const escaped = token.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-    return new RegExp('(?:^|' + TOKEN_BOUNDARY + ')' + escaped + '(?=$|' + TOKEN_BOUNDARY + ')', 'iu').test(text);
+    return new RegExp(
+        '(?:^|' + TOKEN_BOUNDARY + ')' + escaped + '(?=$|' + TOKEN_BOUNDARY + ')',
+        'iu'
+    ).test(text);
 }
 export function normalizeRegion(region) {
     if (typeof region !== 'string') return '';
     const value = region.trim();
     if (Object.prototype.hasOwnProperty.call(REGION_KEYWORDS, value)) return value;
-    const matching = new Set(REGION_ALIASES.filter((item) =>
-        item.word === value.toLowerCase()).map((item) => item.region));
+    const matching = new Set(
+        REGION_ALIASES.filter((item) => item.word === value.toLowerCase()).map(
+            (item) => item.region
+        )
+    );
     return matching.size === 1 ? [...matching][0] : '';
 }
 export function getRegionOptions() {
@@ -581,16 +604,23 @@ function detectAutomaticRegion(name) {
     if (typeof name !== 'string' || !name.trim()) return '其他';
     const flags = new Set(
         [...name.matchAll(/[\u{1F1E6}-\u{1F1FF}]{2}/gu)]
-            .map((hit) => FLAG_REGIONS.get(hit[0])).filter(Boolean)
+            .map((hit) => FLAG_REGIONS.get(hit[0]))
+            .filter(Boolean)
     );
     if (flags.size === 1) return [...flags][0];
     if (flags.size > 1) return '其他';
-    const explicit = new Set(), codes = new Set();
+    const explicit = new Set(),
+        codes = new Set();
     for (const alias of REGION_ALIASES) {
         if (alias.short) {
-            if (!AMBIGUOUS_REGION_CODES.has(alias.word.toUpperCase()) &&
-                matchesToken(name, alias.word)) codes.add(alias.region);
-        } else if (alias.chinese ? name.toLowerCase().includes(alias.word) : matchesToken(name, alias.word)) {
+            if (
+                !AMBIGUOUS_REGION_CODES.has(alias.word.toUpperCase()) &&
+                matchesToken(name, alias.word)
+            )
+                codes.add(alias.region);
+        } else if (
+            alias.chinese ? name.toLowerCase().includes(alias.word) : matchesToken(name, alias.word)
+        ) {
             explicit.add(alias.region);
         }
     }
@@ -598,7 +628,10 @@ function detectAutomaticRegion(name) {
     if (explicit.size > 1) return '其他';
     if (codes.size === 1) return [...codes][0];
     if (codes.size > 1) return '其他';
-    if (/^LA[-_\s]+(?:vless|vmess|trojan|tuic|ss|ssr|hy2|hysteria2|reality)(?:[-_\s]|$)/i.test(name)) return '美国';
+    if (
+        /^LA[-_\s]+(?:vless|vmess|trojan|tuic|ss|ssr|hy2|hysteria2|reality)(?:[-_\s]|$)/i.test(name)
+    )
+        return '美国';
     return '其他';
 }
 export function resolveNodeRegion(name, options = {}) {
@@ -612,7 +645,9 @@ export function resolveNodeRegion(name, options = {}) {
                 const value = normalizeRegion(rule.region);
                 if (value) return value;
             }
-        } catch { /* ignore malformed legacy rules */ }
+        } catch {
+            /* ignore malformed legacy rules */
+        }
     }
     const detected = detectAutomaticRegion(name);
     return detected !== '其他' ? detected : normalizeRegion(options.defaultRegion) || '其他';

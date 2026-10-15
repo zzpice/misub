@@ -16,7 +16,9 @@ describe('anonymous subscription usage counter', () => {
         const prepare = vi.fn(() => statement);
         const storage = { db: { prepare } };
         const profile = { id: 'id', customId: 'family' };
-        await Promise.all(Array.from({ length: 5 }, () => incrementProfileDownload(storage, profile)));
+        await Promise.all(
+            Array.from({ length: 5 }, () => incrementProfileDownload(storage, profile))
+        );
         expect(rows.get('misub_profile_download_count_id')).toBe(5);
         expect(prepare).toHaveBeenCalledTimes(5);
         expect(prepare.mock.calls[0][0]).toContain('ON CONFLICT(key) DO UPDATE');
@@ -31,23 +33,40 @@ describe('anonymous subscription usage counter', () => {
         };
         const profile = { id: 'abc' };
         const pending = [];
-        const context = { waitUntil(promise) { pending.push(promise); } };
+        const context = {
+            waitUntil(promise) {
+                pending.push(promise);
+            },
+        };
         const request = new Request('https://example.org/sub', { method: 'GET' });
         for (const response of [
             new Response('good'),
             new Response('failed', { status: 503 }),
             new Response('forbidden', { status: 403 }),
         ]) {
-            expect(recordSuccessfulProfileResponse({
-                response, context, storage, profile, request,
-            })).toBe(response);
+            expect(
+                recordSuccessfulProfileResponse({
+                    response,
+                    context,
+                    storage,
+                    profile,
+                    request,
+                })
+            ).toBe(response);
         }
         recordSuccessfulProfileResponse({
-            response: new Response('good'), context, storage, profile,
-            request, skip: true,
+            response: new Response('good'),
+            context,
+            storage,
+            profile,
+            request,
+            skip: true,
         });
         recordSuccessfulProfileResponse({
-            response: new Response('head'), context, storage, profile,
+            response: new Response('head'),
+            context,
+            storage,
+            profile,
             request: new Request('https://example.org/sub', { method: 'HEAD' }),
         });
         await Promise.all(pending);
@@ -59,13 +78,15 @@ describe('anonymous subscription usage counter', () => {
     it('does not fail the response if the counter storage is unavailable', async () => {
         const waitUntil = vi.fn((task) => task);
         const response = new Response('data');
-        expect(recordSuccessfulProfileResponse({
-            response,
-            profile: { id: 'personal' },
-            context: { waitUntil },
-            storage: { get: vi.fn().mockRejectedValue(new Error('unavailable')) },
-            request: new Request('https://example.org/sub'),
-        })).toBe(response);
+        expect(
+            recordSuccessfulProfileResponse({
+                response,
+                profile: { id: 'personal' },
+                context: { waitUntil },
+                storage: { get: vi.fn().mockRejectedValue(new Error('unavailable')) },
+                request: new Request('https://example.org/sub'),
+            })
+        ).toBe(response);
         await waitUntil.mock.calls[0][0];
     });
 });

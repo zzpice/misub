@@ -1,6 +1,5 @@
 <script setup>
     import { useRoute } from 'vue-router';
-    import { useUIStore } from '../../stores/ui.js';
     import BaseIcon from '../ui/BaseIcon.vue';
     import BrandLogo from './BrandLogo.vue';
     import NavActionGroup from './NavActionGroup.vue';
@@ -8,7 +7,6 @@
     import { useI18n } from '../../i18n/index.js';
 
     const route = useRoute();
-    const uiStore = useUIStore();
     const { t } = useI18n();
 
     defineProps({
@@ -29,26 +27,18 @@
 <template>
     <header
         :aria-label="t('nav.top')"
-        class="app-nav-bar md:hidden sticky top-0 z-50 flex items-center justify-between px-4 py-2.5 w-full bg-white/90 dark:bg-slate-950/88 backdrop-blur-xl border-b border-gray-200/60 dark:border-white/10 shadow-sm transition-all duration-300"
+        class="app-nav-bar lg:hidden sticky top-0 z-[50] flex items-center justify-between px-4 py-2.5 w-full bg-white dark:bg-slate-950 border-b border-gray-200/60 dark:border-white/10 transition-colors duration-150"
     >
         <BrandLogo to="/dashboard" text-size-class="text-lg" :icon-size="32" />
 
-        <NavActionGroup
-            :is-logged-in="isLoggedIn"
-            :with-focus-ring="true"
-            rounded-class="rounded-full"
-            @toggle-layout="uiStore.toggleLayout()"
-            @logout="emit('logout')"
-        />
+        <NavActionGroup :is-logged-in="isLoggedIn" @logout="emit('logout')" />
     </header>
 
     <header
         :aria-label="t('nav.main')"
-        class="app-nav-bar hidden md:block sticky top-0 z-50 w-full bg-white/90 dark:bg-slate-950/88 backdrop-blur-xl border-b border-gray-200/60 dark:border-white/10 transition-all duration-300"
+        class="app-nav-bar hidden lg:block sticky top-0 z-[50] w-full bg-white dark:bg-slate-950 border-b border-gray-200/60 dark:border-white/10 transition-all duration-300"
     >
-        <div
-            class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-[76px] flex items-center justify-between"
-        >
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="shrink-0 pr-5">
                 <BrandLogo to="/dashboard" text-size-class="text-lg" :icon-size="32" />
             </div>
@@ -58,6 +48,7 @@
                     v-for="item in navItems"
                     :key="item.path"
                     :to="item.path"
+                    :aria-current="isActive(item.path) ? 'page' : undefined"
                     class="nav-tab group"
                     :class="isActive(item.path) ? 'nav-tab-active' : 'nav-tab-inactive'"
                 >
@@ -75,24 +66,18 @@
             </nav>
 
             <div class="flex items-center pl-5 ml-3 gap-2">
-                <NavActionGroup
-                    :is-logged-in="isLoggedIn"
-                    :with-focus-ring="true"
-                    :show-divider="true"
-                    rounded-class="rounded-full"
-                    @toggle-layout="uiStore.toggleLayout()"
-                    @logout="emit('logout')"
-                />
+                <NavActionGroup :is-logged-in="isLoggedIn" @logout="emit('logout')" />
             </div>
         </div>
     </header>
 
-    <nav v-if="isLoggedIn" :aria-label="t('nav.bottom')" class="md:hidden mobile-nav-glass">
+    <nav v-if="isLoggedIn" :aria-label="t('nav.bottom')" class="lg:hidden mobile-nav-glass">
         <div class="mobile-nav-inner">
             <router-link
                 v-for="item in navItems"
                 :key="item.path"
                 :to="item.path"
+                :aria-current="isActive(item.path) ? 'page' : undefined"
                 class="nav-mobile-item"
                 :class="isActive(item.path) ? 'nav-mobile-item-active' : 'nav-mobile-item-inactive'"
             >

@@ -176,27 +176,6 @@ export async function fetchSettings() {
     }
 }
 
-export async function fetchLoginConfig() {
-    let timeoutId;
-    try {
-        const controller = new AbortController();
-        timeoutId = setTimeout(() => controller.abort(), 8000);
-        const headers =
-            typeof window !== 'undefined' && window.location?.pathname
-                ? { 'X-MiSub-Path': window.location.pathname }
-                : undefined;
-        const data = await api.get('/api/login_config', {
-            signal: controller.signal,
-            headers,
-        });
-        return { success: true, data };
-    } catch (error) {
-        return handleApiError(error, 'fetchLoginConfig');
-    } finally {
-        clearTimeout(timeoutId);
-    }
-}
-
 export async function saveSettings(settings) {
     try {
         return await api.post('/api/settings', settings);
@@ -258,45 +237,6 @@ export async function batchUpdateNodes(subscriptionIds) {
  * 数据迁移：从 KV 迁移到 D1 数据库
  * @returns {Promise<Object>} - 迁移结果
  */
-export async function migrateToD1() {
-    try {
-        return await api.post('/api/migrate_to_d1');
-    } catch (error) {
-        if (error instanceof APIError) {
-            return {
-                success: false,
-                error: error.message,
-                errorType: 'server',
-                details: error.data?.details || error.data?.errors,
-            };
-        }
-        return handleApiError(error, 'migrateToD1');
-    }
-}
-
-export async function detectLegacyD1() {
-    try {
-        return await api.get('/api/detect_legacy_d1');
-    } catch (error) {
-        return handleApiError(error, 'detectLegacyD1');
-    }
-}
-
-export async function migrateLegacyD1() {
-    try {
-        return await api.post('/api/migrate_legacy_d1');
-    } catch (error) {
-        if (error instanceof APIError) {
-            return {
-                success: false,
-                error: error.message,
-                errorType: 'server',
-                details: error.data?.details || error.data?.errors,
-            };
-        }
-        return handleApiError(error, 'migrateLegacyD1');
-    }
-}
 
 export async function testSubconverterBackend(backend, target = 'clash') {
     let timeoutId;

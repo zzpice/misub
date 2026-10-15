@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { fetchSettings, saveSettings, resetSettings, showToast } = vi.hoisted(() => ({
@@ -28,6 +29,7 @@ import { useSettingsLogic } from '../../src/composables/useSettingsLogic.js';
 
 describe('useSettingsLogic externalApi normalization', () => {
     beforeEach(() => {
+        setActivePinia(createPinia());
         fetchSettings.mockReset();
         saveSettings.mockReset();
         resetSettings.mockReset();
@@ -50,28 +52,16 @@ describe('useSettingsLogic externalApi normalization', () => {
         expect(settings.value.externalApi.tokens).toEqual([{ name: 'default', token: '' }]);
     });
 
-    it('shows a visible reload countdown and reloads automatically after saving', async () => {
-        vi.useFakeTimers();
+    it('applies settings without a full reload or losing the editor state', async () => {
+        const { useDataStore } = await import('../../src/stores/useDataStore.js');
+        const store = useDataStore();
+        store.markDirty();
         saveSettings.mockResolvedValue({ success: true });
-        const reload = vi.fn();
-        const originalReload = window.location.reload;
-        window.location.reload = reload;
-
-        try {
-            const { settings, handleSave, restartCountdown } = useSettingsLogic();
-            settings.value.storageType = 'kv';
-
-            expect(await handleSave()).toBe(true);
-            expect(restartCountdown.value).toBe(3);
-            await vi.advanceTimersByTimeAsync(1000);
-            expect(restartCountdown.value).toBe(2);
-            await vi.advanceTimersByTimeAsync(2000);
-            expect(reload).toHaveBeenCalledTimes(1);
-            expect(restartCountdown.value).toBe(0);
-        } finally {
-            window.location.reload = originalReload;
-            vi.useRealTimers();
-        }
+        const { settings, handleSave } = useSettingsLogic();
+        settings.value.FileName = 'Personal';
+        expect(await handleSave()).toBe(true);
+        expect(store.settings.FileName).toBe('Personal');
+        expect(store.isDirty).toBe(true);
     });
 
     it('normalizes blank token names before saving', async () => {

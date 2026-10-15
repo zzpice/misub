@@ -16,7 +16,7 @@ export const DEFAULT_SUBCONVERTER_BACKEND = 'subapi.cmliussss.net';
 
 // Default settings
 export const DEFAULT_SETTINGS = {
-    FileName: 'MiSub',
+    FileName: 'Zzp-Sub',
     mytoken: 'auto',
     profileToken: 'profiles',
     transformConfigMode: 'builtin',
@@ -49,65 +49,7 @@ export const DEFAULT_SETTINGS = {
     defaultOperators: [], // 新版操作符链式处理 (New Unified Pipeline)
     regionOverrides: [], // 自定义节点地区覆盖规则：{ pattern, region, flags }
     // @deprecated 使用 defaultOperators 代替
-    defaultNodeTransform: {
-        enabled: false,
-        filter: {
-            include: { enabled: false, rules: [] },
-            exclude: { enabled: false, rules: [] },
-            protocols: { enabled: false, values: [] },
-            regions: { enabled: false, values: [] },
-            script: { enabled: false, expression: '' },
-            useless: { enabled: false },
-        },
-        rename: {
-            regex: { enabled: false, rules: [] },
-            script: { enabled: false, expression: '' },
-            template: {
-                enabled: false,
-                template: '{emoji}{region}-{protocol}-{index}',
-                indexStart: 1,
-                indexPad: 2,
-                indexScope: 'regionProtocol',
-                regionAlias: {},
-                protocolAlias: { hysteria2: 'hy2' },
-            },
-        },
-        dedup: {
-            enabled: false,
-            mode: 'serverPort',
-            includeProtocol: false,
-            prefer: { protocolOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'] },
-        },
-        sort: {
-            enabled: false,
-            nameIgnoreEmoji: true,
-            keys: [
-                {
-                    key: 'region',
-                    order: 'asc',
-                    customOrder: [
-                        '香港',
-                        '台湾',
-                        '日本',
-                        '新加坡',
-                        '美国',
-                        '韩国',
-                        '英国',
-                        '德国',
-                        '法国',
-                        '加拿大',
-                    ],
-                },
-                {
-                    key: 'protocol',
-                    order: 'asc',
-                    customOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'],
-                },
-                { key: 'name', order: 'asc' },
-            ],
-        },
-    },
-    nodeTransformPresets: [],
+    defaultOperators: [],
 
     // 自定义公开页设置
 
@@ -116,8 +58,8 @@ export const DEFAULT_SETTINGS = {
         endpoint: '',
         username: '',
         password: '',
-        remotePath: '/MiSub',
-        filenameTemplate: 'misub-backup-{datetime}.json',
+        remotePath: '/Zzp-Sub',
+        filenameTemplate: 'zzp-sub-backup-{datetime}.json',
         backupScope: 'dataOnly',
         autoBackup: false,
         interval: 'daily',
@@ -154,7 +96,7 @@ export const DEFAULT_SETTINGS = {
 
 // System constants
 export const SYSTEM_CONSTANTS = {
-    VERSION: '1.0.0',
+    VERSION: '1.1.0',
     // Use v2rayN UA to fetch subscriptions reliably.
     FETCHER_USER_AGENT: 'v2rayN/7.23',
 };

@@ -346,9 +346,7 @@ describe('security hardening', () => {
             expect(warnSpy).toHaveBeenCalledWith(
                 '[Storage] No KV binding found, using noop adapter'
             );
-            expect(infoSpy).toHaveBeenCalledWith(
-                '[Cron] Checking 0 remote sources'
-            );
+            expect(infoSpy).toHaveBeenCalledWith('[Cron] Checking 0 remote sources');
         } finally {
             warnSpy.mockRestore();
             infoSpy.mockRestore();

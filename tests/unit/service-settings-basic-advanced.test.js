@@ -35,11 +35,19 @@ describe('service settings basic/advanced organization', () => {
         const details = wrapper.find('#misub-service-advanced');
         expect(wrapper.text()).toContain('日常订阅设置');
         expect(wrapper.text()).toContain('标准版');
-        expect(wrapper.find('button[aria-controls="misub-service-advanced"]').attributes('aria-expanded')).toBe('false');
+        expect(
+            wrapper
+                .find('button[aria-controls="misub-service-advanced"]')
+                .attributes('aria-expanded')
+        ).toBe('false');
         expect(details.element.style.display).toBe('none');
         await wrapper.find('button[aria-controls="misub-service-advanced"]').trigger('click');
         expect(details.element.style.display).not.toBe('none');
-        expect(wrapper.find('button[aria-controls="misub-service-advanced"]').attributes('aria-expanded')).toBe('true');
+        expect(
+            wrapper
+                .find('button[aria-controls="misub-service-advanced"]')
+                .attributes('aria-expanded')
+        ).toBe('true');
         expect(settings).toEqual(defaults());
     });
 
@@ -53,7 +61,11 @@ describe('service settings basic/advanced organization', () => {
         });
         const before = structuredClone(settings);
         const wrapper = mountService(settings);
-        expect(wrapper.find('button[aria-controls="misub-service-advanced"]').attributes('aria-expanded')).toBe('true');
+        expect(
+            wrapper
+                .find('button[aria-controls="misub-service-advanced"]')
+                .attributes('aria-expanded')
+        ).toBe('true');
         await wrapper.find('button[aria-controls="misub-service-advanced"]').trigger('click');
         expect(settings).toEqual(before);
         expect(wrapper.text()).toContain('自定义');

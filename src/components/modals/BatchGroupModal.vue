@@ -42,7 +42,7 @@
     >
         <template #title>
             <div class="flex items-center gap-3">
-                <div class="p-2 misub-radius-lg bg-indigo-500/10">
+                <div class="p-2 sub-radius-lg bg-indigo-500/10">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         class="h-6 w-6 text-indigo-500"

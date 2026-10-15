@@ -15,8 +15,13 @@ function validCount(value) {
 }
 
 export async function readProfileDownloadCount(storage, profile) {
-    const keys = [...new Set([profileCountKey(profile), PREFIX + String(profile?.customId || profile?.id || '')])];
-    const counts = await Promise.all(keys.map(key => storage.get(key)));
+    const keys = [
+        ...new Set([
+            profileCountKey(profile),
+            PREFIX + String(profile?.customId || profile?.id || ''),
+        ]),
+    ];
+    const counts = await Promise.all(keys.map((key) => storage.get(key)));
     return Math.max(validCount(profile?.downloadCount), ...counts.map(validCount));
 }
 
@@ -28,13 +33,16 @@ export async function incrementProfileDownload(storage, profile) {
     if (storage?.db?.prepare) {
         // Carry forward the old alias count without changing its row. The fixed ID
         // survives future alias edits, and the UPSERT remains atomic under concurrency.
-        await storage.db.prepare(
-            `INSERT INTO settings (key, value, updated_at)
+        await storage.db
+            .prepare(
+                `INSERT INTO settings (key, value, updated_at)
              VALUES (?, MAX(?, COALESCE((SELECT CAST(value AS INTEGER) FROM settings WHERE key = ?), 0)) + 1, CURRENT_TIMESTAMP)
              ON CONFLICT(key) DO UPDATE SET
              value = MAX(CAST(settings.value AS INTEGER), CAST(excluded.value AS INTEGER) - 1) + 1,
              updated_at = CURRENT_TIMESTAMP`
-        ).bind(key, baseline, legacyKey).run();
+            )
+            .bind(key, baseline, legacyKey)
+            .run();
         return;
     }
     // Legacy KV instances: best effort without storing identifying request data.
@@ -42,12 +50,15 @@ export async function incrementProfileDownload(storage, profile) {
 }
 
 export function recordSuccessfulProfileResponse({
-    response, context, storage, profile, request, skip = false,
+    response,
+    context,
+    storage,
+    profile,
+    request,
+    skip = false,
 }) {
-    if (
-        !profile || skip || !response || response.status !== 200 ||
-        request?.method !== 'GET'
-    ) return response;
+    if (!profile || skip || !response || response.status !== 200 || request?.method !== 'GET')
+        return response;
     const task = incrementProfileDownload(storage, profile).catch((error) => {
         console.warn('[Profile Count] Unable to update anonymous count:', error?.message || error);
     });

@@ -1,14 +1,16 @@
 import { StorageFactory } from '../../storage-adapter.js';
 import { applyPersonalSettings } from '../personal-mode.js';
+import { migrateConfigSettings, formatBytes, base64EncodeUtf8 } from '../utils.js';
 import {
-    migrateConfigSettings,
-    formatBytes,
-    migrateProfileIds,
-    base64EncodeUtf8,
-} from '../utils.js';
-import { generateCombinedNodeList, fetchRemoteSourceSnapshot } from '../../services/subscription-service.js';
+    generateCombinedNodeList,
+    fetchRemoteSourceSnapshot,
+} from '../../services/subscription-service.js';
 import { resolveSourceSnapshot } from '../../services/source-snapshot-service.js';
-import { readRegionPreferences, fingerprintNode, nodeRegionIdentity } from '../../services/region-preferences.js';
+import {
+    readRegionPreferences,
+    fingerprintNode,
+    nodeRegionIdentity,
+} from '../../services/region-preferences.js';
 import { isPersonalMode } from '../personal-mode.js';
 import {
     KV_KEY_SUBS,
@@ -71,9 +73,7 @@ export function extractProxySectionFromBuiltin(content, targetFormat) {
             const config = JSON.parse(content);
             if (config.outbounds && Array.isArray(config.outbounds)) {
                 // 过滤掉 direct, block, dns-out 等元 outbound
-                const proxies = config.outbounds.filter(
-                    (o) => Boolean(o.server)
-                );
+                const proxies = config.outbounds.filter((o) => Boolean(o.server));
                 return JSON.stringify(proxies, null, 2);
             }
         } catch {
@@ -460,14 +460,6 @@ export async function handleMisubRequest(context) {
     ]);
     const settings = settingsData || {};
 
-    // 自动迁移旧版 profile ID（去除 'profile_' 前缀）
-    if (migrateProfileIds(allProfiles)) {
-        storageAdapter
-            .put(KV_KEY_PROFILES, allProfiles)
-            .catch((err) =>
-                console.error('[Migration] Failed to persist migrated profile IDs:', err)
-            );
-    }
     // 关键：我们在这里定义了 `config`，后续都应该使用它
     const config = migrateConfigSettings(
         applyPersonalSettings({ ...defaultSettings, ...settings }, env)
@@ -521,10 +513,15 @@ export async function handleMisubRequest(context) {
 
     // Only successful, real client responses increment the aggregate profile
     // counter. Detailed access logs remain disabled in personal mode.
-    const countSuccessfulResponse = (response) => recordSuccessfulProfileResponse({
-        response, context, storage: storageAdapter, profile: currentProfile, request,
-        skip: isProfileExpired || shouldSkipLogging || url.searchParams.has('callback_token'),
-    });
+    const countSuccessfulResponse = (response) =>
+        recordSuccessfulProfileResponse({
+            response,
+            context,
+            storage: storageAdapter,
+            profile: currentProfile,
+            request,
+            skip: isProfileExpired || shouldSkipLogging || url.searchParams.has('callback_token'),
+        });
 
     if (profileIdentifier) {
         // [修正] 使用 config 變量
@@ -618,7 +615,6 @@ export async function handleMisubRequest(context) {
                     });
                 }
             }
-
         } else {
             return new Response('Profile not found or disabled', { status: 404 });
         }
@@ -652,12 +648,14 @@ export async function handleMisubRequest(context) {
     const globalSub = config.subconverter || {};
 
     // [Optimization] Respect user defined engine mode while preventing loops for non-browser agents (backend fetchers)
-    const effectiveEngine = isPersonalMode(env) ? 'builtin' : resolveEffectiveEngine({
-        searchParams: url.searchParams,
-        userAgent: userAgentHeader,
-        profileEngineMode: profileSub.engineMode,
-        globalEngineMode: globalSub.engineMode,
-    });
+    const effectiveEngine = isPersonalMode(env)
+        ? 'builtin'
+        : resolveEffectiveEngine({
+              searchParams: url.searchParams,
+              userAgent: userAgentHeader,
+              profileEngineMode: profileSub.engineMode,
+              globalEngineMode: globalSub.engineMode,
+          });
     const isExternalMode = effectiveEngine === 'external';
     const useBuiltin = !isExternalMode;
     const { shouldSkipCertificateVerify, shouldEnableUdp } = resolveBuiltinEngineFlags(
@@ -702,27 +700,33 @@ export async function handleMisubRequest(context) {
     const remoteSources = targetMisubs.filter(
         (sub) => sub?.enabled && sub?.id && /^https?:\/\//i.test(String(sub.url || ''))
     );
-    if (isPersonalMode(env)) await Promise.all(remoteSources.map(async (sub) => {
-        try {
-            const snapshot = await resolveSourceSnapshot({
-                storage: storageAdapter,
-                source: sub,
-                context,
-                fetcher: (source) => fetchRemoteSourceSnapshot(source, storageAdapter, context),
-            });
-            sourceSnapshots.set(sub.id, snapshot);
-        } catch (error) {
-            console.warn('[MiSub] Source snapshot unavailable:', error?.message);
-            sourceSnapshots.set(sub.id, null);
-        }
-    }));
+    if (isPersonalMode(env))
+        await Promise.all(
+            remoteSources.map(async (sub) => {
+                try {
+                    const snapshot = await resolveSourceSnapshot({
+                        storage: storageAdapter,
+                        source: sub,
+                        context,
+                        fetcher: (source) =>
+                            fetchRemoteSourceSnapshot(source, storageAdapter, context),
+                    });
+                    sourceSnapshots.set(sub.id, snapshot);
+                } catch (error) {
+                    console.warn('[MiSub] Source snapshot unavailable:', error?.message);
+                    sourceSnapshots.set(sub.id, null);
+                }
+            })
+        );
     context.preloadedSourceSnapshots = sourceSnapshots;
     context.currentSubscriptionRuntimeInfo ||= {};
     for (const sub of remoteSources) {
         const snapshot = sourceSnapshots.get(sub.id);
-        if (snapshot) context.currentSubscriptionRuntimeInfo[sub.id] = {
-            userInfo: snapshot.userInfo || null, nodeCount: snapshot.nodeCount,
-        };
+        if (snapshot)
+            context.currentSubscriptionRuntimeInfo[sub.id] = {
+                userInfo: snapshot.userInfo || null,
+                nodeCount: snapshot.nodeCount,
+            };
     }
 
     if (isProfileExpired) {
@@ -766,13 +770,15 @@ export async function handleMisubRequest(context) {
         }
     }
 
-
     // An aggregate cache includes the snapshot versions AND the requested
     // transform variant. Different profiles, filters, formats and user agents
     // must not replace one another's aggregate content.
     const savedRegionPreferences = isPersonalMode(env)
-        ? await Promise.all(remoteSources.map(sub => readRegionPreferences(storageAdapter, sub.id))) : [];
-    const regionVersions = savedRegionPreferences.map(data => data.version);
+        ? await Promise.all(
+              remoteSources.map((sub) => readRegionPreferences(storageAdapter, sub.id))
+          )
+        : [];
+    const regionVersions = savedRegionPreferences.map((data) => data.version);
     // Keep source identity separate from display flags; emoji removal and renaming
     // must not undo a correction, including when the aggregate cache is hit.
     const sourceRegionHints = new Map();
@@ -780,18 +786,26 @@ export async function handleMisubRequest(context) {
         const sub = remoteSources[i];
         for (const node of sourceSnapshots.get(sub.id)?.nodes || []) {
             const key = nodeRegionIdentity(node);
-            if (!sourceRegionHints.has(key)) sourceRegionHints.set(key, {
-                manualRegion: savedRegionPreferences[i]?.overrides[await fingerprintNode(node)],
-                defaultRegion: sub.defaultRegion,
-            });
+            if (!sourceRegionHints.has(key))
+                sourceRegionHints.set(key, {
+                    manualRegion: savedRegionPreferences[i]?.overrides[await fingerprintNode(node)],
+                    defaultRegion: sub.defaultRegion,
+                });
         }
     }
     context.sourceRegionHints = sourceRegionHints;
     const variant = JSON.stringify({
-        targetFormat, userAgentHeader, urlInclude, urlExclude, urlRename, urlEmoji,
+        targetFormat,
+        userAgentHeader,
+        urlInclude,
+        urlExclude,
+        urlRename,
+        urlEmoji,
         sources: remoteSources.map((sub, i) => [
-            sub.id, sourceSnapshots.get(sub.id)?.updatedAt || 'none',
-            regionVersions[i] || '', sub.defaultRegion || '',
+            sub.id,
+            sourceSnapshots.get(sub.id)?.updatedAt || 'none',
+            regionVersions[i] || '',
+            sub.defaultRegion || '',
         ]),
     });
     let variantHash = 2166136261;
@@ -801,10 +815,9 @@ export async function handleMisubRequest(context) {
     }
 
     // === 缓存机制：快速响应客户端请求 ===
-    const cacheKey = generateCacheKey(
-        profileIdentifier ? 'profile' : 'token',
-        profileIdentifier || token
-    ) + (isPersonalMode(env) ? '_v_' + (variantHash >>> 0).toString(36) : '');
+    const cacheKey =
+        generateCacheKey(profileIdentifier ? 'profile' : 'token', profileIdentifier || token) +
+        (isPersonalMode(env) ? '_v_' + (variantHash >>> 0).toString(36) : '');
 
     // 检查是否强制刷新（通过 URL 参数）
     const forceRefresh =
@@ -876,34 +889,14 @@ export async function handleMisubRequest(context) {
             }
         }
 
-        // nodeTransform 回退逻辑
-        const globalNodeTransform = config.defaultNodeTransform || {};
-        const globalNodeTransformPresets = Array.isArray(config.nodeTransformPresets)
-            ? config.nodeTransformPresets
-            : [];
-        const profileNodeTransform = activeProfile?.nodeTransform ?? null;
-        const profileNodeTransformPresetId = activeProfile?.nodeTransformPresetId || '';
-        const profilePresetNodeTransform = profileNodeTransformPresetId
-            ? globalNodeTransformPresets.find((item) => item?.id === profileNodeTransformPresetId)
-                  ?.config || null
-            : null;
-        const hasProfileNodeTransform =
-            profileNodeTransform && Object.keys(profileNodeTransform).length > 0;
-
-        // nodeTransform 使用整体覆盖逻辑
-        const effectiveNodeTransform = hasProfileNodeTransform
-            ? profileNodeTransform
-            : profilePresetNodeTransform || globalNodeTransform;
-
         const generationSettings = {
             ...effectivePrefixSettings,
-            nodeTransform: { ...effectiveNodeTransform },
             name: subName,
             operators: Array.isArray(activeProfile?.operators) ? [...activeProfile.operators] : [],
             exclude: urlExclude || activeProfile?.exclude,
             include: urlInclude || activeProfile?.include,
             // [Issue #345] 透传 emoji 开关到内置生成器
-            addFlagEmoji: effectiveNodeTransform.addFlagEmoji,
+            addFlagEmoji: config.enableFlagEmoji !== false,
         };
 
         // [Subconverter API] 动态注入更名算子 (rename=old@new|A@B)
@@ -934,10 +927,9 @@ export async function handleMisubRequest(context) {
 
         // [Subconverter API] 控制 Emoji 注入
         if (urlEmoji === 'false') {
-            generationSettings.nodeTransform.addFlagEmoji = false;
-            generationSettings.nodeTransform.removeFlagEmoji = true;
+            generationSettings.addFlagEmoji = false;
         } else if (urlEmoji === 'true') {
-            generationSettings.nodeTransform.addFlagEmoji = true;
+            generationSettings.addFlagEmoji = true;
         }
 
         const freshNodes = await generateCombinedNodeList(
@@ -1032,15 +1024,18 @@ export async function handleMisubRequest(context) {
         remoteSources.length > 0 &&
         remoteSources.every((sub) => !sourceSnapshots.get(sub.id)?.nodes?.length)
     ) {
-        return new Response('No saved node snapshot available. Refresh the source while its upstream subscription is accessible.', {
-            status: 503,
-            headers: {
-                'Content-Type': 'text/plain; charset=utf-8',
-                'Cache-Control': 'no-store',
-                'Retry-After': '300',
-                'X-MiSub-Source-State': 'snapshot-missing',
-            },
-        });
+        return new Response(
+            'No saved node snapshot available. Refresh the source while its upstream subscription is accessible.',
+            {
+                status: 503,
+                headers: {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    'Cache-Control': 'no-store',
+                    'Retry-After': '300',
+                    'X-MiSub-Source-State': 'snapshot-missing',
+                },
+            }
+        );
     }
 
     const domain = url.hostname;
@@ -1065,9 +1060,11 @@ export async function handleMisubRequest(context) {
         }
         // [兼容性优化] 第三方转换后端对明文列表的支持通常比 Base64 更好。
         // 同时对于 Cloudflare 而言，明文输出更有利于其边缘节点的流式处理。
-        return countSuccessfulResponse(new Response(contentToReturn, {
-            headers: nodeHeaders,
-        }));
+        return countSuccessfulResponse(
+            new Response(contentToReturn, {
+                headers: nodeHeaders,
+            })
+        );
     }
 
     // 2. If external mode active, build the redirect URL and return 302
@@ -1099,7 +1096,9 @@ export async function handleMisubRequest(context) {
                     ruleLevel,
                     regionsAlreadyResolved: isPersonalMode(env),
                     sourceRegionHints,
-                    addFlagEmoji: urlEmoji === 'true' || (urlEmoji !== 'false' && config.enableFlagEmoji !== false),
+                    addFlagEmoji:
+                        urlEmoji === 'true' ||
+                        (urlEmoji !== 'false' && config.enableFlagEmoji !== false),
                     regionOverrides: Array.isArray(config.regionOverrides)
                         ? config.regionOverrides
                         : [],
@@ -1141,7 +1140,9 @@ export async function handleMisubRequest(context) {
                     Object.entries(rendered.headers || {}).forEach(([key, value]) =>
                         responseHeaders.set(key, value)
                     );
-                    return countSuccessfulResponse(new Response(rendered.content, { headers: responseHeaders }));
+                    return countSuccessfulResponse(
+                        new Response(rendered.content, { headers: responseHeaders })
+                    );
                 }
             } catch (err) {
                 console.warn(
@@ -1192,7 +1193,11 @@ export async function handleMisubRequest(context) {
             'Content-Type': 'text/plain; charset=utf-8',
             'Cache-Control': 'no-store, no-cache',
         };
-        const userInfoHeader = buildUserInfoHeaderFromSubscriptions(context, targetMisubs, currentProfile?.expiresAt);
+        const userInfoHeader = buildUserInfoHeaderFromSubscriptions(
+            context,
+            targetMisubs,
+            currentProfile?.expiresAt
+        );
         if (userInfoHeader) {
             headers['Subscription-Userinfo'] = userInfoHeader;
             headers['Profile-Update-Interval'] = String(config.UpdateInterval || 24);
@@ -1219,7 +1224,9 @@ export async function handleMisubRequest(context) {
             }
         }
 
-        return countSuccessfulResponse(new Response(base64EncodeUtf8(contentToEncode), { headers }));
+        return countSuccessfulResponse(
+            new Response(base64EncodeUtf8(contentToEncode), { headers })
+        );
     }
 
     // [Subconverter API] URL 参数优先级高于全局/Profile 设置
@@ -1243,7 +1250,8 @@ export async function handleMisubRequest(context) {
         regionOverrides: Array.isArray(config.regionOverrides) ? config.regionOverrides : [],
         regionsAlreadyResolved: isPersonalMode(env),
         sourceRegionHints,
-        addFlagEmoji: urlEmoji === 'true' || (urlEmoji !== 'false' && config.enableFlagEmoji !== false),
+        addFlagEmoji:
+            urlEmoji === 'true' || (urlEmoji !== 'false' && config.enableFlagEmoji !== false),
         isMeta: isMetaCore(userAgentHeader, url.searchParams),
         customDnsOverride: config.customDnsOverride || '',
         dnsMode:
@@ -1340,12 +1348,17 @@ export async function handleMisubRequest(context) {
                 }
             }
 
-            return countSuccessfulResponse(new Response(finalContent || '', { headers: responseHeaders }));
+            return countSuccessfulResponse(
+                new Response(finalContent || '', { headers: responseHeaders })
+            );
         } catch (e) {
             console.error(`[Builtin${targetFormat}] Generation failed`);
             return new Response('Subscription generation failed. Please retry later.', {
                 status: 502,
-                headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+                headers: {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    'Cache-Control': 'no-store',
+                },
             });
         }
     }
@@ -1367,5 +1380,7 @@ export async function handleMisubRequest(context) {
         base64Headers[key] = value;
     });
 
-    return countSuccessfulResponse(new Response(base64EncodeUtf8(combinedNodeList), { headers: base64Headers }));
+    return countSuccessfulResponse(
+        new Response(base64EncodeUtf8(combinedNodeList), { headers: base64Headers })
+    );
 }

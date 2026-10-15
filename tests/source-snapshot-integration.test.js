@@ -8,8 +8,13 @@ function storageFixture() {
     const records = new Map();
     return {
         records,
-        async get(key) { return records.get(key) ?? null; },
-        async put(key, value) { records.set(key, structuredClone(value)); return true; },
+        async get(key) {
+            return records.get(key) ?? null;
+        },
+        async put(key, value) {
+            records.set(key, structuredClone(value));
+            return true;
+        },
     };
 }
 const SOURCE = {
@@ -30,29 +35,34 @@ describe('source snapshots shared across groups, devices and output formats', ()
 
     it('fetches one raw source once for concurrent downstream clients and renders independent formats', async () => {
         const storage = storageFixture();
-        const upstream = vi.fn(async () => new Response(RAW, {
-            status: 200,
-            headers: { 'subscription-userinfo': 'upload=1; download=2; total=100' },
-        }));
+        const upstream = vi.fn(
+            async () =>
+                new Response(RAW, {
+                    status: 200,
+                    headers: { 'subscription-userinfo': 'upload=1; download=2; total=100' },
+                })
+        );
         vi.stubGlobal('fetch', upstream);
 
         const formats = ['clash', 'singbox', 'surge&ver=4', 'loon', 'quanx', 'egern'];
-        const rendered = await Promise.all(formats.map(async (format, index) => {
-            const groupNodes = await generateCombinedNodeList(
-                { env: { MISUB_PERSONAL_MODE: 'true' }, storage },
-                { enableAccessLog: false, enableFlagEmoji: false },
-                'Desktop-' + format,
-                [SOURCE],
-                '',
-                { enableSubscriptions: index % 2 === 0 }
-            );
-            const converted = transformBuiltinSubscription(groupNodes, format, {
-                fileName: 'Shared source',
-                ruleLevel: 'std',
-                addFlagEmoji: false,
-            });
-            return { format, groupNodes, converted };
-        }));
+        const rendered = await Promise.all(
+            formats.map(async (format, index) => {
+                const groupNodes = await generateCombinedNodeList(
+                    { env: { MISUB_PERSONAL_MODE: 'true' }, storage },
+                    { enableAccessLog: false, enableFlagEmoji: false },
+                    'Desktop-' + format,
+                    [SOURCE],
+                    '',
+                    { enableSubscriptions: index % 2 === 0 }
+                );
+                const converted = transformBuiltinSubscription(groupNodes, format, {
+                    fileName: 'Shared source',
+                    ruleLevel: 'std',
+                    addFlagEmoji: false,
+                });
+                return { format, groupNodes, converted };
+            })
+        );
 
         expect(upstream).toHaveBeenCalledTimes(1);
         const snapshot = await readSourceSnapshot(storage, SOURCE);
@@ -63,7 +73,9 @@ describe('source snapshots shared across groups, devices and output formats', ()
         expect(rendered.every((item) => item.groupNodes.includes('HK-01'))).toBe(true);
         expect(rendered.every((item) => String(item.converted).length > 100)).toBe(true);
         expect(yaml.load(rendered[0].converted).proxies).toHaveLength(2);
-        expect(JSON.parse(rendered[1].converted).outbounds.some((x) => x.type === 'trojan')).toBe(true);
+        expect(JSON.parse(rendered[1].converted).outbounds.some((x) => x.type === 'trojan')).toBe(
+            true
+        );
         expect(rendered[2].converted).toContain('[Proxy]');
         expect(rendered[3].converted).toContain('[Proxy]');
         expect(rendered[4].converted).toContain('[server_local]');

@@ -14,22 +14,22 @@
     const getToastConfig = (type) => {
         const configs = {
             success: {
-                bg: 'bg-gradient-to-r from-green-500 to-emerald-500',
+                bg: 'bg-emerald-700',
                 icon: 'M5 13l4 4L19 7',
                 ring: 'ring-green-500/20',
             },
             error: {
-                bg: 'bg-gradient-to-r from-red-500 to-rose-500',
+                bg: 'bg-red-700',
                 icon: 'M6 18L18 6M6 6l12 12',
                 ring: 'ring-red-500/20',
             },
             info: {
-                bg: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+                bg: 'bg-slate-700',
                 icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
                 ring: 'ring-blue-500/20',
             },
             warning: {
-                bg: 'bg-gradient-to-r from-yellow-500 to-orange-500',
+                bg: 'bg-amber-700',
                 icon: 'M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
                 ring: 'ring-yellow-500/20',
             },
@@ -54,7 +54,7 @@
                 :role="getToastRole(toast.type)"
                 :aria-live="getToastAriaLive(toast.type)"
                 aria-atomic="true"
-                class="toast-container pointer-events-auto w-full sm:w-auto sm:min-w-80 max-w-md backdrop-blur-lg border border-white/20 misub-radius-lg shadow-2xl overflow-hidden ring-1 transition-all duration-300 relative"
+                class="toast-container pointer-events-auto w-full sm:w-auto sm:min-w-80 max-w-md backdrop-blur-lg border border-white/20 sub-radius-lg shadow-lg overflow-hidden ring-1 transition-colors duration-150 relative"
                 :class="[getToastConfig(toast.type).bg, getToastConfig(toast.type).ring]"
             >
                 <!-- Toast 内容 -->
@@ -136,7 +136,9 @@
     .toast-move,
     .toast-enter-active,
     .toast-leave-active {
-        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        transition:
+            opacity var(--duration-fast) ease,
+            transform var(--duration-fast) ease;
         width: 100%;
     }
 
@@ -172,28 +174,6 @@
         }
         to {
             width: 0%;
-        }
-    }
-
-    /* 微光效果 */
-    .toast-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-        animation: shimmer 0.6s ease-out 0.2s;
-        pointer-events: none;
-    }
-
-    @keyframes shimmer {
-        0% {
-            left: -100%;
-        }
-        100% {
-            left: 100%;
         }
     }
 

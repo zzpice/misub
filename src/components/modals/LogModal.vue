@@ -103,7 +103,8 @@
             if (newVal) {
                 fetchLogs();
             }
-        }
+        },
+        { immediate: true }
     );
 </script>
 
@@ -123,13 +124,13 @@
                 <div class="flex gap-2">
                     <button
                         @click="fetchLogs"
-                        class="text-xs px-2 py-1 misub-radius-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-gray-600 dark:text-gray-300"
+                        class="text-xs px-2 py-1 sub-radius-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-gray-600 dark:text-gray-300"
                     >
                         {{ t('common.refresh') }}
                     </button>
                     <button
                         @click="clearLogs"
-                        class="text-xs px-2 py-1 misub-radius-md bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors text-red-600 dark:text-red-400"
+                        class="text-xs px-2 py-1 sub-radius-md bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors text-red-600 dark:text-red-400"
                     >
                         {{ t('common.clear') }}
                     </button>
@@ -185,7 +186,7 @@
                         <li
                             v-for="log in paginatedLogs"
                             :key="log.id || log.timestamp"
-                            class="bg-gray-50 dark:bg-gray-700/30 misub-radius-md p-2.5 text-xs border border-gray-100 dark:border-gray-700 relative overflow-hidden group hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors cursor-pointer"
+                            class="bg-gray-50 dark:bg-gray-700/30 sub-radius-md p-2.5 text-xs border border-gray-100 dark:border-gray-700 relative overflow-hidden group hover:border-indigo-200 dark:hover:border-indigo-800 transition-colors cursor-pointer"
                             @click="toggleExpand(log.id)"
                         >
                             <!-- Status Indicator Stripe -->

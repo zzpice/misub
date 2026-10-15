@@ -49,47 +49,75 @@ describe('Data store settings cache', () => {
         expect(dataStore.profiles).toEqual([]);
     });
 
-    it('updates the session data cache config after saving settings', async () => {
-        const initialData = {
-            misubs: [],
+    it('updates settings in memory and never writes private data to session storage', async () => {
+        const dataStore = createStore();
+        dataStore.hydrateFromData({
+            misubs: [{ id: 'private', url: 'https://example.test/secret' }],
             profiles: [],
-            ruleTemplates: [],
-            config: {
-                siteName: 'old site',
-                enablePublicPage: false,
-                transformConfig: 'https://example.com/old.ini',
-            },
-        };
-        const nextSettings = {
-            siteName: 'new site',
-            enablePublicPage: true,
-            transformConfig: 'https://example.com/new.ini',
-        };
-
+            config: {},
+        });
         vi.stubGlobal(
             'fetch',
-            vi.fn(async (url) => {
-                if (url === '/api/settings') {
-                    return jsonResponse({ success: true });
-                }
-                throw new Error(`Unexpected request: ${url}`);
+            vi.fn(async () => jsonResponse({ success: true }))
+        );
+        await dataStore.saveSettings({ FileName: 'Personal' });
+        expect(useSettingsStore().config.FileName).toBe('Personal');
+        expect(sessionStorage.getItem('misub_data_cache')).toBeNull();
+    });
+
+    it('clears private data and ignores an in-flight response after logout', async () => {
+        let respond;
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(
+                () =>
+                    new Promise((resolve) => {
+                        respond = resolve;
+                    })
+            )
+        );
+        const store = createStore();
+        const pending = store.fetchData();
+        store.clearCachedData();
+        respond(
+            jsonResponse({
+                misubs: [{ id: 'private' }],
+                profiles: [],
+                config: { mytoken: 'private-token' },
             })
         );
+        expect(await pending).toBe(false);
+        expect(store.subscriptions).toEqual([]);
+        expect(store.settings.mytoken).not.toBe('private-token');
+        expect(store.hasDataLoaded).toBe(false);
+    });
 
-        const dataStore = createStore();
-        expect(dataStore.hydrateFromData(initialData)).toBe(true);
-
-        await dataStore.saveSettings(nextSettings);
-
-        const cachedData = JSON.parse(sessionStorage.getItem('misub_data_cache'));
-        expect(cachedData.config).toMatchObject(nextSettings);
-
-        const reloadedStore = createStore();
-        await reloadedStore.fetchData(false);
-
-        const settingsStore = useSettingsStore();
-        expect(settingsStore.config.siteName).toBe('new site');
-        expect(settingsStore.config.enablePublicPage).toBe(true);
-        expect(settingsStore.config.transformConfig).toBe('https://example.com/new.ini');
+    it('keeps edits made while a save is in flight dirty and intact', async () => {
+        let respond;
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(
+                () =>
+                    new Promise((resolve) => {
+                        respond = resolve;
+                    })
+            )
+        );
+        const store = createStore();
+        store.hydrateFromData({
+            misubs: [{ id: 'one', name: 'Initial' }],
+            profiles: [],
+            config: {},
+        });
+        store.updateSubscription('one', { name: 'Submitted' });
+        const pending = store.saveData();
+        store.updateSubscription('one', { name: 'Newer edit' });
+        respond(
+            jsonResponse({ success: true, data: { misubs: [{ id: 'one', name: 'Submitted' }] } })
+        );
+        expect(await pending).toBe(true);
+        expect(store.subscriptions[0].name).toBe('Newer edit');
+        expect(store.isDirty).toBe(true);
+        expect(store.saveState).toBe('idle');
     });
 });

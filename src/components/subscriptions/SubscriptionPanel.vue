@@ -6,7 +6,6 @@
     import PanelPagination from '@/components/shared/PanelPagination.vue';
     import EmptyState from '@/components/ui/EmptyState.vue';
     import Modal from '@/components/forms/Modal.vue';
-    import { useUIStore } from '@/stores/ui';
     import { useI18n } from '@/i18n/index.js';
     import { inferAirportRootDomain } from '../../utils/airport-domain.js';
     import { lookupDomainName } from '../../utils/domain-name-memory.js';
@@ -16,7 +15,6 @@
         createAirportGroupId,
     } from '../../utils/airport-identity.js';
 
-    const { layoutMode } = useUIStore();
     const { t } = useI18n();
 
     const props = defineProps({
@@ -297,7 +295,8 @@
         collapsedGroups.value = next;
     };
 
-    const isGroupCollapsed = (key) => collapsedGroups.value.has(key);
+    const isGroupCollapsed = (key) =>
+        props.searchQuery.trim() ? false : collapsedGroups.value.has(key);
 
     // 仅对新出现的分组应用默认折叠；过滤/分页更新时保留用户手动展开状态。
     // 已消失分组的状态保留在本组件生命周期内，避免搜索/分页切换后忘记用户选择。
@@ -327,15 +326,13 @@
 
 <template>
     <div>
-        <div
-            class="mb-4 rounded-xl border border-gray-100/80 bg-white/85 p-4 shadow-sm dark:border-white/10 dark:bg-gray-900/70"
-        >
+        <div class="mb-4 section-toolbar">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
                     <div class="flex items-center gap-3 shrink-0">
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
                             {{ t('subscriptions.title') }}
-                        </h2>
+                        </h1>
                         <span
                             class="rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-200"
                             >{{ visibleCount }}/{{ subscriptions.length }}</span
@@ -362,34 +359,10 @@
                     class="flex flex-wrap items-center gap-2 sm:w-auto justify-end sm:justify-start"
                 >
                     <button
-                        v-if="subscriptions.length > 1"
-                        type="button"
-                        class="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
-                        :title="t('subscriptions.assignAirportGroup')"
-                        @click.stop="openAirportIdentityEditor()"
-                    >
-                        {{ t('subscriptions.assignAirportGroup') }}
-                    </button>
-
-                    <button
                         @click="handleImport"
                         class="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
                     >
                         {{ t('actions.bulkImport') }}
-                    </button>
-                    <button
-                        v-if="isGrouped && !isSorting"
-                        @click="collapseAllGroups"
-                        class="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
-                    >
-                        {{ t('subscriptions.collapseAll') }}
-                    </button>
-                    <button
-                        v-if="isGrouped && !isSorting"
-                        @click="expandAllGroups"
-                        class="shrink-0 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10"
-                    >
-                        {{ t('subscriptions.expandAll') }}
                     </button>
                     <button
                         @click="handleAdd"
@@ -399,6 +372,40 @@
                     </button>
                     <MoreActionsMenu menu-width-class="w-36">
                         <template #menu="{ close }">
+                            <button
+                                v-if="subscriptions.length > 1"
+                                type="button"
+                                class="group-menu-action"
+                                :title="t('subscriptions.assignAirportGroup')"
+                                @click="
+                                    openAirportIdentityEditor();
+                                    close();
+                                "
+                            >
+                                {{ t('subscriptions.assignAirportGroup') }}
+                            </button>
+
+                            <button
+                                v-if="isGrouped && !isSorting"
+                                @click="
+                                    collapseAllGroups();
+                                    close();
+                                "
+                                class="group-menu-action"
+                            >
+                                {{ t('subscriptions.collapseAll') }}
+                            </button>
+                            <button
+                                v-if="isGrouped && !isSorting"
+                                @click="
+                                    expandAllGroups();
+                                    close();
+                                "
+                                class="group-menu-action"
+                            >
+                                {{ t('subscriptions.expandAll') }}
+                            </button>
+
                             <button
                                 @click="
                                     handleRefreshAll();
@@ -510,9 +517,7 @@
             <!-- 按站点分组：同站点的多个订阅源折叠为一组 -->
             <template v-if="isGrouped">
                 <template v-for="group in visibleCollapsibleGroups" :key="group.key">
-                    <div
-                        class="rounded-xl border border-gray-100/80 bg-white/70 shadow-sm dark:border-white/10 dark:bg-gray-900/50"
-                    >
+                    <div class="subscription-group">
                         <div class="flex w-full items-center justify-between gap-3 px-4 py-3">
                             <button
                                 type="button"
@@ -542,56 +547,56 @@
                                     >{{ group.items.length }}</span
                                 >
                             </button>
-                            <div class="flex shrink-0 items-center gap-2">
-                                <button
-                                    v-if="groupDetectedName(group)"
-                                    type="button"
-                                    class="rounded-md border border-primary-500/30 px-2 py-1 text-[11px] font-medium text-primary-500 transition-colors hover:bg-primary-500/10 dark:text-primary-400"
-                                    :title="
-                                        t('subscriptions.renameGroupHint', {
-                                            name: groupDetectedName(group),
-                                        })
-                                    "
-                                    @click.stop="handleConfirmDetectedName(group)"
-                                >
-                                    {{ t('subscriptions.renameGroup') }}
-                                </button>
-                                <button
-                                    type="button"
-                                    class="rounded-md border border-gray-300/60 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-500/10 dark:border-white/15 dark:text-gray-300"
-                                    :title="t('subscriptions.assignAirportGroup')"
-                                    @click.stop="
-                                        openAirportIdentityEditor(
-                                            group.items.map((item) => item.id)
-                                        )
-                                    "
-                                >
-                                    {{ t('subscriptions.assignAirportGroup') }}
-                                </button>
-                                <button
-                                    v-if="group.items.length > 1"
-                                    type="button"
-                                    class="rounded-md border border-gray-300/60 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-500/10 dark:border-white/15 dark:text-gray-300"
-                                    :title="t('subscriptions.splitAirportGroup')"
-                                    @click.stop="handleSplitAirportGroup(group)"
-                                >
-                                    {{ t('subscriptions.splitAirportGroup') }}
-                                </button>
-                                <button
-                                    v-if="group.items.some((item) => item.airportIdentity?.groupId)"
-                                    type="button"
-                                    class="rounded-md border border-gray-300/60 px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-gray-500/10 dark:border-white/15 dark:text-gray-300"
-                                    :title="t('subscriptions.automaticAirportIdentity')"
-                                    @click.stop="handleResetGroup(group)"
-                                >
-                                    {{ t('subscriptions.automaticAirportIdentity') }}
-                                </button>
-                                <span class="text-xs text-gray-500 dark:text-gray-400">{{
-                                    isGroupCollapsed(group.key)
-                                        ? t('subscriptions.expand')
-                                        : t('subscriptions.collapse')
-                                }}</span>
-                            </div>
+                            <MoreActionsMenu :teleport-to-body="true" menu-width-class="w-48">
+                                <template #menu="{ close }">
+                                    <button
+                                        v-if="groupDetectedName(group)"
+                                        class="group-menu-action"
+                                        @click="
+                                            handleConfirmDetectedName(group);
+                                            close();
+                                        "
+                                    >
+                                        {{ t('subscriptions.renameGroup') }}
+                                    </button>
+                                    <button
+                                        class="group-menu-action"
+                                        :title="t('subscriptions.assignAirportGroup')"
+                                        @click="
+                                            openAirportIdentityEditor(
+                                                group.items.map((item) => item.id)
+                                            );
+                                            close();
+                                        "
+                                    >
+                                        {{ t('subscriptions.assignAirportGroup') }}
+                                    </button>
+                                    <button
+                                        v-if="group.items.length > 1"
+                                        class="group-menu-action"
+                                        @click="
+                                            handleSplitAirportGroup(group);
+                                            close();
+                                        "
+                                    >
+                                        {{ t('subscriptions.splitAirportGroup') }}
+                                    </button>
+                                    <button
+                                        v-if="
+                                            group.items.some(
+                                                (item) => item.airportIdentity?.groupId
+                                            )
+                                        "
+                                        class="group-menu-action"
+                                        @click="
+                                            handleResetGroup(group);
+                                            close();
+                                        "
+                                    >
+                                        {{ t('subscriptions.automaticAirportIdentity') }}
+                                    </button>
+                                </template>
+                            </MoreActionsMenu>
                         </div>
                         <div
                             v-show="!isGroupCollapsed(group.key)"

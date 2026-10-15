@@ -13,9 +13,7 @@
 
 <template>
     <div class="space-y-8">
-        <div
-            class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70"
-        >
+        <div class="settings-section">
             <div class="mb-5 flex items-start gap-3">
                 <div
                     class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
@@ -47,13 +45,13 @@
             <div class="flex gap-4">
                 <button
                     @click="exportBackup"
-                    class="px-4 py-2 text-sm font-medium text-white misub-radius-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700"
+                    class="px-4 py-2 text-sm font-medium text-white sub-radius-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700"
                 >
                     {{ t('systemSettings.exportBackup') }}
                 </button>
                 <button
                     @click="importBackup"
-                    class="px-4 py-2 text-sm font-medium text-white misub-radius-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-orange-500 hover:bg-orange-600"
+                    class="px-4 py-2 text-sm font-medium text-white sub-radius-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed bg-orange-500 hover:bg-orange-600"
                 >
                     {{ t('systemSettings.importBackup') }}
                 </button>
@@ -93,7 +91,7 @@
             </div>
 
             <div
-                class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/50 dark:bg-gray-900/40 p-6 misub-radius-lg border border-red-100 dark:border-red-900/20"
+                class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white/50 dark:bg-gray-900/40 p-6 sub-radius-lg border border-red-100 dark:border-red-900/20"
             >
                 <div class="space-y-2">
                     <h4 class="text-sm font-medium text-gray-900 dark:text-white">
@@ -106,7 +104,7 @@
                 <div class="flex items-center sm:justify-end">
                     <button
                         @click="handleReset"
-                        class="px-5 py-2.5 misub-radius-lg text-red-600 dark:text-red-400 text-sm font-medium border border-red-200 dark:border-red-900/50 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white transition-all active:scale-95"
+                        class="px-5 py-2.5 sub-radius-lg text-red-600 dark:text-red-400 text-sm font-medium border border-red-200 dark:border-red-900/50 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white transition-all active:scale-95"
                     >
                         {{ t('systemSettings.factoryResetTitle') }}
                     </button>

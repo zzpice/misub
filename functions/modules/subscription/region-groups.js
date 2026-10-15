@@ -33,13 +33,19 @@ export function groupNodeLinesByRegion(nodes = [], options = {}) {
             : null;
         const finalizedRegion = finalizedFlag ? resolveNodeRegion(finalizedFlag) : '';
         const region = resolveNodeRegion(tagName, {
-            manualRegion: node.manualRegion || node.metadata?.manualRegion || node.metadata?.resolvedRegion ||
+            manualRegion:
+                node.manualRegion ||
+                node.metadata?.manualRegion ||
+                node.metadata?.resolvedRegion ||
                 (finalizedRegion !== '其他' ? finalizedRegion : ''),
             regionOverrides: options.regionOverrides,
             defaultRegion: node.defaultRegion,
         });
         // 4. 构造标准的展示组名
-        const config = REGION_DISPLAY_CONFIG[region] || { flag: getRegionEmoji(region), name: `${region}节点` };
+        const config = REGION_DISPLAY_CONFIG[region] || {
+            flag: getRegionEmoji(region),
+            name: `${region}节点`,
+        };
         const groupName = `${config.flag} ${config.name}`;
 
         if (!groups.has(groupName)) {

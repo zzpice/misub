@@ -42,7 +42,7 @@
 <template>
     <!-- {{ t('settings.cronTitle') }} 卡片 -->
     <div
-        class="bg-white/90 dark:bg-gray-900/70 misub-radius-lg p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300"
+        class="bg-white/90 dark:bg-gray-900/70 sub-radius-lg p-6 space-y-5 border border-gray-100/80 dark:border-white/10 shadow-sm transition-shadow duration-300"
     >
         <div class="flex justify-between items-start">
             <div>
@@ -86,7 +86,7 @@
                 type="text"
                 v-model="settings.cronSecret"
                 :placeholder="t('settings.cronSecretPlaceholder')"
-                class="block w-full px-3 py-2.5 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/40 focus:border-blue-500 sm:text-sm dark:text-white transition-colors"
+                class="block w-full px-3 py-2.5 bg-white/70 dark:bg-gray-900/50 border border-gray-200/80 dark:border-white/10 sub-radius-lg shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/40 focus:border-blue-500 sm:text-sm dark:text-white transition-colors"
             />
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 {{ t('settings.cronSecretHint') }}
@@ -99,7 +99,7 @@
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {{ t('settings.cronCompatibleUrl') }}
                 </label>
-                <div class="flex misub-radius-lg shadow-xs">
+                <div class="flex sub-radius-lg shadow-xs">
                     <input
                         type="text"
                         :value="cronUrl"
@@ -129,7 +129,7 @@
             </div>
 
             <div
-                class="bg-blue-50/70 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/60 misub-radius-md p-3 space-y-2"
+                class="bg-blue-50/70 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/60 sub-radius-md p-3 space-y-2"
             >
                 <div class="flex items-start gap-2">
                     <span class="text-blue-500 mt-0.5">🔐</span>
@@ -153,7 +153,7 @@
         </div>
         <div
             v-else
-            class="bg-yellow-50/80 dark:bg-yellow-900/20 border border-yellow-200/80 dark:border-yellow-800/70 misub-radius-md p-3"
+            class="bg-yellow-50/80 dark:bg-yellow-900/20 border border-yellow-200/80 dark:border-yellow-800/70 sub-radius-md p-3"
         >
             <p class="text-xs text-yellow-700 dark:text-yellow-300">
                 {{ t('settings.cronEmptyHint') }}

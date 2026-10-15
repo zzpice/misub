@@ -20,11 +20,13 @@ async function runWithConcurrency(items, concurrency, fn) {
     const results = [];
     const executing = new Set();
     for (const item of items) {
-        const task = Promise.resolve().then(() => fn(item)).catch((error) => ({
-            state: 'failed',
-            name: item.name,
-            error: String(error?.message || 'Unexpected refresh error'),
-        }));
+        const task = Promise.resolve()
+            .then(() => fn(item))
+            .catch((error) => ({
+                state: 'failed',
+                name: item.name,
+                error: String(error?.message || 'Unexpected refresh error'),
+            }));
         executing.add(task);
         task.finally(() => executing.delete(task));
         results.push(task);
@@ -41,8 +43,8 @@ export async function handleCronTrigger(env) {
         await StorageFactory.getStorageType(env)
     );
     const subscriptions = await loadSubscriptionsForCron(storage);
-    const remoteSources = subscriptions.filter((source) =>
-        source?.enabled && /^https?:\/\//i.test(String(source.url || ''))
+    const remoteSources = subscriptions.filter(
+        (source) => source?.enabled && /^https?:\/\//i.test(String(source.url || ''))
     );
     const startedAt = Date.now();
     console.info(`[Cron] Checking ${remoteSources.length} remote sources`);

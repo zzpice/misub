@@ -1,4 +1,4 @@
-# MiSub External Management API 使用说明
+# Zzp Sub External Management API 使用说明
 
 本文档面向“要真正开始调用”的使用者，提供一套从启用、认证、资源创建到刷新校验的最短上手路径。
 
@@ -11,7 +11,7 @@
 
 调用前需要满足：
 
-- MiSub 实例已经正常部署
+- Zzp Sub 实例已经正常部署
 - 已在 **System Settings → External Management API** 中启用该功能
 - 已配置至少一个 Bearer Token
 
@@ -335,7 +335,7 @@ curl -s -X POST \
 
 优点：
 
-- 减少脏数据进入 MiSub
+- 减少脏数据进入 Zzp Sub
 - 可以把错误尽早反馈给用户
 
 ### 7.2 外部系统做资源镜像管理

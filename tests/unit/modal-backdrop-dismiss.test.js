@@ -1,7 +1,6 @@
 import { nextTick } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import FormModal from '../../src/components/shared/FormModal.vue';
 import Modal from '../../src/components/forms/Modal.vue';
 import { useBackdropDismiss } from '../../src/composables/useBackdropDismiss.js';
 
@@ -30,28 +29,6 @@ describe('modal backdrop dismiss behavior', () => {
         handleBackdropPointerDown({ target: backdrop, currentTarget: backdrop });
         handleBackdropClick({ target: backdrop, currentTarget: backdrop });
         expect(dismiss).toHaveBeenCalledTimes(1);
-    });
-
-    it('keeps the shared form modal open when dragging from inside to the backdrop', async () => {
-        const wrapper = mount(FormModal, {
-            props: { show: true, title: 'Edit' },
-            attachTo: document.body,
-            slots: { default: '<input data-testid="field" />' },
-        });
-
-        await nextTick();
-        const backdrop = document.body.querySelector('.flex.min-h-full');
-        const input = document.body.querySelector('[data-testid="field"]');
-
-        await dispatchBubbled(input, 'pointerdown');
-        await dispatchBubbled(backdrop, 'click');
-        expect(wrapper.emitted('update:show')).toBeUndefined();
-
-        await dispatchBubbled(backdrop, 'pointerdown');
-        await dispatchBubbled(backdrop, 'click');
-        expect(wrapper.emitted('update:show')).toEqual([[false]]);
-
-        wrapper.unmount();
     });
 
     it('keeps the generic modal open when dragging from inside to the backdrop', async () => {

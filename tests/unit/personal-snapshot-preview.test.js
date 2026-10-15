@@ -35,12 +35,17 @@ function fixture(override = {}) {
     ]);
     const adapter = {
         get: vi.fn(async (key) => records.get(key) ?? null),
-        put: vi.fn(async (key, value) => { records.set(key, value); }),
+        put: vi.fn(async (key, value) => {
+            records.set(key, value);
+        }),
         getAllSubscriptions: vi.fn(async () => [SOURCE]),
         getAllProfiles: vi.fn(async () => []),
         getSubscriptionById: vi.fn(async () => SOURCE),
         getProfileById: vi.fn(async () => ({
-            id: 'profile-1', enabled: true, subscriptions: ['source-1'], manualNodes: [],
+            id: 'profile-1',
+            enabled: true,
+            subscriptions: ['source-1'],
+            manualNodes: [],
         })),
         getSubscriptionsByIds: vi.fn(async () => [SOURCE]),
     };
@@ -55,11 +60,15 @@ describe('personal previews use durable saved snapshots', () => {
     it('shows cached nodes with no upstream requests even when auto-update is disabled', async () => {
         const adapter = fixture({
             [snapshotKey]: {
-                sourceUrl: url, nodes: RAW, nodeCount: RAW.length,
+                sourceUrl: url,
+                nodes: RAW,
+                nodeCount: RAW.length,
                 updatedAt: '2026-10-10T00:00:00.000Z',
             },
         });
-        const upstream = vi.fn(async () => { throw Error('Upstream is expired'); });
+        const upstream = vi.fn(async () => {
+            throw Error('Upstream is expired');
+        });
         vi.stubGlobal('fetch', upstream);
         const env = { MISUB_PERSONAL_MODE: 'true' };
 
@@ -87,15 +96,23 @@ describe('personal previews use durable saved snapshots', () => {
 
     it('makes missing snapshots explicit rather than pretending historical node counts are cached data', async () => {
         fixture();
-        const upstream = vi.fn(async () => { throw Error('Do not fetch'); });
+        const upstream = vi.fn(async () => {
+            throw Error('Do not fetch');
+        });
         vi.stubGlobal('fetch', upstream);
         const env = { MISUB_PERSONAL_MODE: 'true' };
 
         const single = await handleSingleSubscriptionMode(
-            new Request('https://misub.test/api/subscription_nodes'), env, SOURCE.id, 'Preview'
+            new Request('https://misub.test/api/subscription_nodes'),
+            env,
+            SOURCE.id,
+            'Preview'
         );
         const profile = await handleProfileMode(
-            new Request('https://misub.test/api/subscription_nodes'), env, 'profile-1', 'Preview'
+            new Request('https://misub.test/api/subscription_nodes'),
+            env,
+            'profile-1',
+            'Preview'
         );
 
         expect(single.success).toBe(false);
@@ -110,9 +127,7 @@ describe('personal previews use durable saved snapshots', () => {
     it('preserves legacy on-demand previews for non-personal installations', async () => {
         const upstream = vi.fn(async () => new Response(RAW.join('\n')));
         vi.stubGlobal('fetch', upstream);
-        const result = await fetchPreviewSourceNodes(
-            {}, {}, SOURCE, 'ClashMeta'
-        );
+        const result = await fetchPreviewSourceNodes({}, {}, SOURCE, 'ClashMeta');
         expect(result.success).toBe(true);
         expect(result.nodes).toHaveLength(2);
         expect(upstream).toHaveBeenCalled();
@@ -120,7 +135,9 @@ describe('personal previews use durable saved snapshots', () => {
 
     it('returns HTTP 503 instead of a successful empty downstream subscription when the saved snapshot is missing', async () => {
         fixture();
-        const upstream = vi.fn(async () => { throw Error('Upstream must not be fetched'); });
+        const upstream = vi.fn(async () => {
+            throw Error('Upstream must not be fetched');
+        });
         vi.stubGlobal('fetch', upstream);
         const env = {
             MISUB_PERSONAL_MODE: 'true',
@@ -129,7 +146,8 @@ describe('personal previews use durable saved snapshots', () => {
             SUBSCRIPTION_TOKEN: 'c'.repeat(32),
             PROFILE_TOKEN: 'd'.repeat(32),
         };
-        const { handleMisubRequest } = await import('../../functions/modules/subscription/main-handler.js');
+        const { handleMisubRequest } =
+            await import('../../functions/modules/subscription/main-handler.js');
         const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
         try {
             const response = await handleMisubRequest({
@@ -152,7 +170,9 @@ describe('personal previews use durable saved snapshots', () => {
     it('does not leak a snapshot saved under a different source URL', async () => {
         fixture({
             [snapshotKey]: {
-                sourceUrl: 'https://old.example/secret', nodes: RAW, nodeCount: 2,
+                sourceUrl: 'https://old.example/secret',
+                nodes: RAW,
+                nodeCount: 2,
                 updatedAt: '2026-10-10T00:00:00.000Z',
             },
         });

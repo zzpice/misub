@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia';
 import { useDataStore } from '../stores/useDataStore';
 import { useToastStore } from '../stores/toast';
 import { generateProfileId } from '../utils/id.js';
+import { validateProfile } from '../utils/validation-utils.js';
 import { t } from '../i18n/index.js';
 
 export function useProfiles(markDirty) {
@@ -104,6 +105,11 @@ export function useProfiles(markDirty) {
     };
 
     const handleSaveProfile = (profileData) => {
+        const validation = validateProfile(profileData || {});
+        if (!validation.isValid) {
+            showToast(Object.values(validation.errors)[0][0], 'error');
+            return;
+        }
         if (!profileData || !profileData.name) {
             showToast(t('profiles.nameRequired'), 'error');
             return;

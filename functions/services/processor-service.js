@@ -47,7 +47,12 @@ function stripInternalProxyFields(proxy) {
 }
 
 function deduplicateProxyNames(proxies, groups = []) {
-    const seen = new Map(['DIRECT', 'REJECT', 'REJECT-DROP', ...groups.map(group => group.name)].map(name => [name, 1]));
+    const seen = new Map(
+        ['DIRECT', 'REJECT', 'REJECT-DROP', ...groups.map((group) => group.name)].map((name) => [
+            name,
+            1,
+        ])
+    );
     proxies.forEach((proxy) => {
         if (!proxy?.name) return;
         const originalName = proxy.name;

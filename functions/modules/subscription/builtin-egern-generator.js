@@ -11,7 +11,7 @@ export function generateBuiltinEgernConfig(nodeList, options = {}) {
     return renderEgernFromIniTemplate(templateEntry.content, {
         ...options,
         nodeList,
-        fileName: options.fileName || 'MiSub',
+        fileName: options.fileName || 'Zzp-Sub',
         targetFormat: 'egern',
         ruleLevel: options.ruleLevel || 'std',
         interval: options.interval || 86400,

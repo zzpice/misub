@@ -194,15 +194,17 @@ MATCH,MyGroup
     });
 
     it('rejects an unsupported structured format rather than serving incompatible base64', async () => {
-        await expect(ProcessorService.renderOutput({
-            targetFormat: 'unsupported-target',
-            combinedNodeList: NODE_LIST,
-            subName: 'Unsupported Matrix Test',
-            config: {},
-            builtinOptions: {},
-            templateSource: { kind: 'none', value: '' },
-            managedConfigUrl: '',
-            storageAdapter,
-        })).rejects.toThrow('No generator output');
+        await expect(
+            ProcessorService.renderOutput({
+                targetFormat: 'unsupported-target',
+                combinedNodeList: NODE_LIST,
+                subName: 'Unsupported Matrix Test',
+                config: {},
+                builtinOptions: {},
+                templateSource: { kind: 'none', value: '' },
+                managedConfigUrl: '',
+                storageAdapter,
+            })
+        ).rejects.toThrow('No generator output');
     });
 });

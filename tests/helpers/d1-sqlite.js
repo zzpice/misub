@@ -12,8 +12,12 @@ export function createSqliteD1() {
             const statement = sqlite.prepare(sql);
             const bound = (args = []) => ({
                 bind: (...values) => bound(values),
-                async first() { return statement.get(...args) || null; },
-                async all() { return { results: statement.all(...args) }; },
+                async first() {
+                    return statement.get(...args) || null;
+                },
+                async all() {
+                    return { results: statement.all(...args) };
+                },
                 async run() {
                     if (db.beforeRun) await db.beforeRun(sql, args);
                     const result = statement.run(...args);
@@ -34,7 +38,9 @@ export function createSqliteD1() {
                 throw error;
             }
         },
-        close() { sqlite.close(); },
+        close() {
+            sqlite.close();
+        },
     };
     return db;
 }

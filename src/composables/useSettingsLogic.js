@@ -1,10 +1,11 @@
-import { ref, computed, onUnmounted, getCurrentInstance } from 'vue';
+import { ref, computed } from 'vue';
 import { useToastStore } from '../stores/toast.js';
 import { DEFAULT_SETTINGS } from '../constants/default-settings.js';
 import { fetchSettings, saveSettings, resetSettings } from '../lib/api.js';
 import { useBackupLogic } from './useBackupLogic.js';
 import { t, setLocale } from '../i18n/index.js';
 import { confirmAction } from './useConfirm.js';
+import { useDataStore } from '../stores/useDataStore.js';
 
 function normalizeExternalApiConfig(value) {
     const defaults = DEFAULT_SETTINGS.externalApi;
@@ -33,7 +34,7 @@ function normalizeSettingsObject(source = {}) {
 
 /**
  * 设置页面的核心逻辑 composable
- * 用于 SettingsView.vue 和 SettingsPanel.vue 的代码复用
+ * 由唯一的 SettingsView.vue 使用
  */
 export function useSettingsLogic() {
     const { showToast } = useToastStore();
@@ -45,21 +46,6 @@ export function useSettingsLogic() {
     const settings = ref(normalizeSettingsObject(DEFAULT_SETTINGS));
     const isLoading = ref(false);
     const isSaving = ref(false);
-    const showMigrationModal = ref(false);
-    const restartCountdown = ref(null);
-    let reloadTimer = null;
-
-    const clearReloadTimer = () => {
-        if (reloadTimer !== null) {
-            clearInterval(reloadTimer);
-            reloadTimer = null;
-        }
-    };
-
-    if (getCurrentInstance()) {
-        onUnmounted(clearReloadTimer);
-    }
-
     // 嵌套配置对象
     const disguiseConfig = ref({
         enabled: false,
@@ -100,7 +86,7 @@ export function useSettingsLogic() {
                 }
 
                 if (!settings.value.storageType) {
-                    settings.value.storageType = 'kv';
+                    settings.value.storageType = 'd1';
                 }
 
                 // 应用默认显示语言设置
@@ -134,7 +120,7 @@ export function useSettingsLogic() {
 
         isSaving.value = true;
         try {
-            if (!settings.value.storageType) settings.value.storageType = 'kv';
+            if (!settings.value.storageType) settings.value.storageType = 'd1';
             settings.value.externalApi = normalizeExternalApiConfig(settings.value.externalApi);
 
             const settingsToSave = {
@@ -153,16 +139,8 @@ export function useSettingsLogic() {
 
             const result = await saveSettings(settingsToSave);
             if (result.success) {
-                showToast(t('settings.savedReloading'), 'success');
-                clearReloadTimer();
-                restartCountdown.value = 3;
-                reloadTimer = setInterval(() => {
-                    restartCountdown.value -= 1;
-                    if (restartCountdown.value <= 0) {
-                        clearReloadTimer();
-                        window.location.reload();
-                    }
-                }, 1000);
+                useDataStore().applySettings(settingsToSave);
+                showToast(t('settings.saved'), 'success');
                 return true;
             } else {
                 throw new Error(result.error || t('settings.saveFailed'));
@@ -173,15 +151,6 @@ export function useSettingsLogic() {
         } finally {
             isSaving.value = false;
         }
-    };
-
-    /**
-     * 处理 D1 迁移成功
-     */
-    const handleMigrationSuccess = () => {
-        showMigrationModal.value = false;
-        settings.value.storageType = 'd1';
-        showToast(t('settings.migrationSuccess'), 'success');
     };
 
     /**
@@ -225,13 +194,10 @@ export function useSettingsLogic() {
         disguiseConfig,
         isLoading,
         isSaving,
-        showMigrationModal,
-        restartCountdown,
         hasWhitespace,
         isStorageTypeValid,
         loadSettings,
         handleSave,
-        handleMigrationSuccess,
         handleReset,
         exportBackup,
         importBackup,

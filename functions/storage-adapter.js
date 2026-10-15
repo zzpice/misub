@@ -57,34 +57,10 @@ async function readCachedD1Collection(database, table, loader, allowCache = true
     }
 }
 
-const D1_SCHEMA_STATEMENTS = [
-    `CREATE TABLE IF NOT EXISTS subscriptions (
-        id TEXT PRIMARY KEY,
-        data TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );`,
-    `CREATE TABLE IF NOT EXISTS profiles (
-        id TEXT PRIMARY KEY,
-        data TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );`,
-    `CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );`,
-    `CREATE INDEX IF NOT EXISTS idx_subscriptions_updated_at ON subscriptions(updated_at);`,
-    `CREATE INDEX IF NOT EXISTS idx_profiles_updated_at ON profiles(updated_at);`,
-    `CREATE INDEX IF NOT EXISTS idx_settings_updated_at ON settings(updated_at);`,
-];
-
 /**
  * 以 settings 表为家的已知业务键。
  * D1StorageAdapter._parseKey 靠它区分「预期的业务键」与「真正的未知 key」，
- * 后者才告警。与 D1_MIGRATION_KEYS 保持一致。
+ * 后者才告警。
  */
 const D1_KNOWN_SETTINGS_KEYS = new Set([
     'misub_dns_templates_v1',
@@ -93,12 +69,6 @@ const D1_KNOWN_SETTINGS_KEYS = new Set([
     'misub_settings_v1',
     'misub_restore_snapshot_latest',
 ]);
-
-async function ensureD1Schema(d1Db) {
-    for (const statement of D1_SCHEMA_STATEMENTS) {
-        await d1Db.prepare(statement).run();
-    }
-}
 
 /**
  * KV 存储适配器
@@ -403,13 +373,7 @@ class D1StorageAdapter {
                 .first();
             if (result) return JSON.parse(result.data);
 
-            const legacyMain = await this.db
-                .prepare('SELECT data FROM subscriptions WHERE id = ?')
-                .bind('main')
-                .first();
-            if (!legacyMain) return null;
-            const parsed = JSON.parse(legacyMain.data);
-            return Array.isArray(parsed) ? parsed.find((item) => item.id === id) || null : null;
+            return null;
         } catch (error) {
             console.error(`[D1] Failed to get subscription ${id}:`, error);
             if (this.failClosed) throw new Error('D1 read unavailable');
@@ -423,26 +387,14 @@ class D1StorageAdapter {
             'subscriptions',
             async () => {
                 try {
-                    const results = await this.db.prepare("SELECT data FROM subscriptions ORDER BY CASE WHEN id = 'main' THEN 0 ELSE 1 END").all();
+                    const results = await this.db.prepare('SELECT data FROM subscriptions').all();
                     if (!Array.isArray(results?.results)) return [];
 
-                    const all = [];
-                    results.results.forEach((row) => {
-                        const parsed = JSON.parse(row.data);
-                        if (Array.isArray(parsed)) {
-                            all.push(...parsed);
-                        } else if (parsed) {
-                            all.push(parsed);
-                        }
-                    });
-
-                    const deduped = new Map();
-                    all.forEach((item) => {
-                        if (item?.id) deduped.set(item.id, item);
-                    });
-                    return Array.from(deduped.values()).sort(
-                        (a, b) => (a.sortIndex || 0) - (b.sortIndex || 0)
-                    );
+                    const items = results.results.map((row) => JSON.parse(row.data));
+                    if (items.some((item) => !item || Array.isArray(item) || !item.id)) {
+                        throw new Error('Invalid row-level collection data');
+                    }
+                    return items.sort((a, b) => (a.sortIndex || 0) - (b.sortIndex || 0));
                 } catch (error) {
                     invalidateD1CollectionCache(this.db, 'subscriptions');
                     console.error('[D1] Failed to get all subscriptions:', error);
@@ -462,16 +414,8 @@ class D1StorageAdapter {
                 .first();
             if (result) return JSON.parse(result.data);
 
-            const legacyMain = await this.db
-                .prepare('SELECT data FROM profiles WHERE id = ?')
-                .bind('main')
-                .first();
-            const allProfiles = legacyMain
-                ? JSON.parse(legacyMain.data)
-                : await this.get(DATA_KEYS.PROFILES);
-            return Array.isArray(allProfiles)
-                ? allProfiles.find((item) => item.id === id || item.customId === id) || null
-                : null;
+            const allProfiles = await this.getAllProfiles();
+            return allProfiles.find((item) => item.customId === id) || null;
         } catch (error) {
             console.error(`[D1] Failed to get profile ${id}:`, error);
             if (this.failClosed) throw new Error('D1 read unavailable');
@@ -485,26 +429,14 @@ class D1StorageAdapter {
             'profiles',
             async () => {
                 try {
-                    const results = await this.db.prepare("SELECT data FROM profiles ORDER BY CASE WHEN id = 'main' THEN 0 ELSE 1 END").all();
+                    const results = await this.db.prepare('SELECT data FROM profiles').all();
                     if (!Array.isArray(results?.results)) return [];
 
-                    const all = [];
-                    results.results.forEach((row) => {
-                        const parsed = JSON.parse(row.data);
-                        if (Array.isArray(parsed)) {
-                            all.push(...parsed);
-                        } else if (parsed) {
-                            all.push(parsed);
-                        }
-                    });
-
-                    const deduped = new Map();
-                    all.forEach((item) => {
-                        if (item?.id) deduped.set(item.id, item);
-                    });
-                    return Array.from(deduped.values()).sort(
-                        (a, b) => (a.sortIndex || 0) - (b.sortIndex || 0)
-                    );
+                    const items = results.results.map((row) => JSON.parse(row.data));
+                    if (items.some((item) => !item || Array.isArray(item) || !item.id)) {
+                        throw new Error('Invalid row-level collection data');
+                    }
+                    return items.sort((a, b) => (a.sortIndex || 0) - (b.sortIndex || 0));
                 } catch (error) {
                     invalidateD1CollectionCache(this.db, 'profiles');
                     console.error('[D1] Failed to get all profiles:', error);
@@ -520,17 +452,22 @@ class D1StorageAdapter {
         // Compare the exact row read, retrying against the latest admin edit.
         // UPDATE cannot resurrect a source deleted during a background refresh.
         for (let attempt = 0; attempt < 5; attempt++) {
-            const row = await this.db.prepare('SELECT data FROM subscriptions WHERE id = ?')
-                .bind(id).first();
+            const row = await this.db
+                .prepare('SELECT data FROM subscriptions WHERE id = ?')
+                .bind(id)
+                .first();
             if (!row) return null;
             const existing = JSON.parse(row.data);
             const updated = updater({ ...existing });
             if (!updated) return existing;
             const data = JSON.stringify(updated);
             if (data === row.data) return updated;
-            const result = await this.db.prepare(
-                'UPDATE subscriptions SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND data = ?'
-            ).bind(data, id, row.data).run();
+            const result = await this.db
+                .prepare(
+                    'UPDATE subscriptions SET data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND data = ?'
+                )
+                .bind(data, id, row.data)
+                .run();
             if (result?.meta?.changes === 1) {
                 invalidateD1CollectionCache(this.db, 'subscriptions');
                 return updated;
@@ -543,16 +480,23 @@ class D1StorageAdapter {
         const parsedKey = this._parseKey(key);
         if (parsedKey.table !== 'settings') throw new Error('Expected a settings key');
         for (let attempt = 0; attempt < 5; attempt++) {
-            const row = await this.db.prepare('SELECT value FROM settings WHERE key = ?')
-                .bind(parsedKey.queryValue).first();
+            const row = await this.db
+                .prepare('SELECT value FROM settings WHERE key = ?')
+                .bind(parsedKey.queryValue)
+                .first();
             const updated = updater(row ? JSON.parse(row.value) : {});
             const data = JSON.stringify(updated);
             const result = row
-                ? await this.db.prepare(
-                    'UPDATE settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ? AND value = ?'
-                ).bind(data, parsedKey.queryValue, row.value).run()
-                : await this.db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)')
-                    .bind(parsedKey.queryValue, data).run();
+                ? await this.db
+                      .prepare(
+                          'UPDATE settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ? AND value = ?'
+                      )
+                      .bind(data, parsedKey.queryValue, row.value)
+                      .run()
+                : await this.db
+                      .prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)')
+                      .bind(parsedKey.queryValue, data)
+                      .run();
             if (result?.meta?.changes === 1) return updated;
         }
         throw new Error('Settings changed concurrently; retry the update');
@@ -573,18 +517,9 @@ class D1StorageAdapter {
     }
 
     async deleteCollectionItem(table, id) {
-        // Keep legacy array readers compatible, but an explicit deletion must
-        // remove the same ID from that array too. D1 batch is transactional.
-        const cleanup = this.db.prepare(`UPDATE ${table} SET data = (
-            SELECT COALESCE(json_group_array(json(value)), '[]') FROM json_each(${table}.data)
-            WHERE type != 'object' OR COALESCE(json_extract(value, '$.id'), '') != ?
-        ), updated_at = CURRENT_TIMESTAMP
-        WHERE id = 'main' AND json_valid(data) AND json_type(data) = 'array'`).bind(id);
-        const deletion = this.db.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id);
-        const results = typeof this.db.batch === 'function'
-            ? await this.db.batch([cleanup, deletion]) : [await cleanup.run(), await deletion.run()];
+        const result = await this.db.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run();
         invalidateD1CollectionCache(this.db, table);
-        return Boolean(results.every(result => result?.success));
+        return Boolean(result?.success);
     }
 
     async deleteSubscriptionById(id) {
@@ -613,7 +548,7 @@ class D1StorageAdapter {
         if (!Array.isArray(ids) || ids.length === 0) return [];
         // D1 单条 SQL 绑定变量上限为 100，超过会报
         // "too many SQL variables" 而整条查询失败。
-        // 因此按 90 一批分片查询，再合并结果（同时保留原有 legacy 'main' 回退）。
+        // 因此按 90 一批分片查询，再合并结果。
         const CHUNK_SIZE = 90;
         const uniqueIds = Array.from(new Set(ids));
         try {
@@ -629,22 +564,7 @@ class D1StorageAdapter {
                     directHits.push(...results.results.map((row) => JSON.parse(row.data)));
                 }
             }
-            const foundIds = new Set(directHits.map((item) => item?.id).filter(Boolean));
-            const missingIds = uniqueIds.filter((id) => !foundIds.has(id));
-
-            if (missingIds.length === 0) return directHits;
-
-            const legacyMain = await this.db
-                .prepare('SELECT data FROM subscriptions WHERE id = ?')
-                .bind('main')
-                .first();
-            if (!legacyMain) return directHits;
-
-            const parsed = JSON.parse(legacyMain.data);
-            if (!Array.isArray(parsed)) return directHits;
-
-            const legacyHits = parsed.filter((item) => missingIds.includes(item.id));
-            return [...directHits, ...legacyHits];
+            return directHits;
         } catch (error) {
             console.error('[D1] Failed to get subscriptions by ids:', error);
             if (this.failClosed) throw new Error('D1 read unavailable');
@@ -679,10 +599,12 @@ class D1StorageAdapter {
             if (String(key).startsWith(DATA_KEYS.PROFILE_DOWNLOAD_COUNT_PREFIX)) {
                 return { table: 'settings', queryField: 'key', queryValue: key };
             }
-            if (String(key).startsWith('misub_region_preferences_v1_') ||
+            if (
+                String(key).startsWith('misub_region_preferences_v1_') ||
                 String(key).startsWith('misub_source_snapshot_v1_') ||
                 String(key).startsWith('misub_source_attempt_v1_') ||
-                String(key).startsWith('misub_source_lock_v1_')) {
+                String(key).startsWith('misub_source_lock_v1_')
+            ) {
                 return { table: 'settings', queryField: 'key', queryValue: key };
             }
             if (String(key).startsWith('tmp_external_nodes:')) {
@@ -912,231 +834,11 @@ export class StorageFactory {
     }
 
     /**
-     * 将 KV Settings 同步到 D1（当 D1 为空时）
-     */
-    static async ensureD1Settings(env) {
-        if (!env?.MISUB_DB) return false;
-        try {
-            const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
-            const existing = await d1Adapter.get(DATA_KEYS.SETTINGS);
-            if (existing) return true;
-            const kvNs = resolveKV(env);
-            if (!kvNs) return false;
-            const raw = await kvNs.get(DATA_KEYS.SETTINGS);
-            if (!raw) return false;
-            const settings = JSON.parse(raw);
-            if (settings?.storageType !== STORAGE_TYPES.D1) {
-                settings.storageType = STORAGE_TYPES.D1;
-            }
-            await d1Adapter.put(DATA_KEYS.SETTINGS, settings);
-            return true;
-        } catch (error) {
-            console.warn('[Storage] ensureD1Settings failed:', error?.message || error);
-            return false;
-        }
-    }
-
-    /**
      * 检查是否配置了双重存储
      * @param {Object} env - Cloudflare环境对象
      * @returns {boolean} 是否配置了双重存储
      */
     static hasDualStorage(env) {
         return !!(StorageFactory.resolveKV(env) && env.MISUB_DB);
-    }
-}
-
-/**
- * KV → D1 需要搬运的业务键。
- *
- * 原实现只搬 subscriptions / profiles / settings 三个键，其余业务数据（DNS 模板、
- * 规则模板、客户端、留言板……）留在 KV 里，迁移后按 storageType='d1' 读就全成空，
- * 而接口仍返回「数据已成功迁移」。用户照官方引导解绑 KV 后就再也取不回。
- *
- * 刻意不搬的键，各有原因：
- *   misub_webdav_backup_lock  —— 定时任务互斥锁，搬一个过期锁过去会挡住下次备份
- *   misub_system_logs         —— 诊断日志，体积可能很大，非业务数据
- *   misub_error_reports       —— 同上
- *   misub_data_v1             —— 更早的遗留格式，由 api-router 的独立升级路径处理
- */
-const D1_MIGRATION_KEYS = [
-    DATA_KEYS.SUBSCRIPTIONS,
-    DATA_KEYS.PROFILES,
-    'misub_dns_templates_v1',
-    'misub_rule_templates_v1',
-    'misub_clients_v1',
-    'misub_settings_v1',
-    'misub_restore_snapshot_latest',
-];
-
-/** 需要按前缀枚举后逐条搬运的键 */
-const D1_MIGRATION_KEY_PREFIXES = [DATA_KEYS.PROFILE_DOWNLOAD_COUNT_PREFIX];
-
-export { D1_MIGRATION_KEYS, D1_MIGRATION_KEY_PREFIXES };
-
-/**
- * 数据迁移工具
- */
-export class DataMigrator {
-    /**
-     * 从 KV 迁移到 D1
-     * @param {Object} env - Cloudflare 环境对象
-     * @returns {Promise<Object>} 迁移结果
-     */
-    static async migrateKVToD1(env) {
-        try {
-            const kvNs = resolveKV(env);
-            if (!kvNs) throw new Error('No KV binding found');
-            const kvAdapter = new KVStorageAdapter(kvNs);
-            const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
-            await ensureD1Schema(d1Adapter.db);
-
-            // keys: 逐键结果，'migrated' | 'empty' | 'failed'
-            const results = {
-                subscriptions: false,
-                profiles: false,
-                settings: false,
-                keys: {},
-                errors: [],
-            };
-
-            const copyKey = async (key) => {
-                try {
-                    const value = await kvAdapter.get(key);
-                    if (value === null || value === undefined) {
-                        results.keys[key] = 'empty';
-                        return false;
-                    }
-                    await d1Adapter.put(key, value);
-                    results.keys[key] = 'migrated';
-                    return true;
-                } catch (error) {
-                    results.keys[key] = 'failed';
-                    results.errors.push(`${key} 迁移失败: ${error.message}`);
-                    return false;
-                }
-            };
-
-            for (const key of D1_MIGRATION_KEYS) {
-                const ok = await copyKey(key);
-                if (key === DATA_KEYS.SUBSCRIPTIONS) results.subscriptions = ok;
-                if (key === DATA_KEYS.PROFILES) results.profiles = ok;
-            }
-
-            // 前缀键：先枚举再逐条搬
-            for (const prefix of D1_MIGRATION_KEY_PREFIXES) {
-                try {
-                    const listed = await kvAdapter.list(prefix);
-                    for (const entry of listed) {
-                        const key = typeof entry === 'string' ? entry : entry?.name;
-                        if (key) await copyKey(key);
-                    }
-                } catch (error) {
-                    results.errors.push(`前缀 ${prefix} 枚举失败: ${error.message}`);
-                }
-            }
-
-            // settings 放在最后：storageType 要在其余数据都就位之后才翻成 d1，
-            // 否则中途失败会留下「已切 d1、数据还在 kv」的半迁移状态。
-            try {
-                const settings = await kvAdapter.get(DATA_KEYS.SETTINGS);
-                if (settings) {
-                    settings.storageType = STORAGE_TYPES.D1;
-                    await d1Adapter.put(DATA_KEYS.SETTINGS, settings);
-                    results.settings = true;
-                    results.keys[DATA_KEYS.SETTINGS] = 'migrated';
-                } else {
-                    results.keys[DATA_KEYS.SETTINGS] = 'empty';
-                }
-            } catch (error) {
-                results.keys[DATA_KEYS.SETTINGS] = 'failed';
-                results.errors.push(`设置迁移失败: ${error.message}`);
-            }
-
-            return results;
-        } catch (error) {
-            console.error('[Migration] Failed to migrate KV to D1:', error);
-            throw error;
-        }
-    }
-
-    static async migrateLegacyD1MainRows(env) {
-        if (!env?.MISUB_DB) throw new Error('D1 database not available');
-
-        const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
-        await ensureD1Schema(d1Adapter.db);
-
-        const results = {
-            subscriptions: 0,
-            profiles: 0,
-            errors: [],
-        };
-
-        try {
-            const legacySubs = await d1Adapter.get(DATA_KEYS.SUBSCRIPTIONS);
-            if (Array.isArray(legacySubs)) {
-                for (const item of legacySubs) {
-                    if (!item?.id) continue;
-                    await d1Adapter.putSubscription(item);
-                    results.subscriptions += 1;
-                }
-                await d1Adapter.db
-                    .prepare('DELETE FROM subscriptions WHERE id = ?')
-                    .bind('main')
-                    .run();
-                invalidateD1CollectionCache(d1Adapter.db, 'subscriptions');
-            }
-        } catch (error) {
-            results.errors.push(`订阅主行迁移失败: ${error.message}`);
-        }
-
-        try {
-            const legacyProfiles = await d1Adapter.get(DATA_KEYS.PROFILES);
-            if (Array.isArray(legacyProfiles)) {
-                for (const item of legacyProfiles) {
-                    if (!item?.id) continue;
-                    await d1Adapter.putProfile(item);
-                    results.profiles += 1;
-                }
-                await d1Adapter.db.prepare('DELETE FROM profiles WHERE id = ?').bind('main').run();
-                invalidateD1CollectionCache(d1Adapter.db, 'profiles');
-            }
-        } catch (error) {
-            results.errors.push(`订阅组主行迁移失败: ${error.message}`);
-        }
-
-        return results;
-    }
-
-    static async detectLegacyD1MainRows(env) {
-        if (!env?.MISUB_DB) {
-            return {
-                hasLegacySubscriptions: false,
-                hasLegacyProfiles: false,
-                hasLegacyData: false,
-            };
-        }
-
-        const d1Adapter = new D1StorageAdapter(env.MISUB_DB);
-        const [legacySubs, legacyProfiles] = await Promise.all([
-            d1Adapter.db
-                .prepare('SELECT data FROM subscriptions WHERE id = ?')
-                .bind('main')
-                .first(),
-            d1Adapter.db.prepare('SELECT data FROM profiles WHERE id = ?').bind('main').first(),
-        ]);
-
-        const hasLegacySubscriptions = Array.isArray(
-            legacySubs ? JSON.parse(legacySubs.data) : null
-        );
-        const hasLegacyProfiles = Array.isArray(
-            legacyProfiles ? JSON.parse(legacyProfiles.data) : null
-        );
-
-        return {
-            hasLegacySubscriptions,
-            hasLegacyProfiles,
-            hasLegacyData: hasLegacySubscriptions || hasLegacyProfiles,
-        };
     }
 }

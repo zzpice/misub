@@ -6,7 +6,7 @@
 import { DEFAULT_SUBCONVERTER_BACKEND } from './subconverter-backends.js';
 
 export const DEFAULT_SETTINGS = {
-    FileName: 'MiSub',
+    FileName: 'Zzp-Sub',
     mytoken: 'auto',
     profileToken: 'profiles',
     defaultLocale: 'zh-CN',
@@ -23,7 +23,7 @@ export const DEFAULT_SETTINGS = {
     enableTrafficNode: false,
     enableFlagEmoji: true,
 
-    storageType: 'kv',
+    storageType: 'd1',
     defaultPrefixSettings: {
         enableManualNodes: true,
         enableSubscriptions: true,
@@ -36,65 +36,7 @@ export const DEFAULT_SETTINGS = {
     // 存在设置里是为了跨设备同步（原先只存 localStorage，换设备就丢）。
     // 条目的 id 都是固定字符串（见 src/utils/dashboard-health.js），跨设备可比对。
     dismissedHealthItems: [],
-    defaultNodeTransform: {
-        enabled: false,
-        filter: {
-            include: { enabled: false, rules: [] },
-            exclude: { enabled: false, rules: [] },
-            protocols: { enabled: false, values: [] },
-            regions: { enabled: false, values: [] },
-            script: { enabled: false, expression: '' },
-            useless: { enabled: false },
-        },
-        rename: {
-            regex: { enabled: false, rules: [] },
-            script: { enabled: false, expression: '' },
-            template: {
-                enabled: false,
-                template: '{emoji}{region}-{protocol}-{index}',
-                indexStart: 1,
-                indexPad: 2,
-                indexScope: 'regionProtocol',
-                regionAlias: {},
-                protocolAlias: { hysteria2: 'hy2' },
-            },
-        },
-        dedup: {
-            enabled: false,
-            mode: 'serverPort',
-            includeProtocol: false,
-            prefer: { protocolOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'] },
-        },
-        sort: {
-            enabled: false,
-            nameIgnoreEmoji: true,
-            keys: [
-                {
-                    key: 'region',
-                    order: 'asc',
-                    customOrder: [
-                        '\u9999\u6e2f',
-                        '\u53f0\u6e7e',
-                        '\u65e5\u672c',
-                        '\u65b0\u52a0\u5761',
-                        '\u7f8e\u56fd',
-                        '\u97e9\u56fd',
-                        '\u82f1\u56fd',
-                        '\u5fb7\u56fd',
-                        '\u6cd5\u56fd',
-                        '\u52a0\u62ff\u5927',
-                    ],
-                },
-                {
-                    key: 'protocol',
-                    order: 'asc',
-                    customOrder: ['vless', 'trojan', 'vmess', 'hysteria2', 'ss', 'ssr'],
-                },
-                { key: 'name', order: 'asc' },
-            ],
-        },
-    },
-    nodeTransformPresets: [],
+    defaultOperators: [],
     regionOverrides: [],
 
     webdavBackup: {
@@ -102,8 +44,8 @@ export const DEFAULT_SETTINGS = {
         endpoint: '',
         username: '',
         password: '',
-        remotePath: '/MiSub',
-        filenameTemplate: 'misub-backup-{datetime}.json',
+        remotePath: '/Zzp-Sub',
+        filenameTemplate: 'zzp-sub-backup-{datetime}.json',
         backupScope: 'dataOnly',
         autoBackup: false,
         interval: 'daily',

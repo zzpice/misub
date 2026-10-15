@@ -1,27 +1,28 @@
 name: Tests and build
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
 permissions:
-  contents: read
+    contents: read
 concurrency:
-  group: check-${{ github.ref }}
-  cancel-in-progress: true
+    group: check-${{ github.ref }}
+    cancel-in-progress: true
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: npm
-      - run: npm ci
-      - run: npm run test:run
-      - run: npm run build
-      - name: Install Chromium for isolated browser smoke test
-        run: npx playwright install --with-deps chromium
-      - name: Check rendered login page on desktop and mobile (no production backend)
-        run: npm run test:browser
+    check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: '24'
+                  cache: npm
+            - run: npm ci
+            - run: npm run format:check
+            - run: npm run test:run
+            - run: npm run build
+            - name: Install Chromium for isolated browser smoke test
+              run: npx playwright install --with-deps chromium
+            - name: Check isolated login, management, save and responsive flows
+              run: npm run test:browser

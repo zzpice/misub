@@ -12,15 +12,16 @@ export async function handleSourceSnapshotRefresh(request, env) {
     try {
         body = await readJsonWithLimit(request, 4096);
     } catch (error) {
-        return createJsonResponse({ success: false, error: error.status === 413 ? 'Request too large' : 'Invalid JSON' }, error.status || 400);
+        return createJsonResponse(
+            { success: false, error: error.status === 413 ? 'Request too large' : 'Invalid JSON' },
+            error.status || 400
+        );
     }
     const subscriptionId = body?.subscriptionId;
     if (typeof subscriptionId !== 'string' || !subscriptionId || subscriptionId.length > 200) {
         return createJsonResponse({ success: false, error: 'Invalid subscription ID' }, 400);
     }
-    const storage = StorageFactory.createAdapter(
-        env, await StorageFactory.getStorageType(env)
-    );
+    const storage = StorageFactory.createAdapter(env, await StorageFactory.getStorageType(env));
     const source = await storage.getSubscriptionById(subscriptionId);
     if (!source || !source.enabled || !/^https?:\/\//i.test(String(source.url || ''))) {
         return createJsonResponse({ success: false, error: 'Subscription not found' }, 404);
@@ -31,11 +32,14 @@ export async function handleSourceSnapshotRefresh(request, env) {
         fetcher: (subscription) => fetchRemoteSourceSnapshot(subscription, storage),
     });
     if (!result.success) {
-        return createJsonResponse({
-            success: false,
-            error: result.busy ? 'Refresh already in progress' : result.error,
-            preserved: Boolean(result.snapshot),
-        }, result.busy ? 409 : 502);
+        return createJsonResponse(
+            {
+                success: false,
+                error: result.busy ? 'Refresh already in progress' : result.error,
+                preserved: Boolean(result.snapshot),
+            },
+            result.busy ? 409 : 502
+        );
     }
     const snapshot = result.snapshot;
     return createJsonResponse({

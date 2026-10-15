@@ -19,13 +19,13 @@
             <div
                 v-for="i in count"
                 :key="i"
-                class="bg-white/90 dark:bg-gray-900/80 backdrop-blur-md misub-radius-lg p-6 card-shadow animate-pulse"
+                class="bg-white/90 dark:bg-gray-900/80 backdrop-blur-md sub-radius-lg p-6 card-shadow animate-pulse"
                 :style="{ '--delay-index': i - 1 }"
             >
                 <div class="flex items-start justify-between mb-4">
                     <div class="flex-1">
                         <div
-                            class="h-4 bg-gradient-to-r from-gray-300 to-gray-200 dark:from-gray-600 dark:to-gray-700 misub-radius-md w-3/4 mb-2 skeleton-shimmer"
+                            class="h-4 bg-gradient-to-r from-gray-300 to-gray-200 dark:from-gray-600 dark:to-gray-700 sub-radius-md w-3/4 mb-2 skeleton-shimmer"
                         ></div>
                         <div
                             class="h-3 bg-gradient-to-r from-gray-200 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded w-1/2 skeleton-shimmer"
@@ -51,7 +51,7 @@
             <div
                 v-for="i in count"
                 :key="i"
-                class="flex items-center p-4 bg-white/90 dark:bg-gray-900/80 backdrop-blur-md misub-radius-lg card-shadow animate-pulse mb-3"
+                class="flex items-center p-4 bg-white/90 dark:bg-gray-900/80 backdrop-blur-md sub-radius-lg card-shadow animate-pulse mb-3"
                 :style="{ '--delay-index': i - 1 }"
             >
                 <div
@@ -77,14 +77,14 @@
                 <!-- 标题区域 -->
                 <div class="flex justify-between items-center">
                     <div
-                        class="h-8 bg-gradient-to-r from-gray-300 to-gray-200 dark:from-gray-600 dark:to-gray-700 misub-radius-md w-48 skeleton-shimmer"
+                        class="h-8 bg-gradient-to-r from-gray-300 to-gray-200 dark:from-gray-600 dark:to-gray-700 sub-radius-md w-48 skeleton-shimmer"
                     ></div>
                     <div class="flex gap-3">
                         <div
-                            class="h-10 w-24 bg-gradient-to-r from-gray-300 to-gray-200 dark:from-gray-600 dark:to-gray-700 misub-radius-md skeleton-shimmer"
+                            class="h-10 w-24 bg-gradient-to-r from-gray-300 to-gray-200 dark:from-gray-600 dark:to-gray-700 sub-radius-md skeleton-shimmer"
                         ></div>
                         <div
-                            class="h-10 w-20 bg-gradient-to-r from-gray-300 to-gray-200 dark:from-gray-600 dark:to-gray-700 misub-radius-md skeleton-shimmer"
+                            class="h-10 w-20 bg-gradient-to-r from-gray-300 to-gray-200 dark:from-gray-600 dark:to-gray-700 sub-radius-md skeleton-shimmer"
                         ></div>
                     </div>
                 </div>
@@ -94,10 +94,10 @@
                     <div
                         v-for="i in 3"
                         :key="i"
-                        class="bg-white/90 dark:bg-gray-900/80 backdrop-blur-md misub-radius-lg p-6 card-shadow animate-pulse"
+                        class="bg-white/90 dark:bg-gray-900/80 backdrop-blur-md sub-radius-lg p-6 card-shadow animate-pulse"
                     >
                         <div
-                            class="h-12 bg-gradient-to-r from-gray-300 to-gray-200 dark:from-gray-600 dark:to-gray-700 misub-radius-md w-full mb-4 skeleton-shimmer"
+                            class="h-12 bg-gradient-to-r from-gray-300 to-gray-200 dark:from-gray-600 dark:to-gray-700 sub-radius-md w-full mb-4 skeleton-shimmer"
                         ></div>
                         <div
                             class="h-6 bg-gradient-to-r from-gray-200 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded w-3/4 skeleton-shimmer"
@@ -110,7 +110,7 @@
                     <div
                         v-for="i in 4"
                         :key="i"
-                        class="h-20 bg-white/90 dark:bg-gray-900/80 backdrop-blur-md misub-radius-lg card-shadow animate-pulse skeleton-shimmer"
+                        class="h-20 bg-white/90 dark:bg-gray-900/80 backdrop-blur-md sub-radius-lg card-shadow animate-pulse skeleton-shimmer"
                     ></div>
                 </div>
             </div>

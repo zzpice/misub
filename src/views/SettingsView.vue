@@ -1,8 +1,7 @@
 <script setup>
-    import { ref, onMounted, onActivated, onUnmounted, watch, nextTick } from 'vue';
+    import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
     import { useRoute } from 'vue-router';
     import { useI18n } from '../i18n/index.js';
-    import MigrationModal from '../components/modals/MigrationModal.vue';
     import { useSettingsLogic } from '../composables/useSettingsLogic.js';
     import SettingsContent from '../components/settings/SettingsContent.vue';
     import {
@@ -18,13 +17,10 @@
         disguiseConfig,
         isLoading,
         isSaving,
-        showMigrationModal,
-        restartCountdown,
         hasWhitespace,
         isStorageTypeValid,
         loadSettings,
         handleSave,
-        handleMigrationSuccess,
         handleReset,
         exportBackup,
         importBackup,
@@ -64,16 +60,7 @@
         });
     }
 
-    const handleOpenMigrationModal = () => {
-        showMigrationModal.value = true;
-    };
-
     onMounted(() => {
-        loadSettings();
-        applyFocusFromQuery();
-    });
-
-    onActivated(() => {
         loadSettings();
         applyFocusFromQuery();
     });
@@ -85,26 +72,14 @@
         () => applyFocusFromQuery()
     );
 
-    watch(
-        () => route.path,
-        (path) => {
-            if (path === '/settings' && !resolveSettingsFocusTab(route.query?.focus)) {
-                activeTab.value = 'basic';
-                loadSettings();
-            }
-        }
-    );
-
     onUnmounted(() => {
         clearTimeout(highlightTimer);
     });
 </script>
 
 <template>
-    <div class="pt-0 pb-6 min-h-[calc(100vh-80px)]">
-        <div
-            class="mb-4 bg-white/80 dark:bg-gray-900/60 border border-gray-100/80 dark:border-white/10 misub-radius-lg p-4"
-        >
+    <div class="settings-page pb-6">
+        <div class="page-heading mb-6">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
                 {{ t('settings.title') }}
             </h1>
@@ -116,7 +91,6 @@
             :disguise-config="disguiseConfig"
             :is-loading="isLoading"
             :is-saving="isSaving"
-            :restart-countdown="restartCountdown"
             :has-whitespace="hasWhitespace"
             :is-storage-type-valid="isStorageTypeValid"
             :highlighted-focus-id="highlightedFocusId"
@@ -125,10 +99,6 @@
             :handle-reset="handleReset"
             layout-class="h-full"
             @save="handleSave"
-            @reload-now="() => window.location.reload()"
-            @migrate="handleOpenMigrationModal"
         />
-
-        <MigrationModal v-model:show="showMigrationModal" @success="handleMigrationSuccess" />
     </div>
 </template>

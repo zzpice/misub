@@ -7,7 +7,7 @@
 <template>
     <span
         role="img"
-        aria-label="MiSub · zzpice"
+        aria-label="Zzp Sub"
         class="brand-mark inline-flex shrink-0"
         :style="{ width: `${size}px`, height: `${size}px` }"
         v-html="brandSvg"

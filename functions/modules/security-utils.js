@@ -142,8 +142,10 @@ async function fetchValidatedUrl(inputUrl, init, options, validate) {
                 requestInit.headers.delete(header);
             }
         }
-        if (response.status === 303 ||
-            ([301, 302].includes(response.status) && requestInit.method === 'POST')) {
+        if (
+            response.status === 303 ||
+            ([301, 302].includes(response.status) && requestInit.method === 'POST')
+        ) {
             requestInit = { ...requestInit, method: 'GET', body: undefined };
             requestInit.headers.delete('Content-Type');
             requestInit.headers.delete('Content-Length');
@@ -373,6 +375,9 @@ export async function readResponseBufferWithLimit(response, maxBytes = 10 * 1024
     }
     const bytes = new Uint8Array(size);
     let offset = 0;
-    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+    }
     return bytes.buffer;
 }

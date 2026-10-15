@@ -11,7 +11,6 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import BrandLogo from '../../src/components/layout/BrandLogo.vue';
-import Header from '../../src/components/layout/Header.vue';
 import NavBar from '../../src/components/layout/NavBar.vue';
 
 function makeRouter() {
@@ -66,18 +65,6 @@ describe('品牌 LOGO 跳转目标', () => {
         const logo = wrapper.find('.nav-brand-wrap');
         expect(logo.exists()).toBe(true);
         expect(logo.attributes('href')).toBe('/dashboard');
-        wrapper.unmount();
-    });
-
-    it('Header 已登录时 LOGO 指向 /dashboard', async () => {
-        const wrapper = await mountWithPlugins(Header, { props: { isLoggedIn: true } });
-        expect(wrapper.find('.nav-brand-wrap').attributes('href')).toBe('/dashboard');
-        wrapper.unmount();
-    });
-
-    it('Header 未登录时 LOGO 指向 /', async () => {
-        const wrapper = await mountWithPlugins(Header, { props: { isLoggedIn: false } });
-        expect(wrapper.find('.nav-brand-wrap').attributes('href')).toBe('/');
         wrapper.unmount();
     });
 });

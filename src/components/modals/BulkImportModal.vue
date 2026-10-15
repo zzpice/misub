@@ -142,7 +142,7 @@
     >
         <template #title>
             <div class="flex items-center gap-3">
-                <div class="p-2 misub-radius-lg bg-indigo-500/10">
+                <div class="p-2 sub-radius-lg bg-indigo-500/10">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         class="h-6 w-6 text-indigo-500"
@@ -172,14 +172,14 @@
         <template #footer>
             <button
                 @click="emit('update:show', false)"
-                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold text-sm misub-radius-lg transition-colors"
+                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold text-sm sub-radius-lg transition-colors"
             >
                 {{ t('actions.cancel') }}
             </button>
             <button
                 v-if="activeTab === 'text'"
                 @click="handleConfirm"
-                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm misub-radius-lg transition-colors"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm sub-radius-lg transition-colors"
             >
                 {{ t('actions.confirm') }}
             </button>
@@ -188,10 +188,10 @@
         <template #body>
             <div class="space-y-6">
                 <!-- 来源切换 -->
-                <div class="grid grid-cols-2 gap-1 p-1 bg-gray-100 dark:bg-white/5 misub-radius-lg">
+                <div class="grid grid-cols-2 gap-1 p-1 bg-gray-100 dark:bg-white/5 sub-radius-lg">
                     <button
                         type="button"
-                        class="py-1.5 text-sm font-medium misub-radius-md transition-colors"
+                        class="py-1.5 text-sm font-medium sub-radius-md transition-colors"
                         :class="
                             activeTab === 'text'
                                 ? 'bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-xs'
@@ -203,7 +203,7 @@
                     </button>
                     <button
                         type="button"
-                        class="py-1.5 text-sm font-medium misub-radius-md transition-colors"
+                        class="py-1.5 text-sm font-medium sub-radius-md transition-colors"
                         :class="
                             activeTab === 'file'
                                 ? 'bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-xs'
@@ -234,7 +234,7 @@
 
                 <div v-if="activeTab === 'text'" class="relative group">
                     <div
-                        class="relative border misub-radius-lg transition-all duration-300 overflow-hidden bg-gray-50 dark:bg-black/20 border-gray-200 dark:border-white/10"
+                        class="relative border sub-radius-lg transition-all duration-300 overflow-hidden bg-gray-50 dark:bg-black/20 border-gray-200 dark:border-white/10"
                         :class="[
                             urlFocused
                                 ? 'ring-2 ring-primary-500/50 border-primary-500 dark:border-primary-500'
@@ -271,7 +271,7 @@
                         </div>
                         <!-- Focus Glow -->
                         <div
-                            class="absolute inset-0 misub-radius-lg pointer-events-none transition-opacity duration-300 opacity-0 group-focus-within:opacity-100 ring-1 ring-primary-500/20"
+                            class="absolute inset-0 sub-radius-lg pointer-events-none transition-opacity duration-300 opacity-0 group-focus-within:opacity-100 ring-1 ring-primary-500/20"
                         ></div>
                     </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400">

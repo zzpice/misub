@@ -37,7 +37,6 @@ vi.mock('../../functions/modules/utils.js', () => ({
     createJsonResponse: (data, status = 200) => new Response(JSON.stringify(data), { status }),
     createErrorResponse: (data, status = 500) =>
         new Response(JSON.stringify({ error: String(data) }), { status }),
-    migrateProfileIds: vi.fn().mockReturnValue(false),
     JSON_BODY_LIMITS: {
         auth: 16 * 1024,
         small: 128 * 1024,

@@ -198,7 +198,8 @@
             if (newVal) {
                 parseFromText();
             }
-        }
+        },
+        { immediate: true }
     );
 
     // === 高级模式相关（保留原有逻辑） ===
@@ -323,7 +324,7 @@
     >
         <template #title>
             <div class="flex items-center gap-3">
-                <div class="p-2 misub-radius-lg bg-indigo-500/10">
+                <div class="p-2 sub-radius-lg bg-indigo-500/10">
                     <!-- Standard RSS/Link Icon for Subscription -->
                     <svg
                         xmlns="http://www.w3.org/2000/svg"

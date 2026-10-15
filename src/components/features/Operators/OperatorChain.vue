@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, computed } from 'vue';
+    import { ref } from 'vue';
     import { useI18n } from '../../../i18n/index.js';
     import FilterEditor from './components/FilterEditor.vue';
     import RenameEditor from './components/RenameEditor.vue';
@@ -12,109 +12,10 @@
             type: Array,
             default: () => [],
         },
-        legacyData: {
-            type: Object,
-            default: null,
-        },
     });
 
     const emit = defineEmits(['update:modelValue']);
     const { t } = useI18n();
-
-    // Migration Logic
-    const canMigrate = computed(() => {
-        return props.modelValue.length === 0 && props.legacyData && props.legacyData.enabled;
-    });
-
-    const migrateFromLegacy = () => {
-        if (!props.legacyData) return;
-        const config = props.legacyData;
-        const ops = [];
-
-        // 1. Filter
-        const filter = config.filter;
-        if (
-            filter &&
-            (filter.include?.enabled ||
-                filter.exclude?.enabled ||
-                filter.protocols?.enabled ||
-                filter.regions?.enabled ||
-                filter.script?.enabled ||
-                filter.useless?.enabled)
-        ) {
-            ops.push({
-                id: crypto.randomUUID(),
-                type: 'filter',
-                enabled: true,
-                params: JSON.parse(JSON.stringify(filter)),
-            });
-        }
-
-        // 2. Rename (Regex)
-        const regex = config.rename?.regex;
-        if (regex?.enabled && regex.rules?.length > 0) {
-            ops.push({
-                id: crypto.randomUUID(),
-                type: 'rename',
-                enabled: true,
-                params: { regex: JSON.parse(JSON.stringify(regex)) },
-            });
-        }
-
-        // 3. Rename (Template)
-        const template = config.rename?.template;
-        if (template?.enabled) {
-            ops.push({
-                id: crypto.randomUUID(),
-                type: 'rename',
-                enabled: true,
-                params: {
-                    template: {
-                        enabled: true,
-                        template: template.template || '{emoji}{region}-{protocol}-{index}',
-                        offset: template.indexStart || 1,
-                    },
-                },
-            });
-        }
-
-        // 4. Script Rename
-        const renameScript = config.rename?.script;
-        if (renameScript?.enabled && renameScript.expression) {
-            ops.push({
-                id: crypto.randomUUID(),
-                type: 'script',
-                enabled: true,
-                params: {
-                    code: `return ($nodes) => { return $nodes.map(n => { n.name = (${renameScript.expression})(n.name, n); return n; }); }`,
-                },
-            });
-        }
-
-        // 5. Dedup
-        const dedup = config.dedup;
-        if (dedup?.enabled) {
-            ops.push({
-                id: crypto.randomUUID(),
-                type: 'dedup',
-                enabled: true,
-                params: JSON.parse(JSON.stringify(dedup)),
-            });
-        }
-
-        // 6. Sort
-        const sort = config.sort;
-        if (sort?.enabled && sort.keys?.length > 0) {
-            ops.push({
-                id: crypto.randomUUID(),
-                type: 'sort',
-                enabled: true,
-                params: JSON.parse(JSON.stringify(sort)),
-            });
-        }
-
-        emit('update:modelValue', ops);
-    };
 
     // Track which operator is expanded
     const expandedIndex = ref(props.modelValue.length > 0 ? props.modelValue.length - 1 : null);
@@ -232,64 +133,8 @@
 
 <template>
     <div class="space-y-4">
-        <!-- Migration Suggestion Card -->
         <div
-            v-if="canMigrate"
-            class="group relative mb-6 overflow-hidden rounded-xl border border-amber-200/50 bg-gradient-to-br from-amber-50 to-orange-50 p-5 dark:border-amber-500/20 dark:from-amber-900/10 dark:to-orange-900/10"
-        >
-            <div class="relative z-10 flex items-center justify-between gap-4">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20"
-                    >
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M13 10V3L4 14h7v7l9-11h-7z"
-                            />
-                        </svg>
-                    </div>
-                    <div>
-                        <h4 class="text-sm font-bold text-amber-900 dark:text-amber-200">
-                            {{ t('operators.legacyConfigFound') }}
-                        </h4>
-                        <p class="mt-0.5 text-[10px] text-amber-700/70 dark:text-amber-400/60">
-                            {{ t('operators.legacyConfigDesc') }}
-                        </p>
-                    </div>
-                </div>
-                <button
-                    @click="migrateFromLegacy"
-                    class="whitespace-nowrap rounded-xl bg-amber-500 px-5 py-2 text-[11px] font-bold text-white shadow-md shadow-amber-500/20 transition-all hover:bg-amber-600 active:scale-95"
-                >
-                    {{ t('operators.migrateNow') }}
-                </button>
-            </div>
-            <!-- Decorative bg -->
-            <div
-                class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity"
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-24 w-24"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-            </div>
-        </div>
-
-        <div
-            v-if="modelValue.length === 0 && !canMigrate"
+            v-if="modelValue.length === 0"
             class="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/30 py-12 text-center dark:border-gray-800 dark:bg-gray-900/10"
         >
             <div

@@ -48,9 +48,9 @@ describe('independent personal deployment', () => {
             autoUpdateEnabled: false,
         };
         const legacyKey = buildSubscriptionNodeCacheKey(sub);
-        const fetchMock = vi.spyOn(globalThis, 'fetch').mockRejectedValue(
-            new Error('Upstream unavailable')
-        );
+        const fetchMock = vi
+            .spyOn(globalThis, 'fetch')
+            .mockRejectedValue(new Error('Upstream unavailable'));
         try {
             for (const age of [6 * 3600000, 13 * 3600000, null]) {
                 const timestamp = age === null ? null : Date.now() - age;
@@ -61,7 +61,9 @@ describe('independent personal deployment', () => {
                 const records = new Map([[legacyKey, initial]]);
                 const storage = {
                     get: async (key) => records.get(key) ?? null,
-                    put: vi.fn(async (key, value) => { records.set(key, value); }),
+                    put: vi.fn(async (key, value) => {
+                        records.set(key, value);
+                    }),
                 };
                 const context = { env: environment(), storage };
                 const result = await generateCombinedNodeList(

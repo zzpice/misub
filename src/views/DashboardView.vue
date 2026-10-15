@@ -31,8 +31,8 @@
     const { showToast } = useToastStore();
 
     const dataStore = useDataStore();
-    const { settings, profiles, isLoading, lastUpdated } = storeToRefs(dataStore);
-    const { activeProfiles, markDirty } = dataStore;
+    const { settings, profiles, activeProfiles, isLoading, lastUpdated } = storeToRefs(dataStore);
+    const { markDirty } = dataStore;
 
     const {
         totalRemainingTraffic: trafficVal,
@@ -52,7 +52,7 @@
     });
 
     const subscriptionsCount = computed(() => (subscriptions.value || []).length);
-    const activeProfilesCount = computed(() => (activeProfiles || []).length);
+    const activeProfilesCount = computed(() => (activeProfiles.value || []).length);
 
     const lastUpdatedTime = computed(() => {
         if (!lastUpdated.value) return t('dashboard.never');
@@ -279,12 +279,7 @@
         </div>
 
         <template v-else>
-            <section
-                class="relative overflow-hidden bg-white/85 dark:bg-gray-900/75 border border-gray-100/80 dark:border-white/10 misub-radius-lg p-4 sm:p-5 shadow-sm"
-            >
-                <div
-                    class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary-500 via-sky-400 to-emerald-400 opacity-80"
-                ></div>
+            <section class="page-heading">
                 <div
                     class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4"
                 >
@@ -312,10 +307,10 @@
                         </p>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:w-auto">
+                    <div class="flex flex-wrap gap-2 w-full lg:w-auto">
                         <button
                             @click="showLogModal = true"
-                            class="min-h-11 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-white/[0.04] dark:text-gray-300 dark:hover:bg-white/[0.07] misub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10"
+                            class="min-h-11 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium bg-white/80 text-gray-700 hover:bg-white dark:bg-white/[0.04] dark:text-gray-300 dark:hover:bg-white/[0.07] sub-radius-lg transition-colors border border-gray-200/80 dark:border-white/10"
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -335,13 +330,13 @@
                         </button>
                         <button
                             @click="openBulkImportModal"
-                            class="min-h-11 px-4 py-2.5 text-sm font-medium bg-gray-100/80 text-gray-800 hover:bg-gray-200/80 dark:bg-white/[0.04] dark:text-gray-200 dark:hover:bg-white/[0.07] misub-radius-lg transition-colors border border-transparent dark:border-white/10"
+                            class="min-h-11 px-4 py-2.5 text-sm font-medium bg-gray-100/80 text-gray-800 hover:bg-gray-200/80 dark:bg-white/[0.04] dark:text-gray-200 dark:hover:bg-white/[0.07] sub-radius-lg transition-colors border border-transparent dark:border-white/10"
                         >
                             {{ t('dashboard.actions.bulkImport') }}
                         </button>
                         <button
                             @click="handleAddProfile"
-                            class="min-h-11 px-4 py-2.5 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 misub-radius-lg transition-colors shadow-sm shadow-primary-500/20"
+                            class="min-h-11 px-4 py-2.5 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 sub-radius-lg transition-colors shadow-sm shadow-primary-500/20"
                         >
                             {{ t('dashboard.actions.addProfile') }}
                         </button>
@@ -359,10 +354,20 @@
                 @navigate="handleStatNavigate"
             />
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 space-y-6">
+            <div
+                :class="
+                    hasHealthItems || dismissedHealthItemsCount || showFullGuide
+                        ? 'dashboard-columns'
+                        : 'dashboard-links-only'
+                "
+            >
+                <div
+                    v-if="hasHealthItems || dismissedHealthItemsCount || showFullGuide"
+                    class="space-y-6"
+                >
                     <section
-                        class="bg-white/90 dark:bg-gray-900/80 p-5 misub-radius-lg shadow-sm border border-gray-100/80 dark:border-white/10"
+                        v-if="hasHealthItems || dismissedHealthItemsCount"
+                        class="health-section"
                     >
                         <div
                             class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4"
@@ -402,7 +407,7 @@
                             <div
                                 v-for="item in visibleHealthItems"
                                 :key="item.id"
-                                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-[var(--misub-radius-md)] border p-3"
+                                class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-[var(--sub-radius-md)] border p-3"
                                 :class="healthToneClasses[item.tone] || healthToneClasses.info"
                             >
                                 <div class="flex gap-3 min-w-0">
@@ -423,7 +428,7 @@
                                     <button
                                         v-if="item.actionLabel"
                                         type="button"
-                                        class="min-h-10 rounded-[var(--misub-radius-md)] border border-current/20 bg-white/60 px-3 py-2 text-sm font-semibold hover:bg-white/90 dark:bg-white/10 dark:hover:bg-white/15 transition-colors"
+                                        class="min-h-10 rounded-[var(--sub-radius-md)] border border-current/20 bg-white/60 px-3 py-2 text-sm font-semibold hover:bg-white/90 dark:bg-white/10 dark:hover:bg-white/15 transition-colors"
                                         @click="handleHealthAction(item)"
                                     >
                                         {{ item.actionLabel }}
@@ -431,14 +436,14 @@
                                     <button
                                         v-if="item.secondaryActionLabel"
                                         type="button"
-                                        class="min-h-10 rounded-[var(--misub-radius-md)] border border-current/15 px-3 py-2 text-sm font-semibold opacity-80 hover:opacity-100 transition-opacity"
+                                        class="min-h-10 rounded-[var(--sub-radius-md)] border border-current/15 px-3 py-2 text-sm font-semibold opacity-80 hover:opacity-100 transition-opacity"
                                         @click="handleHealthSecondaryAction(item)"
                                     >
                                         {{ item.secondaryActionLabel }}
                                     </button>
                                     <button
                                         type="button"
-                                        class="min-h-10 rounded-[var(--misub-radius-md)] px-3 py-2 text-sm font-medium opacity-60 hover:opacity-100 transition-opacity"
+                                        class="min-h-10 rounded-[var(--sub-radius-md)] px-3 py-2 text-sm font-medium opacity-60 hover:opacity-100 transition-opacity"
                                         :title="t('dashboard.health.dismissItem')"
                                         :aria-label="t('dashboard.health.dismissItem')"
                                         data-testid="health-item-dismiss"
@@ -451,7 +456,7 @@
                             <button
                                 v-if="hiddenHealthItemsCount > 0 || showAllHealthItems"
                                 type="button"
-                                class="min-h-10 justify-self-start rounded-[var(--misub-radius-md)] border border-gray-200/80 bg-white/70 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
+                                class="min-h-10 justify-self-start rounded-[var(--sub-radius-md)] border border-gray-200/80 bg-white/70 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
                                 @click="showAllHealthItems = !showAllHealthItems"
                             >
                                 {{
@@ -465,7 +470,7 @@
                         </div>
                         <div
                             v-else
-                            class="rounded-[var(--misub-radius-md)] border border-emerald-200/80 bg-emerald-50/80 p-4 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200"
+                            class="rounded-[var(--sub-radius-md)] border border-emerald-200/80 bg-emerald-50/80 p-4 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-200"
                         >
                             <p class="font-semibold">{{ t('dashboard.health.allGood') }}</p>
                             <p class="mt-1 text-sm opacity-80">
@@ -487,75 +492,17 @@
                         </button>
                     </section>
 
-                    <section
-                        v-if="showFullGuide"
-                        class="bg-white/90 dark:bg-gray-900/80 p-5 misub-radius-lg shadow-sm border border-gray-100/80 dark:border-white/10 min-h-[320px]"
-                    >
-                        <h3
-                            class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center"
-                        >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                class="h-5 w-5 mr-2 text-indigo-500"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                            </svg>
-                            {{ t('dashboard.guide.title') }}
-                        </h3>
-                        <div class="grid md:grid-cols-2 gap-3">
-                            <div
-                                class="p-4 bg-white/80 dark:bg-gray-900/70 misub-radius-lg border border-gray-200/60 dark:border-white/10"
-                            >
-                                <h4 class="font-medium text-gray-900 dark:text-gray-200 mb-2">
-                                    {{ t('dashboard.guide.step1Title') }}
-                                </h4>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ t('dashboard.guide.step1Desc') }}
-                                </p>
-                            </div>
-                            <div
-                                class="p-4 bg-white/80 dark:bg-gray-900/70 misub-radius-lg border border-gray-200/60 dark:border-white/10"
-                            >
-                                <h4 class="font-medium text-gray-900 dark:text-gray-200 mb-2">
-                                    {{ t('dashboard.guide.step2Title') }}
-                                </h4>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ t('dashboard.guide.step2Desc') }}
-                                </p>
-                            </div>
-                            <div
-                                class="p-4 bg-white/80 dark:bg-gray-900/70 misub-radius-lg border border-gray-200/60 dark:border-white/10"
-                            >
-                                <h4 class="font-medium text-gray-900 dark:text-gray-200 mb-2">
-                                    {{ t('dashboard.guide.step3Title') }}
-                                </h4>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ t('dashboard.guide.step3Desc') }}
-                                </p>
-                            </div>
-                            <div
-                                class="p-4 bg-white/80 dark:bg-gray-900/70 misub-radius-lg border border-gray-200/60 dark:border-white/10"
-                            >
-                                <h4 class="font-medium text-gray-900 dark:text-gray-200 mb-2">
-                                    {{ t('dashboard.guide.step4Title') }}
-                                </h4>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    {{ t('dashboard.guide.step4Desc') }}
-                                </p>
-                            </div>
-                        </div>
+                    <section v-if="showFullGuide" class="getting-started">
+                        <h3 class="font-semibold">{{ t('dashboard.guide.title') }}</h3>
+                        <ol class="mt-3 grid gap-3 text-sm text-gray-500 dark:text-gray-400">
+                            <li><strong>1.</strong> {{ t('dashboard.guide.step1Desc') }}</li>
+                            <li><strong>2.</strong> {{ t('dashboard.guide.step2Desc') }}</li>
+                            <li><strong>3.</strong> {{ t('dashboard.guide.step3Desc') }}</li>
+                        </ol>
                     </section>
                 </div>
 
-                <div class="lg:col-span-1">
+                <div class="dashboard-link-panel">
                     <RightPanel :config="settings" :profiles="profiles" @qrcode="handleQRCode" />
                 </div>
             </div>
@@ -579,9 +526,18 @@
                 size="2xl"
             />
 
-            <LogModal :show="showLogModal" @update:show="showLogModal = $event" />
+            <LogModal
+                v-if="showLogModal"
+                :show="showLogModal"
+                @update:show="showLogModal = $event"
+            />
 
-            <QRCodeModal v-model:show="showQRCodeModal" :url="qrCodeUrl" :title="qrCodeTitle" />
+            <QRCodeModal
+                v-if="showQRCodeModal"
+                v-model:show="showQRCodeModal"
+                :url="qrCodeUrl"
+                :title="qrCodeTitle"
+            />
         </template>
     </div>
 </template>

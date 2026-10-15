@@ -28,7 +28,7 @@
                 endpoint: '',
                 username: '',
                 password: '',
-                remotePath: '/MiSub',
+                remotePath: '/Zzp Sub',
                 filenameTemplate: 'misub-backup-{datetime}.json',
                 backupScope: 'dataOnly',
                 autoBackup: false,
@@ -187,9 +187,7 @@
 </script>
 
 <template>
-    <div
-        class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70"
-    >
+    <div class="settings-section">
         <div class="mb-5 flex items-start gap-3">
             <div
                 class="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-300"
@@ -238,7 +236,7 @@
                 <Input
                     :label="t('settings.webdavRemotePath')"
                     v-model="settings.webdavBackup.remotePath"
-                    placeholder="/MiSub"
+                    placeholder="/Zzp Sub"
                 />
                 <Input
                     :label="t('settings.webdavUsername')"

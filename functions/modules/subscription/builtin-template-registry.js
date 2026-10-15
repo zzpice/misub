@@ -1,7 +1,7 @@
 export const BUILTIN_TEMPLATE_REGISTRY = {
     clash_misub_minimal: {
         id: 'clash_misub_minimal',
-        name: 'MiSub 极简默认分流',
+        name: 'Zzp Sub 极简默认分流',
         target: 'clash',
         format: 'ini',
         description:
@@ -60,7 +60,7 @@ overwrite_original_rules=true`,
     },
     clash_misub_media_ai: {
         id: 'clash_misub_media_ai',
-        name: 'MiSub 流媒体与 AI 分流',
+        name: 'Zzp Sub 流媒体与 AI 分流',
         target: 'clash',
         format: 'ini',
         description: '面向常见流媒体和 AI 服务场景的内置模板，保留自动选择、地区组和核心服务分流。',
@@ -140,7 +140,7 @@ overwrite_original_rules=true`,
     },
     clash_exclusive_ai: {
         id: 'clash_exclusive_ai',
-        name: 'MiSub 深度 AI 开发者模板',
+        name: 'Zzp Sub 深度 AI 开发者模板',
         target: 'clash',
         format: 'ini',
         description:
@@ -167,7 +167,7 @@ overwrite_original_rules=true`,
     },
     clash_game_optimized: {
         id: 'clash_game_optimized',
-        name: 'MiSub 游戏加速竞技模板',
+        name: 'Zzp Sub 游戏加速竞技模板',
         target: 'clash',
         format: 'ini',
         description: '强化各平台游戏规则（Steam, Epic, Sony 等），优先选择低延迟线路。',

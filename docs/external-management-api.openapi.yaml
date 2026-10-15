@@ -1,17 +1,17 @@
 openapi: 3.1.0
 info:
-    title: MiSub External Management API
+    title: Zzp Sub External Management API
     version: 1.0.0
     description: |
-        MiSub 对外暴露的受控管理接口。当前版本覆盖订阅源、手动节点、订阅组与轻量预览能力。
+        Zzp Sub 对外暴露的受控管理接口。当前版本覆盖订阅源、手动节点、订阅组与轻量预览能力。
 
         认证方式：
-        - 需要在 MiSub 设置页启用 `externalApi.enabled`
+        - 需要在 Zzp Sub 设置页启用 `externalApi.enabled`
         - 所有请求都必须携带 `Authorization: Bearer <token>`
 
 servers:
     - url: /api/ext/v1
-      description: Relative path on the current MiSub deployment
+      description: Relative path on the current Zzp Sub deployment
 
 tags:
     - name: Subscriptions

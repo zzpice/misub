@@ -99,7 +99,7 @@
                 <select
                     :value="itemsPerPage"
                     @change="handleItemsPerPageChange"
-                    class="form-select misub-radius-md text-xs py-1 pl-2 pr-6 border-gray-300 bg-gray-50 dark:bg-gray-900 dark:border-gray-600 focus-visible:ring-primary-500/50 focus:border-primary-500"
+                    class="form-select sub-radius-md text-xs py-1 pl-2 pr-6 border-gray-300 bg-gray-50 dark:bg-gray-900 dark:border-gray-600 focus-visible:ring-primary-500/50 focus:border-primary-500"
                 >
                     <option v-for="option in itemsPerPageOptions" :key="option" :value="option">
                         {{ option === -1 ? t('common.all') : option }}
@@ -113,7 +113,7 @@
             <button
                 @click="emitPageChange(1)"
                 :disabled="currentPage === 1"
-                class="h-8 w-8 flex items-center justify-center misub-radius-md bg-white/70 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-200/70 dark:border-white/10 touch-target"
+                class="h-8 w-8 flex items-center justify-center sub-radius-md bg-white/70 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-200/70 dark:border-white/10 touch-target"
                 :title="t('common.firstPage')"
                 :aria-label="t('common.firstPage')"
             >
@@ -129,7 +129,7 @@
             <button
                 @click="emitPageChange(currentPage - 1)"
                 :disabled="currentPage === 1"
-                class="h-8 w-8 flex items-center justify-center misub-radius-md bg-white/70 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-200/70 dark:border-white/10 touch-target"
+                class="h-8 w-8 flex items-center justify-center sub-radius-md bg-white/70 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-200/70 dark:border-white/10 touch-target"
                 :title="t('common.prevPage')"
                 :aria-label="t('common.prevPage')"
             >
@@ -149,7 +149,7 @@
                     v-model="pageInput"
                     @keydown.enter="jumpToPage"
                     @blur="jumpToPage"
-                    class="w-14 text-center text-sm py-1 border border-gray-300 dark:border-gray-600 misub-radius-md bg-gray-50 dark:bg-gray-900 focus-visible:ring-1 focus-visible:ring-primary-500/50 focus:border-primary-500 appearance-none remove-arrow touch-target"
+                    class="w-14 text-center text-sm py-1 border border-gray-300 dark:border-gray-600 sub-radius-md bg-gray-50 dark:bg-gray-900 focus-visible:ring-1 focus-visible:ring-primary-500/50 focus:border-primary-500 appearance-none remove-arrow touch-target"
                     :aria-label="t('common.pageNumber')"
                 />
                 <span class="text-sm text-gray-500">/ {{ totalPages }}</span>
@@ -158,7 +158,7 @@
             <button
                 @click="emitPageChange(currentPage + 1)"
                 :disabled="currentPage === totalPages"
-                class="h-8 w-8 flex items-center justify-center misub-radius-md bg-white/70 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-200/70 dark:border-white/10 touch-target"
+                class="h-8 w-8 flex items-center justify-center sub-radius-md bg-white/70 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-200/70 dark:border-white/10 touch-target"
                 :title="t('common.nextPage')"
                 :aria-label="t('common.nextPage')"
             >
@@ -174,7 +174,7 @@
             <button
                 @click="emitPageChange(totalPages)"
                 :disabled="currentPage === totalPages"
-                class="h-8 w-8 flex items-center justify-center misub-radius-md bg-white/70 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-200/70 dark:border-white/10 touch-target"
+                class="h-8 w-8 flex items-center justify-center sub-radius-md bg-white/70 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-200/70 dark:border-white/10 touch-target"
                 :title="t('common.lastPage')"
                 :aria-label="t('common.lastPage')"
             >
@@ -198,18 +198,18 @@
         <button
             @click="emitPageChange(currentPage - 1)"
             :disabled="currentPage === 1"
-            class="h-8 px-3 misub-radius-md disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 touch-target"
+            class="h-8 px-3 sub-radius-md disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 touch-target"
         >
             &laquo; {{ t('common.prevPage') }}
         </button>
         <span
-            class="text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-white/5 border border-gray-200/70 dark:border-white/10 px-3 py-1 misub-radius-md"
+            class="text-gray-500 dark:text-gray-400 bg-white/70 dark:bg-white/5 border border-gray-200/70 dark:border-white/10 px-3 py-1 sub-radius-md"
             >{{ t('common.pageOf', { current: currentPage, total: totalPages }) }}</span
         >
         <button
             @click="emitPageChange(currentPage + 1)"
             :disabled="currentPage === totalPages"
-            class="h-8 px-3 misub-radius-md disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 touch-target"
+            class="h-8 px-3 sub-radius-md disabled:opacity-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 touch-target"
         >
             {{ t('common.nextPage') }} &raquo;
         </button>

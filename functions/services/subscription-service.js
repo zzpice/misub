@@ -18,11 +18,20 @@ import {
 } from '../utils/node-utils.js';
 import { runOperatorChain } from '../utils/operator-runner.js';
 import { createTimeoutFetch } from '../modules/utils.js';
-import { assertPublicNetworkUrl, safeFetchNetworkUrl, readResponseBufferWithLimit } from '../modules/security-utils.js';
+import {
+    assertPublicNetworkUrl,
+    safeFetchNetworkUrl,
+    readResponseBufferWithLimit,
+} from '../modules/security-utils.js';
 import { isSuspiciousNodeCountDrop } from './node-cache-service.js';
 import { isPersonalMode } from '../modules/personal-mode.js';
 import { resolveSourceSnapshot } from './source-snapshot-service.js';
-import { readRegionPreferences, fingerprintNode, correctedName, nodeRegionIdentity } from './region-preferences.js';
+import {
+    readRegionPreferences,
+    fingerprintNode,
+    correctedName,
+    nodeRegionIdentity,
+} from './region-preferences.js';
 import { resolveNodeRegion } from '../modules/utils/geo-utils.js';
 
 const PERSONAL_SOURCE_CACHE_MAX_AGE = 12 * 60 * 60 * 1000;
@@ -293,7 +302,9 @@ export async function fetchAirportSiteTitle(rootDomain, options = {}) {
         if (!response.ok) return '';
 
         // 只读前 64KB，标题一定在 <head> 里
-        const text = new TextDecoder().decode(await readResponseBufferWithLimit(response, 1024 * 1024)).slice(0, 65536);
+        const text = new TextDecoder()
+            .decode(await readResponseBufferWithLimit(response, 1024 * 1024))
+            .slice(0, 65536);
         const match = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
         if (!match) return '';
 
@@ -359,7 +370,8 @@ async function readSubscriptionNodeCache(storage, sub, bounded = false) {
         if (bounded) {
             const timestamp = Date.parse(cached.updatedAt);
             const age = Date.now() - timestamp;
-            if (!Number.isFinite(timestamp) || age < 0 || age >= PERSONAL_SOURCE_CACHE_MAX_AGE) return null;
+            if (!Number.isFinite(timestamp) || age < 0 || age >= PERSONAL_SOURCE_CACHE_MAX_AGE)
+                return null;
         }
         const nodes = cached.nodes.filter(isRealProxyNode);
         return nodes.length > 0 ? { ...cached, nodes } : null;
@@ -590,7 +602,6 @@ function createConcurrencyLimiter(limit) {
         });
 }
 
-
 /**
  * Fetch and parse a raw upstream source once with a stable server-side User-Agent.
  * Source-level operators, profile rules and output conversion are intentionally not
@@ -598,13 +609,10 @@ function createConcurrencyLimiter(limit) {
  */
 export async function fetchRemoteSourceSnapshot(sub, storage = null, context = null) {
     assertPublicNetworkUrl(sub.url);
-    const customUserAgent = typeof sub.customUserAgent === 'string'
-        ? sub.customUserAgent.trim()
-        : '';
+    const customUserAgent =
+        typeof sub.customUserAgent === 'string' ? sub.customUserAgent.trim() : '';
     const userAgent = customUserAgent || getProcessedUserAgent('MiSub-Backend', sub.url);
-    const url = sub.fetchProxy
-        ? buildFetchProxyUrl(sub.fetchProxy, sub.url, userAgent)
-        : sub.url;
+    const url = sub.fetchProxy ? buildFetchProxyUrl(sub.fetchProxy, sub.url, userAgent) : sub.url;
     const safeUrl = assertPublicNetworkUrl(url).toString();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 12000);
@@ -629,13 +637,11 @@ export async function fetchRemoteSourceSnapshot(sub, storage = null, context = n
         text = await decodeBase64Content(encodeArrayBufferToBase64(buffer));
         parsed = parseNodeList(text);
     }
-    const nodes = parsed.map((node) => node.url).filter(
-        (node) => isRealProxyNode(node) || /^https?:\/\//i.test(String(node || ''))
-    );
+    const nodes = parsed
+        .map((node) => node.url)
+        .filter((node) => isRealProxyNode(node) || /^https?:\/\//i.test(String(node || '')));
     if (!nodes.length) throw new Error('No valid proxy nodes in upstream response');
-    const userInfo = parseSubscriptionUserInfoHeader(
-        response.headers.get('subscription-userinfo')
-    );
+    const userInfo = parseSubscriptionUserInfoHeader(response.headers.get('subscription-userinfo'));
     const detectedName = parseSubscriptionProfileTitle(response.headers);
     return { nodes, userInfo, detectedName };
 }
@@ -668,36 +674,25 @@ export async function generateCombinedNodeList(
     // 判断是否在节点名称前添加分组名称
     const prependGroupName = profilePrefixSettings?.prependGroupName ?? false;
 
-    // [修复] 多级 Emoji 开关控制逻辑
-    const nodeTransformConfig = profilePrefixSettings?.nodeTransform;
-    const templateEnabled =
-        nodeTransformConfig?.enabled && nodeTransformConfig?.rename?.template?.enabled;
-    const defaultTemplate = '{emoji}{region}-{protocol}-{index}';
-    const effectiveTemplate = nodeTransformConfig?.rename?.template?.template || defaultTemplate;
-    const templateContainsEmoji = templateEnabled && effectiveTemplate.includes('{emoji}');
-
-    // 确定最终是否保留/添加 Emoji
-    // 优先级：nodeTransform.addFlagEmoji (来自 URL 或组件设置) > config.enableFlagEmoji (全局设置)
-    const emojiEnabledByConfig = config.enableFlagEmoji !== false;
-    const emojiExplicitlyDisabled = nodeTransformConfig?.addFlagEmoji === false;
-    const emojiExplicitlyEnabled = nodeTransformConfig?.addFlagEmoji === true;
-
-    let shouldKeepEmoji = emojiEnabledByConfig;
-    if (emojiExplicitlyDisabled) shouldKeepEmoji = false;
-    if (emojiExplicitlyEnabled) shouldKeepEmoji = true;
-
-    // 强制约束：如果启用了模板命名且模板不含 {emoji}，则必须移除
-    if (templateEnabled && !templateContainsEmoji) {
+    const profileOperators = ensureArray(profilePrefixSettings?.operators);
+    const activeOperators = profileOperators.length
+        ? profileOperators
+        : ensureArray(config.defaultOperators);
+    const template = activeOperators.find(
+        (op) => op.enabled !== false && op.type === 'rename' && op.params?.template?.enabled
+    )?.params.template;
+    const templateEnabled = Boolean(template);
+    const explicitEmoji = profilePrefixSettings?.addFlagEmoji;
+    let shouldKeepEmoji = explicitEmoji ?? config.enableFlagEmoji !== false;
+    if (templateEnabled && !String(template.template || '').includes('{emoji}'))
         shouldKeepEmoji = false;
-    }
 
     // 手动节点前缀文本
     const manualNodePrefix = profilePrefixSettings?.manualNodePrefix ?? '\u624b\u52a8\u8282\u70b9';
 
     // [重要] 当智能重命名模板启用时，跳过前缀添加，因为智能重命名会完全覆盖节点名称
     // 用户可以在模板中使用 {name} 变量来保留原始信息
-    const skipPrefixDueToRenaming =
-        nodeTransformConfig?.enabled && nodeTransformConfig?.rename?.template?.enabled;
+    const skipPrefixDueToRenaming = templateEnabled;
 
     // --- 阶段 1: 数据准备与手动节点处理 ---
 
@@ -709,26 +704,23 @@ export async function generateCombinedNodeList(
 
         // 1. [配置水合] 执行 Workflow 算子 (操作符)
         let subOperators = ensureArray(subSource?.operators);
-        if (
-            !subOperators.length &&
-            subSource?.nodeTransform?.enabled &&
-            subSource.nodeTransform.operators
-        ) {
-            subOperators = ensureArray(subSource.nodeTransform.operators);
-        }
-
         if (subOperators.length > 0) {
             currentNodes = await runOperatorChain(currentNodes, subOperators, {
                 subName: subSource?.name,
                 userAgent,
                 config,
-                nodeMetadataByUrl: new Map(currentNodes.map(url => {
-                    const hints = context.sourceRegionHints?.get(nodeRegionIdentity(url));
-                    const region = hints ? resolveNodeRegion(parseNodeInfo(url).name, {
-                        ...hints, regionOverrides: config.regionOverrides,
-                    }) : '';
-                    return [url, region ? { metadata: { regionZh: region } } : {}];
-                })),
+                nodeMetadataByUrl: new Map(
+                    currentNodes.map((url) => {
+                        const hints = context.sourceRegionHints?.get(nodeRegionIdentity(url));
+                        const region = hints
+                            ? resolveNodeRegion(parseNodeInfo(url).name, {
+                                  ...hints,
+                                  regionOverrides: config.regionOverrides,
+                              })
+                            : '';
+                        return [url, region ? { metadata: { regionZh: region } } : {}];
+                    })
+                ),
             });
         }
 
@@ -805,7 +797,10 @@ export async function generateCombinedNodeList(
             const cached = await readSubscriptionNodeCache(storage, sub, personal);
             if (usingFallback && personal && cached?.nodes?.length) {
                 const timestamp = Date.parse(cached.updatedAt);
-                context.cachedFallbackTimestamp = Math.min(context.cachedFallbackTimestamp ?? timestamp, timestamp);
+                context.cachedFallbackTimestamp = Math.min(
+                    context.cachedFallbackTimestamp ?? timestamp,
+                    timestamp
+                );
             }
             return cached?.nodes || [];
         };
@@ -976,25 +971,30 @@ export async function generateCombinedNodeList(
             ? [...snapshot.nodes]
             : await applySubscriptionTransforms(snapshot.nodes, sub);
         // Corrections affect only generated output; source snapshots remain untouched.
-        const preferences = storage && sub.id
-            ? await readRegionPreferences(storage, sub.id) : { overrides: {} };
-        const localizedNodes = await Promise.all(validNodes.map(async (url) => {
-            const fingerprint = await fingerprintNode(url);
-            const info = parseNodeInfo(url);
-            const region = resolveNodeRegion(info.name, {
-                manualRegion: preferences.overrides[fingerprint],
-                regionOverrides: config.regionOverrides,
-                defaultRegion: sub.defaultRegion,
-            });
-            const name = correctedName(url, region);
-            if (name && url.toLowerCase().startsWith('ssr://')) return replaceSsrDisplayName(url, name);
-            return name ? applyManualNodeName(url, name) : url;
-        }));
+        const preferences =
+            storage && sub.id ? await readRegionPreferences(storage, sub.id) : { overrides: {} };
+        const localizedNodes = await Promise.all(
+            validNodes.map(async (url) => {
+                const fingerprint = await fingerprintNode(url);
+                const info = parseNodeInfo(url);
+                const region = resolveNodeRegion(info.name, {
+                    manualRegion: preferences.overrides[fingerprint],
+                    regionOverrides: config.regionOverrides,
+                    defaultRegion: sub.defaultRegion,
+                });
+                const name = correctedName(url, region);
+                if (name && url.toLowerCase().startsWith('ssr://'))
+                    return replaceSsrDisplayName(url, name);
+                return name ? applyManualNodeName(url, name) : url;
+            })
+        );
         const shouldPrependSubscriptions = profilePrefixSettings?.enableSubscriptions ?? true;
         const shouldAddSubPrefix = shouldPrependSubscriptions && !skipPrefixDueToRenaming;
-        return (shouldAddSubPrefix && sub.name
-            ? localizedNodes.map((node) => prependNodeName(node, sub.name))
-            : localizedNodes).join('\n');
+        return (
+            shouldAddSubPrefix && sub.name
+                ? localizedNodes.map((node) => prependNodeName(node, sub.name))
+                : localizedNodes
+        ).join('\n');
     };
 
     // 使用并发控制器限制同时请求数量，避免网络拥塞
@@ -1020,25 +1020,7 @@ export async function generateCombinedNodeList(
     }
 
     // --- 阶段 2: 核心转换引擎 (Logic Transformation Engine) ---
-    // 优先级: 订阅组 Operator Chain > 全局默认 Operator Chain > 旧版 Node Pipeline (桥接模式)
-
-    let activeOperators = [];
-
-    // 获取工作流配置（支持字符串自动解析）
-    if (profilePrefixSettings?.operators) {
-        activeOperators = ensureArray(profilePrefixSettings.operators);
-    }
-
-    if (!activeOperators.length && config.defaultOperators) {
-        activeOperators = ensureArray(config.defaultOperators);
-    }
-
-    if (!activeOperators.length) {
-        const legacyConfig = nodeTransformConfig?.enabled
-            ? nodeTransformConfig
-            : config.defaultNodeTransform;
-        activeOperators = adaptLegacyTransform(legacyConfig);
-    }
+    // 订阅组规则链优先，其次使用全局规则链。
 
     // 2.1 执行 Workflow 链式处理 (算子操作)
     if (activeOperators.length > 0) {
@@ -1046,13 +1028,18 @@ export async function generateCombinedNodeList(
             subName: profilePrefixSettings?.name,
             userAgent,
             config,
-            nodeMetadataByUrl: new Map(currentLines.map(url => {
-                const hints = context.sourceRegionHints?.get(nodeRegionIdentity(url));
-                const region = hints ? resolveNodeRegion(parseNodeInfo(url).name, {
-                    ...hints, regionOverrides: config.regionOverrides,
-                }) : '';
-                return [url, region ? { metadata: { regionZh: region } } : {}];
-            })),
+            nodeMetadataByUrl: new Map(
+                currentLines.map((url) => {
+                    const hints = context.sourceRegionHints?.get(nodeRegionIdentity(url));
+                    const region = hints
+                        ? resolveNodeRegion(parseNodeInfo(url).name, {
+                              ...hints,
+                              regionOverrides: config.regionOverrides,
+                          })
+                        : '';
+                    return [url, region ? { metadata: { regionZh: region } } : {}];
+                })
+            ),
         });
     }
 
@@ -1401,102 +1388,6 @@ function filterNodes(nodes, rules, mode = 'exclude') {
         }
         return !(protocolHit || nameHit);
     });
-}
-
-/**
- * 桥接模式：将旧版 NodeTransform 配置转换为新的 Operator 列表
- * @param {Object} config - 旧版配置对象
- * @returns {Array} - 转换后的操作符列表
- */
-function adaptLegacyTransform(config) {
-    if (!config || !config.enabled) return [];
-
-    const ops = [];
-
-    // 1. 过滤器 (Filter)
-    const filter = config.filter;
-    if (
-        filter &&
-        (filter.include?.enabled ||
-            filter.exclude?.enabled ||
-            filter.protocols?.enabled ||
-            filter.regions?.enabled ||
-            filter.script?.enabled ||
-            filter.useless?.enabled)
-    ) {
-        ops.push({
-            id: 'legacy-filter',
-            type: 'filter',
-            enabled: true,
-            params: { ...filter },
-        });
-    }
-
-    // 2. 正则重命名 (Regex Rename)
-    const regex = config.rename?.regex;
-    if (regex?.enabled && regex.rules?.length > 0) {
-        ops.push({
-            id: 'legacy-rename-regex',
-            type: 'rename',
-            enabled: true,
-            params: { regex: { ...regex } },
-        });
-    }
-
-    // 3. 模板重命名 (Template Rename)
-    const template = config.rename?.template;
-    if (template?.enabled) {
-        ops.push({
-            id: 'legacy-rename-template',
-            type: 'rename',
-            enabled: true,
-            params: {
-                template: {
-                    enabled: true,
-                    template: template.template || '{emoji}{region}-{protocol}-{index}',
-                    offset: template.indexStart || 1,
-                    indexScope: template.indexScope || 'region',
-                },
-            },
-        });
-    }
-
-    // 4. 重命名脚本 (Script Rename)
-    const renameScript = config.rename?.script;
-    if (renameScript?.enabled && renameScript.expression) {
-        ops.push({
-            id: 'legacy-rename-script',
-            type: 'script',
-            enabled: true,
-            params: {
-                code: `return ($nodes) => { return $nodes.map(n => { n.name = (${renameScript.expression})(n.name, n); return n; }); }`,
-            },
-        });
-    }
-
-    // 5. 去重 (Dedup)
-    const dedup = config.dedup;
-    if (dedup?.enabled) {
-        ops.push({
-            id: 'legacy-dedup',
-            type: 'dedup',
-            enabled: true,
-            params: { ...dedup },
-        });
-    }
-
-    // 6. 排序 (Sort)
-    const sort = config.sort;
-    if (sort?.enabled && sort.keys?.length > 0) {
-        ops.push({
-            id: 'legacy-sort',
-            type: 'sort',
-            enabled: true,
-            params: { ...sort },
-        });
-    }
-
-    return ops;
 }
 
 /**

@@ -1,4 +1,4 @@
-# MiSub · zzpice 后端技术细节
+# Zzp Sub 后端技术细节
 
 当前独立版本为 v1.0.0。生产个人模式采用 Cloudflare Pages Functions + D1 + KV；D1 是业务数据和认证设置的唯一来源，KV 不提供认证或业务数据故障回退。
 

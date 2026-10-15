@@ -17,7 +17,7 @@ import { getUniqueName } from './name-utils.js';
 function deduplicateNames(proxies, groups, options) {
     if (!Array.isArray(proxies)) return;
     const usedNames = createReservedNameMap(proxies, options);
-    groups.forEach(group => usedNames.set(group.name, 1));
+    groups.forEach((group) => usedNames.set(group.name, 1));
     proxies.forEach((proxy) => {
         if (proxy && proxy.name) {
             proxy.name = getUniqueName(proxy.name, usedNames);

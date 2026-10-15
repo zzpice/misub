@@ -222,7 +222,7 @@
     >
         <template #title>
             <div class="flex items-center gap-3">
-                <div class="p-2 misub-radius-lg bg-indigo-500/10">
+                <div class="p-2 sub-radius-lg bg-indigo-500/10">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         class="h-6 w-6 text-indigo-500"
@@ -411,7 +411,7 @@
                     </div>
 
                     <div
-                        class="relative border misub-radius-lg transition-all duration-300 overflow-hidden bg-gray-50 dark:bg-black/20 border-gray-200 dark:border-white/10"
+                        class="relative border sub-radius-lg transition-all duration-300 overflow-hidden bg-gray-50 dark:bg-black/20 border-gray-200 dark:border-white/10"
                         :class="[
                             urlFocused
                                 ? 'ring-2 ring-primary-500/50 border-primary-500 dark:border-primary-500'
@@ -464,7 +464,7 @@
 
                         <!-- Focus Glow -->
                         <div
-                            class="absolute inset-0 misub-radius-lg pointer-events-none transition-opacity duration-300 opacity-0 group-focus-within:opacity-100 ring-1 ring-primary-500/20"
+                            class="absolute inset-0 sub-radius-lg pointer-events-none transition-opacity duration-300 opacity-0 group-focus-within:opacity-100 ring-1 ring-primary-500/20"
                         ></div>
                     </div>
                 </div>
@@ -495,7 +495,7 @@
                         </span>
                     </div>
                     <div
-                        class="max-h-48 overflow-y-auto misub-radius-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
+                        class="max-h-48 overflow-y-auto sub-radius-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
                     >
                         <div
                             v-for="(node, idx) in parsedNodes.slice(0, 10)"

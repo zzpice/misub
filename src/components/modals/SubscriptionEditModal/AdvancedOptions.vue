@@ -22,10 +22,10 @@
         <select
             id="sub-edit-ua"
             v-model="editingSubscription.customUserAgent"
-            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 misub-radius-md dark:text-white"
+            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 sub-radius-md dark:text-white"
         >
             <option value="">{{ t('subscriptions.defaultUa') }}</option>
-            <option value="MiSub">MiSub</option>
+            <option value="Zzp Sub">Zzp Sub</option>
             <option value="clash-verge/v2.4.3">Clash Verge</option>
             <option value="clash.meta">Clash Meta</option>
             <option value="v2rayN/7.23">v2rayN</option>
@@ -55,7 +55,7 @@
             type="url"
             inputmode="url"
             placeholder="https://example.com"
-            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 misub-radius-md dark:text-white font-mono text-sm"
+            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 sub-radius-md dark:text-white font-mono text-sm"
         />
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
             {{ t('subscriptions.websiteHint') }}
@@ -71,7 +71,7 @@
             v-model="editingSubscription.notes"
             :placeholder="t('subscriptions.notesPlaceholder')"
             rows="2"
-            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 misub-radius-md dark:text-white"
+            class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 sub-radius-md dark:text-white"
         ></textarea>
     </div>
 

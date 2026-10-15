@@ -176,6 +176,7 @@
         </div>
 
         <LogModal
+            v-if="showLogModal"
             :show="showLogModal"
             @update:show="showLogModal = $event"
             :filter-profile-name="logProfileName"
@@ -206,6 +207,7 @@
         </Modal>
 
         <NodePreviewModal
+            v-if="showNodePreviewModal"
             :show="showNodePreviewModal"
             :subscription-id="null"
             :subscription-name="''"
@@ -215,7 +217,12 @@
             @update:show="showNodePreviewModal = $event"
         />
 
-        <QRCodeModal v-model:show="showQRCodeModal" :url="qrCodeUrl" :title="qrCodeTitle" />
+        <QRCodeModal
+            v-if="showQRCodeModal"
+            v-model:show="showQRCodeModal"
+            :url="qrCodeUrl"
+            :title="qrCodeTitle"
+        />
 
         <CopyLinkModal
             v-if="showCopyModal && showCopyModalProfile"

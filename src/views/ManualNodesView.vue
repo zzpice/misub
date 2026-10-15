@@ -7,10 +7,18 @@
     import { extractNodeName } from '../lib/utils.js';
     import ManualNodePanel from '../components/nodes/ManualNodePanel.vue';
     import Modal from '../components/forms/Modal.vue';
-    import ManualNodeEditModal from '../components/modals/ManualNodeEditModal.vue';
-    import ManualNodeDedupModal from '../components/modals/ManualNodeDedupModal.vue';
-    import SubscriptionImportModal from '../components/modals/SubscriptionImportModal.vue';
-    import BatchGroupModal from '../components/modals/BatchGroupModal.vue'; // Added
+    const ManualNodeEditModal = defineAsyncComponent(
+        () => import('../components/modals/ManualNodeEditModal.vue')
+    );
+    const ManualNodeDedupModal = defineAsyncComponent(
+        () => import('../components/modals/ManualNodeDedupModal.vue')
+    );
+    const SubscriptionImportModal = defineAsyncComponent(
+        () => import('../components/modals/SubscriptionImportModal.vue')
+    );
+    const BatchGroupModal = defineAsyncComponent(
+        () => import('../components/modals/BatchGroupModal.vue')
+    );
     import { useI18n } from '../i18n/index.js';
     import { readRawPreference, writeRawPreference } from '../utils/local-preference.js';
 
@@ -25,7 +33,7 @@
 
     // Component Logic Reuse
     const isSortingNodes = ref(false);
-    const manualNodeViewMode = ref(readRawPreference('manualNodeViewMode') || 'card');
+    const manualNodeViewMode = ref(readRawPreference('manualNodeViewMode') || 'list');
     const showDeleteNodesModal = ref(false);
     const showBatchDeleteModal = ref(false);
     const batchDeleteIds = ref([]);
@@ -218,6 +226,7 @@
         />
 
         <ManualNodeEditModal
+            v-if="showNodeModal"
             v-model:show="showNodeModal"
             :is-new="isNewNode"
             :editing-node="editingNode"
@@ -226,6 +235,7 @@
             @input-url="handleNodeUrlInput"
         />
         <ManualNodeDedupModal
+            v-if="showDedupModal"
             v-model:show="showDedupModal"
             :plan="dedupPlan"
             @confirm="
@@ -236,6 +246,7 @@
         />
 
         <BatchGroupModal
+            v-if="showBatchGroupModal"
             v-model:show="showBatchGroupModal"
             :groups="manualNodeGroups"
             @confirm="handleBatchGroupConfirm"
@@ -276,6 +287,7 @@
         </Modal>
 
         <SubscriptionImportModal
+            v-if="showSubscriptionImportModal"
             :show="showSubscriptionImportModal"
             @update:show="showSubscriptionImportModal = $event"
             :add-nodes-from-bulk="addNodesFromBulk"

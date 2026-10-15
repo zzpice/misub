@@ -1,6 +1,6 @@
 # 订阅请求链路
 
-本文档记录 MiSub 当前真实订阅请求链路，重点覆盖路由入口、token/profile 解析、浏览器伪装、订阅源读取、节点解析、缓存、转换输出、匿名成功拉取计数与兼容日志。
+本文档记录 Zzp Sub 当前真实订阅请求链路，重点覆盖路由入口、token/profile 解析、浏览器伪装、订阅源读取、节点解析、缓存、转换输出、匿名成功拉取计数与兼容日志。
 
 > 代码基准：`functions/[[path]].js`、`functions/modules/subscription/main-handler.js`、`functions/services/subscription-service.js`、`functions/modules/subscription/cache-manager.js`、`functions/services/node-cache-service.js`。
 
@@ -340,7 +340,7 @@ HTTP 订阅源定义为 URL 以 `http` 开头的订阅项。
 当 `effectiveEngine === 'external'` 且目标格式不是 `base64`：
 
 1. 使用 `buildExternalSubconverterUrl()` 构造第三方后端 URL。
-2. 将 MiSub 已预处理后的节点列表作为内联 `url` 参数传给 subconverter。
+2. 将 Zzp Sub 已预处理后的节点列表作为内联 `url` 参数传给 subconverter。
 3. 节点用 `|` 拼接，避免部分后端只解析首行或报 No nodes found。
 4. 透传/设置：
     - `target`
@@ -461,6 +461,6 @@ Telegram Bot 访问通知已删除；访问日志在个人部署默认关闭。
 - 聚合缓存不能被空节点覆盖。
 - 有 HTTP 订阅源时，只有至少一个远程源真正成功，才应刷新聚合缓存时间。
 - 单源缓存只保存真实代理节点，不能保存流量/到期/公告伪节点。
-- 第三方转换模式使用 MiSub 预处理后的节点列表作为内联输入，不应回退为原始订阅 URL，除非节点列表为空。
+- 第三方转换模式使用 Zzp Sub 预处理后的节点列表作为内联输入，不应回退为原始订阅 URL，除非节点列表为空。
 - Meta/Mihomo 链式代理语义应使用 `dialer-proxy`，不要恢复旧 relay 策略组语义。
 - Hiddify 兼容模式会影响引擎和模板应用，修改目标格式逻辑时必须保留相关判断。

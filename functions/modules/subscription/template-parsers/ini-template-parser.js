@@ -185,7 +185,7 @@ export function parseIniTemplate(templateText, options = {}) {
 
     return createUnifiedTemplateModel({
         meta: {
-            name: options.fileName || 'MiSub',
+            name: options.fileName || 'Zzp-Sub',
             source: 'ini',
             target: options.targetFormat || 'clash',
             // [逻辑说明] ruleLevel 在 INI 模式下暂不直接影响生成，因为 INI 自带了 hardcoded rules。

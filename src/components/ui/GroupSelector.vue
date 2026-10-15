@@ -128,7 +128,7 @@
                 :value="modelValue"
                 type="text"
                 :placeholder="placeholder"
-                class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 misub-radius-lg focus-visible:ring-1 focus-visible:ring-indigo-500 focus:border-indigo-500 text-sm transition-all h-[42px] dark:text-white placeholder-gray-400"
+                class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 sub-radius-lg focus-visible:ring-1 focus-visible:ring-indigo-500 focus:border-indigo-500 text-sm transition-all h-[42px] dark:text-white placeholder-gray-400"
                 @input="handleInput"
                 @focus="handleFocus"
                 @keydown.enter="isOpen = false"
@@ -191,7 +191,7 @@
                 <div
                     v-if="isOpen && (groups.length > 0 || modelValue)"
                     id="group-selector-dropdown"
-                    class="absolute bg-white dark:bg-gray-800 misub-radius-lg shadow-lg border border-gray-100 dark:border-gray-700 max-h-60 overflow-auto py-1 custom-scrollbar"
+                    class="absolute bg-white dark:bg-gray-800 sub-radius-lg shadow-lg border border-gray-100 dark:border-gray-700 max-h-60 overflow-auto py-1 custom-scrollbar"
                     :style="dropdownStyle"
                 >
                     <button

@@ -70,7 +70,7 @@
 <template>
     <div class="space-y-4">
         <div
-            class="relative border-2 border-dashed misub-radius-lg p-6 text-center transition-all duration-200 cursor-pointer"
+            class="relative border-2 border-dashed sub-radius-lg p-6 text-center transition-all duration-200 cursor-pointer"
             :class="[
                 isDragging
                     ? 'border-primary-500 bg-primary-500/5'
@@ -116,7 +116,7 @@
         </div>
 
         <div
-            class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 misub-radius-md p-3"
+            class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 sub-radius-md p-3"
         >
             <h4 class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
                 {{ t('fileImport.detectedHeading') }}
@@ -169,13 +169,13 @@
 
         <p
             v-if="errorMessage"
-            class="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 misub-radius-md p-2"
+            class="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 sub-radius-md p-2"
         >
             {{ errorMessage }}
         </p>
         <p
             v-if="successMessage"
-            class="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 misub-radius-md p-2"
+            class="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 sub-radius-md p-2"
         >
             {{ successMessage }}
         </p>

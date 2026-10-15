@@ -366,8 +366,9 @@ export function applySmartModelOptimizations(model) {
         const proxyNames = model.proxies.map((p) => p.name || p.tag).filter(Boolean);
         if (proxyNames.length > 0) {
             // 4. 识别地区分组并注入
-            const nodeEntries = model.proxies.map(proxy => ({
-                tag: proxy.name || proxy.tag, metadata: proxy.metadata,
+            const nodeEntries = model.proxies.map((proxy) => ({
+                tag: proxy.name || proxy.tag,
+                metadata: proxy.metadata,
             }));
             const regions = groupNodeLinesByRegion(nodeEntries);
 

@@ -79,10 +79,18 @@
                             <div :class="selectionMode ? 'col-span-3' : 'col-span-4'">
                                 {{ t('nodePreview.nodeName') }}
                             </div>
-                            <div class="col-span-3 hidden sm:block">{{ t('nodePreview.serverAddress') }}</div>
-                            <div class="col-span-2 hidden md:block text-center">{{ t('nodePreview.port') }}</div>
-                            <div class="col-span-1 hidden sm:block text-center">{{ t('nodePreview.type') }}</div>
-                            <div class="col-span-1 hidden sm:block text-center">{{ t('nodePreview.region') }}</div>
+                            <div class="col-span-3 hidden sm:block">
+                                {{ t('nodePreview.serverAddress') }}
+                            </div>
+                            <div class="col-span-2 hidden md:block text-center">
+                                {{ t('nodePreview.port') }}
+                            </div>
+                            <div class="col-span-1 hidden sm:block text-center">
+                                {{ t('nodePreview.type') }}
+                            </div>
+                            <div class="col-span-1 hidden sm:block text-center">
+                                {{ t('nodePreview.region') }}
+                            </div>
                             <div class="col-span-1 text-center">{{ t('nodePreview.action') }}</div>
                         </div>
                     </div>
@@ -184,14 +192,22 @@
                                     <div class="col-span-1 hidden sm:block flex justify-center">
                                         <button
                                             type="button"
-                                            :disabled="!editableRegions || !node.fingerprint || selectionMode"
+                                            :disabled="
+                                                !editableRegions ||
+                                                !node.fingerprint ||
+                                                selectionMode
+                                            "
                                             @click.stop="emit('edit-region', node)"
                                             :title="editableRegions ? '点击修改节点地区' : ''"
                                             class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400 disabled:cursor-default"
-                                            :class="{ 'hover:bg-indigo-100 dark:hover:bg-indigo-500/20': editableRegions }"
+                                            :class="{
+                                                'hover:bg-indigo-100 dark:hover:bg-indigo-500/20':
+                                                    editableRegions,
+                                            }"
                                             style="min-width: 60px"
                                         >
-                                            {{ parseNodeInfo(node).region }}{{ node.regionSource === 'manual' ? ' ✎' : '' }}
+                                            {{ parseNodeInfo(node).region
+                                            }}{{ node.regionSource === 'manual' ? ' ✎' : '' }}
                                         </button>
                                     </div>
 

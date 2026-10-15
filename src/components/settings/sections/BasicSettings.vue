@@ -11,9 +11,7 @@
 <template>
     <div class="space-y-8">
         <!-- 默认显示语言 -->
-        <div
-            class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70"
-        >
+        <div class="settings-section">
             <SectionHeader
                 :title="t('settings.defaultLanguageTitle')"
                 :description="t('settings.defaultLanguageDesc')"
@@ -69,7 +67,7 @@
             <div class="max-w-xs">
                 <select
                     v-model="settings.defaultLocale"
-                    class="block w-full px-3 py-2.5 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus-visible:ring-2 focus-visible:ring-amber-500/40 focus:border-amber-500 sm:text-sm dark:text-white transition-colors"
+                    class="block w-full px-3 py-2.5 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 sub-radius-lg shadow-sm focus-visible:ring-2 focus-visible:ring-amber-500/40 focus:border-amber-500 sm:text-sm dark:text-white transition-colors"
                 >
                     <option value="zh-CN">{{ t('settings.defaultLanguageZh') }}</option>
                     <option value="en-US">{{ t('settings.defaultLanguageEn') }}</option>
@@ -78,9 +76,7 @@
         </div>
 
         <!-- 订阅基本信息配置 -->
-        <div
-            class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70"
-        >
+        <div class="settings-section">
             <SectionHeader
                 :title="t('settings.subscriptionConfigTitle')"
                 :description="t('settings.subscriptionConfigDesc')"
@@ -108,16 +104,14 @@
                     <Input
                         :label="t('settings.customFileName')"
                         v-model="settings.FileName"
-                        class="misub-radius-lg"
+                        class="sub-radius-lg"
                     />
                 </div>
             </div>
         </div>
 
         <!-- 功能开关区域 -->
-        <div
-            class="rounded-xl border border-gray-100/80 bg-white/90 p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/70"
-        >
+        <div class="settings-section">
             <SectionHeader
                 :title="t('settings.featureControlTitle')"
                 :description="t('settings.featureControlDesc')"
@@ -143,7 +137,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- 流量与到期时间节点 -->
                 <div
-                    class="flex items-center justify-between p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 misub-radius-lg"
+                    class="flex items-center justify-between p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 sub-radius-lg"
                 >
                     <div>
                         <p class="text-sm font-medium text-gray-900 dark:text-gray-200">
@@ -158,7 +152,7 @@
 
                 <!-- 合并到期时间策略 -->
                 <div
-                    class="p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 misub-radius-lg space-y-2"
+                    class="p-4 bg-white/70 dark:bg-gray-900/50 border border-gray-200/70 dark:border-white/10 sub-radius-lg space-y-2"
                 >
                     <div>
                         <p class="text-sm font-medium text-gray-900 dark:text-gray-200">
@@ -170,7 +164,7 @@
                     </div>
                     <select
                         v-model="settings.mergeExpireStrategy"
-                        class="block w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 misub-radius-lg shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
+                        class="block w-full px-3 py-2 bg-white/80 dark:bg-gray-900/60 border border-gray-200/80 dark:border-white/10 sub-radius-lg shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus:border-indigo-500 sm:text-sm dark:text-white transition-colors"
                     >
                         <option value="max">{{ t('settings.mergeExpireMax') }}</option>
                         <option value="min">{{ t('settings.mergeExpireMin') }}</option>
@@ -178,6 +172,5 @@
                 </div>
             </div>
         </div>
-
     </div>
 </template>

@@ -27,10 +27,11 @@
         (newSub) => {
             if (newSub) {
                 useFetchProxy.value = !!newSub.fetchProxy;
-                if (typeof newSub.autoUpdateEnabled !== 'boolean')
-                    newSub.autoUpdateEnabled = true;
-                if (!Number.isFinite(Number(newSub.autoUpdateIntervalMinutes)) ||
-                    Number(newSub.autoUpdateIntervalMinutes) < 5)
+                if (typeof newSub.autoUpdateEnabled !== 'boolean') newSub.autoUpdateEnabled = true;
+                if (
+                    !Number.isFinite(Number(newSub.autoUpdateIntervalMinutes)) ||
+                    Number(newSub.autoUpdateIntervalMinutes) < 5
+                )
                     newSub.autoUpdateIntervalMinutes = 60;
             }
         },
@@ -119,23 +120,35 @@
                 min="5"
                 step="5"
                 class="w-28 rounded-lg border border-gray-200 dark:border-gray-600 bg-transparent px-3 py-2"
-                @blur="editingSubscription.autoUpdateIntervalMinutes = Math.max(
-                    5, Math.floor(Number(editingSubscription.autoUpdateIntervalMinutes) || 60)
-                )"
+                @blur="
+                    editingSubscription.autoUpdateIntervalMinutes = Math.max(
+                        5,
+                        Math.floor(Number(editingSubscription.autoUpdateIntervalMinutes) || 60)
+                    )
+                "
             />
         </label>
     </div>
 
     <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
-        <label for="sub-default-region" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">订阅源默认地区</label>
-        <select id="sub-default-region" v-model="editingSubscription.defaultRegion"
-            class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200">
+        <label
+            for="sub-default-region"
+            class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
+            >订阅源默认地区</label
+        >
+        <select
+            id="sub-default-region"
+            v-model="editingSubscription.defaultRegion"
+            class="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+        >
             <option value="">自动识别（不设默认值）</option>
             <option v-for="region in regionOptions" :key="region.name" :value="region.name">
                 {{ region.flag }} {{ region.name }}
             </option>
         </select>
-        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">仅在节点名称无法明确识别时使用，不覆盖国旗、国家或城市信息。</p>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            仅在节点名称无法明确识别时使用，不覆盖国旗、国家或城市信息。
+        </p>
     </div>
 
     <!-- 专属拉取代理 -->

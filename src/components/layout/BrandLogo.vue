@@ -1,4 +1,5 @@
 <script setup>
+    import { BRAND_NAME } from '../../lib/brand.js';
     import BrandMark from './BrandMark.vue';
 
     defineProps({
@@ -13,6 +14,6 @@
         <div class="nav-brand-badge nav-brand-badge-sm">
             <BrandMark :size="iconSize" />
         </div>
-        <span class="nav-brand-text" :class="textSizeClass">MiSub</span>
+        <span class="nav-brand-text" :class="textSizeClass">{{ BRAND_NAME }}</span>
     </router-link>
 </template>

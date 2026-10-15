@@ -167,12 +167,16 @@ describe('SubscriptionPanel UX', () => {
             Array.from(document.body.querySelectorAll('[role="dialog"] button')).map(
                 (el) => new DOMWrapper(el)
             );
-        await dialogButtons().find((button) => button.text() === '取消').trigger('click');
+        await dialogButtons()
+            .find((button) => button.text() === '取消')
+            .trigger('click');
         expect(wrapper.emitted('assign-airport-group')).toBeUndefined();
 
         await wrapper.get('button[title="指定机场分组"]').trigger('click');
         await new DOMWrapper(document.body.querySelector('[role="dialog"] select')).setValue('g1');
-        await dialogButtons().find((button) => button.text() === '保存机场归属').trigger('click');
+        await dialogButtons()
+            .find((button) => button.text() === '保存机场归属')
+            .trigger('click');
         expect(wrapper.emitted('assign-airport-group')).toEqual([
             [['s1', 's2'], { groupId: 'g1', name: 'Existing' }],
         ]);

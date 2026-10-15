@@ -1571,10 +1571,15 @@ export function urlsToClashProxies(urls, options = {}) {
             const sourceHints = options.sourceRegionHints?.get(nodeRegionIdentity(url));
             if (sourceHints) {
                 const region = resolveNodeRegion(proxy.name, {
-                    ...sourceHints, regionOverrides: options.regionOverrides,
+                    ...sourceHints,
+                    regionOverrides: options.regionOverrides,
                 });
-                proxy.metadata = { ...proxy.metadata, region, resolvedRegion: region,
-                    flag: getRegionEmoji(region) };
+                proxy.metadata = {
+                    ...proxy.metadata,
+                    region,
+                    resolvedRegion: region,
+                    flag: getRegionEmoji(region),
+                };
             }
 
             // [自动补全] 仅在名称中完全没有国旗/地球 Emoji 时才尝试补全，避免重复添加或干扰用户重命名

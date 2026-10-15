@@ -84,7 +84,8 @@ export async function resolveNodeListWithCache({
                 for (const [key, timestamp] of refreshDebounce) {
                     if (timestamp <= cutoff) refreshDebounce.delete(key);
                 }
-                if (refreshDebounce.size >= 256) refreshDebounce.delete(refreshDebounce.keys().next().value);
+                if (refreshDebounce.size >= 256)
+                    refreshDebounce.delete(refreshDebounce.keys().next().value);
             }
             refreshDebounce.set(cacheKey, Date.now());
             triggerBackgroundRefresh(context, () => refreshNodes(true));

@@ -1,7 +1,7 @@
 export const messages = {
     'zh-CN': {
         app: {
-            name: 'MiSub',
+            name: 'Zzp Sub',
             home: '首页',
             language: '语言',
         },
@@ -149,7 +149,7 @@ export const messages = {
             schemeLabel: '配置规则方案 (Scheme)',
             followGlobalScheme: '跟随全局方案',
             externalEngineHint:
-                '第三方后端不支持 MiSub 内置规则源、内置模板和本地 custom: 模板，请选择预设远程模板或自定义 URL。',
+                '第三方后端不支持 Zzp Sub 内置规则源、内置模板和本地 custom: 模板，请选择预设远程模板或自定义 URL。',
             currentGlobal: '当前全局：{value}',
             backendOverride: '第三方后端地址 (Backend URL Override)',
             backendPlaceholder: '留空跟随全局；可填 api.v1.mk',
@@ -485,7 +485,7 @@ export const messages = {
             scopeDataAndSettings: '数据 + 设置',
             scopeDataOnly: '仅数据',
             restoreConfirm:
-                '确定要从备份中恢复吗？\n\n备份范围：{scope}\n恢复会覆盖 MiSub 对应的数据集合，但不会清空整个 KV/D1。',
+                '确定要从备份中恢复吗？\n\n备份范围：{scope}\n恢复会覆盖 Zzp Sub 对应的数据集合，但不会清空整个 KV/D1。',
             restoreFailed: '恢复失败',
             restoreSuccess: '备份已恢复，请刷新页面查看最新数据',
             importFailedWithMessage: '导入失败: {message}',
@@ -574,7 +574,7 @@ export const messages = {
             healthItems: {
                 missingSubscriptions: {
                     title: '还没有机场订阅',
-                    description: '先添加一个机场订阅，MiSub 才能获取节点并生成可用链接。',
+                    description: '先添加一个机场订阅，Zzp Sub 才能获取节点并生成可用链接。',
                     action: '添加机场订阅',
                 },
                 noEnabledSubscriptions: {
@@ -726,6 +726,7 @@ export const messages = {
             loadFailedWithMessage: '加载设置失败: {message}',
             noWhitespace: '输入项中不能包含空格',
             invalidStorageType: '存储类型设置无效',
+            saved: '设置已保存',
             savedReloading: '设置已保存，页面将自动刷新...',
             reloadCountdown: '设置已保存，将在 {seconds} 秒后刷新以应用更改。',
             reloadNow: '立即刷新',
@@ -866,7 +867,7 @@ export const messages = {
             webdavBackupSuccess: 'WebDAV 备份成功',
             webdavBackupFailedWithMessage: 'WebDAV 备份失败: {message}',
             webdavRestoreLocalConfirm:
-                '确定从该备份恢复吗？\n\n备份范围：{scope}\n恢复会按 MiSub 数据域覆盖，不会清空整个 KV/D1，WebDAV 配置会保留当前值。',
+                '确定从该备份恢复吗？\n\n备份范围：{scope}\n恢复会按 Zzp Sub 数据域覆盖，不会清空整个 KV/D1，WebDAV 配置会保留当前值。',
             webdavRestoreFailed: '恢复失败',
             webdavRestoreSuccessReload: '备份已恢复，页面即将刷新',
             webdavRestoreFailedWithMessage: '恢复失败: {message}',
@@ -874,7 +875,7 @@ export const messages = {
             webdavLoadRemoteSuccess: '已获取 {count} 个远端备份',
             webdavLoadRemoteFailedWithMessage: '获取远端备份失败: {message}',
             webdavRestoreRemoteConfirm:
-                '确定从远端备份恢复吗？\n\n{name}\n\n恢复会按 MiSub 数据域覆盖，不会清空整个 KV/D1，WebDAV 配置会保留当前值。',
+                '确定从远端备份恢复吗？\n\n{name}\n\n恢复会按 Zzp Sub 数据域覆盖，不会清空整个 KV/D1，WebDAV 配置会保留当前值。',
             webdavRestoreRemoteSuccessReload: '远端备份已恢复，页面即将刷新',
             webdavRestoreRemoteFailedWithMessage: '远端恢复失败: {message}',
             webdavCronCopied: 'Cron 地址已复制，请按服务集成设置中的密钥方式配置外部定时服务',
@@ -931,7 +932,8 @@ export const messages = {
             cronGuideExternal:
                 '由于 Cloudflare Pages 免费版不支持 Cron Trigger，请使用外部监控服务（如 UptimeRobot, Cron-Job.org）定时访问上方生成的兼容链接。',
             cronGuideBearer: '如果服务支持自定义请求头，也可以使用推荐的 Bearer 方式触发 /cron。',
-            cronGuideFrequency: '建议按订阅源频率和上游限制设置外部触发间隔；服务端会跳过尚未到期的来源。',
+            cronGuideFrequency:
+                '建议按订阅源频率和上游限制设置外部触发间隔；服务端会跳过尚未到期的来源。',
 
             copyFailedManualSelect: '复制失败，请手动选择文本复制',
             copiedShort: '已复制',
@@ -961,7 +963,7 @@ export const messages = {
             transformRulesDesc: '决定节点如何分流和过滤，无论引擎是谁，此配置逻辑均生效。',
             transformRuleSource: '1. 规则来源',
             transformExternalWarning:
-                '使用第三方订阅转换时，无法兼容 MiSub 内置规则、内置预设和本地 custom: 模板。请使用远程预设模板或自定义 URL。',
+                '使用第三方订阅转换时，无法兼容 Zzp Sub 内置规则、内置预设和本地 custom: 模板。请使用远程预设模板或自定义 URL。',
             transformEngineChangeNotice:
                 '切换到第三方后端会调整规则来源并关闭内置选项。原设置仍保存在本次页面状态中；切回内置引擎可恢复。',
             transformRestoreEngineSettings: '恢复内置设置',
@@ -981,7 +983,7 @@ export const messages = {
             transformExternalParams: '第三方后端参数',
             transformBackend: '转换后端',
             transformBackendHint:
-                '只需填写域名，例如 subapi.cmliussss.net 或 api.v1.mk；MiSub 会自动补全为 https://域名/sub。',
+                '只需填写域名，例如 subapi.cmliussss.net 或 api.v1.mk；Zzp Sub 会自动补全为 https://域名/sub。',
             transformTesting: '测试中...',
             transformTestBackend: '测试后端可用性',
             transformTestBackendHint:
@@ -1208,10 +1210,10 @@ export const messages = {
             otherGroup: '其他',
             helperCustomTemplatesOnly: '仅可选择已保存的 custom: 自定义规则模板。',
             helperExcludeBuiltin:
-                '第三方订阅转换仅支持远程模板 URL，无法兼容 MiSub 内置规则、内置预设和本地 custom: 模板。',
+                '第三方订阅转换仅支持远程模板 URL，无法兼容 Zzp Sub 内置规则、内置预设和本地 custom: 模板。',
             helperDefault: '适用于统一模板渲染。',
             thirdPartyNotice:
-                '使用第三方订阅转换时，无法兼容 MiSub 内置规则、内置预设和本地 custom: 模板。请使用远程预设模板或自定义 URL。',
+                '使用第三方订阅转换时，无法兼容 Zzp Sub 内置规则、内置预设和本地 custom: 模板。请使用远程预设模板或自定义 URL。',
             defaultGlobalOption: '默认 / 全局设置',
             pleaseSelect: '请选择...',
             customInputOption: '自定义输入...',
@@ -1242,20 +1244,20 @@ export const messages = {
         },
         transformAssets: {
             builtinMinimal: {
-                name: 'MiSub 内置 极简默认分流',
-                description: 'MiSub 自带的默认极简模板，适合日常通用、新手用户和优先稳定的场景。',
+                name: 'Zzp Sub 内置 极简默认分流',
+                description: 'Zzp Sub 自带的默认极简模板，适合日常通用、新手用户和优先稳定的场景。',
             },
             acl4ssrLite: {
-                name: 'MiSub 内置 ACL4SSR 精简分流',
+                name: 'Zzp Sub 内置 ACL4SSR 精简分流',
                 description:
                     '内置精简 ACL4SSR 分流模板，适合习惯 ACL4SSR 规则且希望保持轻量的用户。',
             },
             mediaAi: {
-                name: 'MiSub 内置 流媒体与 AI 分流',
+                name: 'Zzp Sub 内置 流媒体与 AI 分流',
                 description: '面向流媒体和 AI 服务使用场景的内置模板，保留核心分流和地区候选链。',
             },
             acl4ssrFull: {
-                name: 'MiSub 内置 ACL4SSR 完整分流',
+                name: 'Zzp Sub 内置 ACL4SSR 完整分流',
                 description:
                     '内置完整 ACL4SSR 分流模板，可通过统一模板模型生成 Clash 与 Sing-Box 配置。',
             },
@@ -1423,6 +1425,8 @@ export const messages = {
             requestFailedWithStatus: '请求失败 ({status})',
         },
         common: {
+            skipToContent: '跳到主要内容',
+            discardConfirm: '有未保存的修改，确定放弃吗？',
             searchPlaceholder: '搜索...',
             searchSuggestions: '搜索建议',
             searchResultCount: '找到 {count} 个结果',
@@ -1537,7 +1541,7 @@ export const messages = {
     },
     'en-US': {
         app: {
-            name: 'MiSub',
+            name: 'Zzp Sub',
             home: 'Home',
             language: 'Language',
         },
@@ -1683,7 +1687,7 @@ export const messages = {
             schemeLabel: '配置规则方案 (Scheme)',
             followGlobalScheme: '跟随全局方案',
             externalEngineHint:
-                '第三方后端不支持 MiSub 内置规则源、内置模板和本地 custom: 模板，请选择预设远程模板或自定义 URL。',
+                '第三方后端不支持 Zzp Sub 内置规则源、内置模板和本地 custom: 模板，请选择预设远程模板或自定义 URL。',
             currentGlobal: '当前全局：{value}',
             backendOverride: '第三方后端地址 (Backend URL Override)',
             backendPlaceholder: '留空跟随全局；可填 api.v1.mk',
@@ -1748,11 +1752,11 @@ export const messages = {
             schemeLabel: 'Scheme',
             followGlobalScheme: 'Follow global scheme',
             externalEngineHint:
-                'External backend does not support MiSub built-in sources/templates or local custom: templates. Choose a remote preset or custom URL.',
+                'External backend does not support Zzp Sub built-in sources/templates or local custom: templates. Choose a remote preset or custom URL.',
             currentGlobal: 'Global: {value}',
             backendOverride: 'Backend URL override',
             backendPlaceholder: 'Leave empty for global; e.g. api.v1.mk',
-            backendHint: 'Enter domain only. MiSub adds https:// and /sub at runtime.',
+            backendHint: 'Enter domain only. Zzp Sub adds https:// and /sub at runtime.',
             templateLabel: 'Config template URL',
             presetPlaceholder: 'Select preset...',
             remoteTemplatePlaceholder: 'Enter remote .ini config URL',
@@ -2022,7 +2026,7 @@ export const messages = {
             proxyTestError: 'Proxy test error: {message}',
             testing: 'Testing...',
             testProxy: 'Test proxy',
-            fetchProxyHint: 'MiSub appends source URLs after this prefix.',
+            fetchProxyHint: 'Zzp Sub appends source URLs after this prefix.',
             includeExclude: 'Include / exclude nodes',
             advancedMode: 'Advanced',
             visualMode: 'Visual',
@@ -2081,7 +2085,7 @@ export const messages = {
             title: 'Bulk import',
             description: 'Import subscription links or shared nodes and assign a group.',
             groupLabel: 'Auto group (optional)',
-            helper: 'One link per line. MiSub detects protocols and extracts node names when possible.',
+            helper: 'One link per line. Zzp Sub detects protocols and extracts node names when possible.',
         },
         backup: {
             exportFailed: 'Export failed',
@@ -2090,7 +2094,7 @@ export const messages = {
             scopeDataAndSettings: 'Data + settings',
             scopeDataOnly: 'Data only',
             restoreConfirm:
-                'Restore from backup?\n\nScope: {scope}\nThis will overwrite MiSub data collections, but will not clear the whole KV/D1.',
+                'Restore from backup?\n\nScope: {scope}\nThis will overwrite Zzp Sub data collections, but will not clear the whole KV/D1.',
             restoreFailed: 'Restore failed',
             restoreSuccess: 'Backup restored. Refresh to see latest data.',
             importFailedWithMessage: 'Import failed: {message}',
@@ -2181,7 +2185,7 @@ export const messages = {
                 missingSubscriptions: {
                     title: 'No sources yet',
                     description:
-                        'Add a source first so MiSub can fetch nodes and generate usable links.',
+                        'Add a source first so Zzp Sub can fetch nodes and generate usable links.',
                     action: 'Add source',
                 },
                 noEnabledSubscriptions: {
@@ -2342,6 +2346,7 @@ export const messages = {
             loadFailedWithMessage: 'Failed to load settings: {message}',
             noWhitespace: 'Fields cannot contain spaces',
             invalidStorageType: 'Invalid storage type',
+            saved: 'Settings saved',
             savedReloading: 'Settings saved. Reloading...',
             reloadCountdown: 'Settings saved. Reloading in {seconds} seconds to apply changes.',
             reloadNow: 'Reload now',
@@ -2367,7 +2372,8 @@ export const messages = {
             dataFormatInvalid: 'Invalid data: misubs and profiles must be arrays',
             updateNodeInfoFailed: 'Failed to update node info',
             subscriptionConfigTitle: 'Subscription config',
-            subscriptionConfigDesc: 'Set the subscription filename. Access tokens are managed through Cloudflare Secrets.',
+            subscriptionConfigDesc:
+                'Set the subscription filename. Access tokens are managed through Cloudflare Secrets.',
             defaultLanguageTitle: 'Default display language',
             defaultLanguageDesc: 'Set the default display language for the system',
             defaultLanguageZh: '简体中文',
@@ -2489,7 +2495,7 @@ export const messages = {
             webdavBackupSuccess: 'WebDAV backup succeeded',
             webdavBackupFailedWithMessage: 'WebDAV backup failed: {message}',
             webdavRestoreLocalConfirm:
-                'Restore from this backup?\n\nScope: {scope}\nRestore overwrites MiSub data domains, does not clear the whole KV/D1, and keeps current WebDAV configuration.',
+                'Restore from this backup?\n\nScope: {scope}\nRestore overwrites Zzp Sub data domains, does not clear the whole KV/D1, and keeps current WebDAV configuration.',
             webdavRestoreFailed: 'Restore failed',
             webdavRestoreSuccessReload: 'Backup restored. The page will reload soon.',
             webdavRestoreFailedWithMessage: 'Restore failed: {message}',
@@ -2497,7 +2503,7 @@ export const messages = {
             webdavLoadRemoteSuccess: 'Loaded {count} remote backups',
             webdavLoadRemoteFailedWithMessage: 'Failed to load remote backups: {message}',
             webdavRestoreRemoteConfirm:
-                'Restore from this remote backup?\n\n{name}\n\nRestore overwrites MiSub data domains, does not clear the whole KV/D1, and keeps current WebDAV configuration.',
+                'Restore from this remote backup?\n\n{name}\n\nRestore overwrites Zzp Sub data domains, does not clear the whole KV/D1, and keeps current WebDAV configuration.',
             webdavRestoreRemoteSuccessReload: 'Remote backup restored. The page will reload soon.',
             webdavRestoreRemoteFailedWithMessage: 'Remote restore failed: {message}',
             webdavCronCopied:
@@ -2531,12 +2537,15 @@ export const messages = {
             regionOverrideFlags: 'Flags',
 
             serviceBasicTitle: 'Everyday subscription settings',
-            serviceBasicDesc: 'Use built-in routing by default. Open advanced settings to customize rules, DNS, or scheduling.',
+            serviceBasicDesc:
+                'Use built-in routing by default. Open advanced settings to customize rules, DNS, or scheduling.',
             serviceCustomActive: 'Custom routing is active; edit it in advanced settings',
             serviceUdpHint: 'UDP support for built-in generated output',
-            serviceAdvancedConfigured: 'Saved advanced options are active; collapsing them does not reset them.',
+            serviceAdvancedConfigured:
+                'Saved advanced options are active; collapsing them does not reset them.',
             serviceAdvancedTitle: 'Advanced settings',
-            serviceAdvancedDesc: 'Rule templates, routing levels, certificate exceptions, DNS overrides and scheduled refresh',
+            serviceAdvancedDesc:
+                'Rule templates, routing levels, certificate exceptions, DNS overrides and scheduled refresh',
             serviceExpand: 'Expand',
             serviceCollapse: 'Collapse',
             cronTitle: 'External scheduled refresh (advanced)',
@@ -2559,7 +2568,8 @@ export const messages = {
                 'Cloudflare Pages Free does not support Cron Triggers. Use an external monitor such as UptimeRobot or Cron-Job.org to access the compatible link above on a schedule.',
             cronGuideBearer:
                 'If your service supports custom headers, you can also trigger /cron with the recommended Bearer method.',
-            cronGuideFrequency: 'Schedule according to source intervals and upstream limits; sources not yet due are skipped.',
+            cronGuideFrequency:
+                'Schedule according to source intervals and upstream limits; sources not yet due are skipped.',
 
             copyFailedManualSelect: 'Copy failed. Select the text manually.',
             copiedShort: 'Copied',
@@ -2591,7 +2601,7 @@ export const messages = {
             transformRulesDesc: 'Decides how nodes are routed and filtered, regardless of engine.',
             transformRuleSource: '1. Rule source',
             transformExternalWarning:
-                'External subscription conversion cannot use MiSub built-in rules, built-in presets, or local custom: templates. Use a remote preset template or custom URL.',
+                'External subscription conversion cannot use Zzp Sub built-in rules, built-in presets, or local custom: templates. Use a remote preset template or custom URL.',
             transformEngineChangeNotice:
                 'Switching to an external backend changes the rule source and disables built-in options. Your previous settings stay in this page session and can be restored by switching back.',
             transformRestoreEngineSettings: 'Restore built-in settings',
@@ -2611,7 +2621,7 @@ export const messages = {
             transformExternalParams: 'External backend parameters',
             transformBackend: 'Conversion backend',
             transformBackendHint:
-                'Enter only the domain, such as subapi.cmliussss.net or api.v1.mk. MiSub completes it as https://domain/sub.',
+                'Enter only the domain, such as subapi.cmliussss.net or api.v1.mk. Zzp Sub completes it as https://domain/sub.',
             transformTesting: 'Testing...',
             transformTestBackend: 'Test backend availability',
             transformTestBackendHint:
@@ -2849,10 +2859,10 @@ export const messages = {
             otherGroup: 'Other',
             helperCustomTemplatesOnly: 'Only saved custom: rule templates can be selected.',
             helperExcludeBuiltin:
-                'Third-party subconverter only supports remote template URLs; MiSub built-in rules, built-in presets and local custom: templates are not compatible.',
+                'Third-party subconverter only supports remote template URLs; Zzp Sub built-in rules, built-in presets and local custom: templates are not compatible.',
             helperDefault: 'Used for unified template rendering.',
             thirdPartyNotice:
-                'When using a third-party subconverter, MiSub built-in rules, built-in presets and local custom: templates are not compatible. Please use a remote preset template or a custom URL.',
+                'When using a third-party subconverter, Zzp Sub built-in rules, built-in presets and local custom: templates are not compatible. Please use a remote preset template or a custom URL.',
             defaultGlobalOption: 'Default / Global settings',
             pleaseSelect: 'Please select...',
             customInputOption: 'Custom input...',
@@ -2892,22 +2902,22 @@ export const messages = {
         },
         transformAssets: {
             builtinMinimal: {
-                name: 'MiSub Builtin — Minimal Default Routing',
+                name: 'Zzp Sub Builtin — Minimal Default Routing',
                 description:
-                    'MiSub built-in minimal default template, suited to everyday use, beginners and stability-first scenarios.',
+                    'Zzp Sub built-in minimal default template, suited to everyday use, beginners and stability-first scenarios.',
             },
             acl4ssrLite: {
-                name: 'MiSub Builtin — ACL4SSR Lite Routing',
+                name: 'Zzp Sub Builtin — ACL4SSR Lite Routing',
                 description:
                     'Built-in lite ACL4SSR routing template for users familiar with ACL4SSR rules who prefer to stay lightweight.',
             },
             mediaAi: {
-                name: 'MiSub Builtin — Streaming & AI Routing',
+                name: 'Zzp Sub Builtin — Streaming & AI Routing',
                 description:
                     'Built-in template for streaming and AI service scenarios, keeping the core routing and region candidate chains.',
             },
             acl4ssrFull: {
-                name: 'MiSub Builtin — ACL4SSR Full Routing',
+                name: 'Zzp Sub Builtin — ACL4SSR Full Routing',
                 description:
                     'Built-in full ACL4SSR routing template that can generate Clash and Sing-Box configs through the unified template model.',
             },
@@ -3091,6 +3101,8 @@ export const messages = {
             requestFailedWithStatus: 'Request failed ({status})',
         },
         common: {
+            skipToContent: 'Skip to content',
+            discardConfirm: 'Discard unsaved changes?',
             searchPlaceholder: 'Search...',
             searchSuggestions: 'Search suggestions',
             searchResultCount: '{count} results found',
@@ -3180,7 +3192,8 @@ export const messages = {
             clearSuccess: 'Logs cleared',
             clearFailed: 'Failed to clear logs',
             empty: 'No detailed access records are available. Personal mode disables access logging; download counts are tracked separately.',
-            emptyForProfile: 'No detailed access logs for this profile. Personal mode does not retain visitor IPs; download counts are tracked separately.',
+            emptyForProfile:
+                'No detailed access logs for this profile. Personal mode does not retain visitor IPs; download counts are tracked separately.',
             time: 'Time',
             location: 'Location',
             duration: 'Duration',

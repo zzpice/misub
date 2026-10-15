@@ -6,7 +6,7 @@
 
 <template>
     <div
-        class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 misub-radius-md p-3"
+        class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 sub-radius-md p-3"
     >
         <h4 class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
             {{ t('formatDetector.heading') }}

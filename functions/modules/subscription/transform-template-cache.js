@@ -1,4 +1,8 @@
-import { assertPublicNetworkUrl, safeFetchNetworkUrl, readResponseBufferWithLimit } from '../security-utils.js';
+import {
+    assertPublicNetworkUrl,
+    safeFetchNetworkUrl,
+    readResponseBufferWithLimit,
+} from '../security-utils.js';
 
 const TEMPLATE_CACHE_PREFIX = 'transform_template_';
 const DEFAULT_REVALIDATE_INTERVAL_SECONDS = 5 * 60;
@@ -117,7 +121,8 @@ export async function fetchTransformTemplate(storageAdapter, templateUrl, forceR
                 ? { 'User-Agent': 'MiSub-Template-Fetch/1.0' }
                 : buildFetchHeaders(cachedTemplate),
         });
-        if (response.ok) text = new TextDecoder().decode(await readResponseBufferWithLimit(response));
+        if (response.ok)
+            text = new TextDecoder().decode(await readResponseBufferWithLimit(response));
     } catch (error) {
         if (
             cachedTemplate?.nodes &&

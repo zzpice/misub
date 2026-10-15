@@ -38,15 +38,17 @@ describe('manual persistent snapshot refresh failures', () => {
         async (oldCacheFlag) => {
             const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             const oldUserInfo = { upload: 1, download: 2, total: 100, expire: 999 };
-            mocks.subscriptionsRef.value = [{
-                id: 'sub-1',
-                name: 'Source',
-                url: 'https://source.example/sub',
-                enabled: true,
-                enableNodeCache: oldCacheFlag,
-                nodeCount: 86,
-                userInfo: oldUserInfo,
-            }];
+            mocks.subscriptionsRef.value = [
+                {
+                    id: 'sub-1',
+                    name: 'Source',
+                    url: 'https://source.example/sub',
+                    enabled: true,
+                    enableNodeCache: oldCacheFlag,
+                    nodeCount: 86,
+                    userInfo: oldUserInfo,
+                },
+            ];
             mocks.refreshSourceSnapshot.mockResolvedValue({
                 success: false,
                 error: 'Upstream HTTP 403',

@@ -102,7 +102,7 @@ describe('WebDAV backup payload and restore', () => {
             trigger: 'manual',
         });
 
-        expect(payload.app).toBe('MiSub');
+        expect(payload.app).toBe('Zzp Sub');
         expect(payload.type).toBe('misub-backup');
         expect(payload.scope).toBe('dataOnly');
         expect(payload.data.subscriptions).toEqual(sampleSubscriptions);
@@ -119,27 +119,40 @@ describe('WebDAV backup payload and restore', () => {
     });
 
     it('fails backup creation when templates cannot be read instead of exporting an empty collection', async () => {
-        const { buildBackupPayload } = await import('../../functions/modules/webdav-backup-handler.js');
+        const { buildBackupPayload } =
+            await import('../../functions/modules/webdav-backup-handler.js');
         const { StorageFactory } = await import('../../functions/storage-adapter.js');
         const spy = vi.spyOn(StorageFactory, 'createAdapter').mockReturnValue({
-            getAllSubscriptions: async () => [], getAllProfiles: async () => [],
-            get: async key => {
+            getAllSubscriptions: async () => [],
+            getAllProfiles: async () => [],
+            get: async (key) => {
                 if (key === 'misub_rule_templates_v1') throw Error('synthetic storage failure');
                 return {};
             },
         });
         try {
-            await expect(buildBackupPayload(createEnv())).rejects.toThrow('synthetic storage failure');
-        } finally { spy.mockRestore(); }
+            await expect(buildBackupPayload(createEnv())).rejects.toThrow(
+                'synthetic storage failure'
+            );
+        } finally {
+            spy.mockRestore();
+        }
     });
     it('rejects oversized backup requests before reading or restoring business data', async () => {
-        const { handleBackupRestore, MAX_BACKUP_BYTES } = await import('../../functions/modules/webdav-backup-handler.js');
+        const { handleBackupRestore, MAX_BACKUP_BYTES } =
+            await import('../../functions/modules/webdav-backup-handler.js');
         const env = createEnv();
         const before = env.MISUB_KV.dump();
-        const response = await handleBackupRestore({
-            method: 'POST', headers: { get: () => String(MAX_BACKUP_BYTES + 1) },
-            text: () => { throw Error('must not read'); },
-        }, env);
+        const response = await handleBackupRestore(
+            {
+                method: 'POST',
+                headers: { get: () => String(MAX_BACKUP_BYTES + 1) },
+                text: () => {
+                    throw Error('must not read');
+                },
+            },
+            env
+        );
         expect(response.status).toBe(413);
         expect(env.MISUB_KV.dump()).toEqual(before);
     });

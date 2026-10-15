@@ -172,7 +172,7 @@
                 </div>
 
                 <div
-                    class="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-white dark:bg-gray-800/40 p-4 border border-gray-100 dark:border-gray-700 misub-radius-lg shadow-sm"
+                    class="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-white dark:bg-gray-800/40 p-4 border border-gray-100 dark:border-gray-700 sub-radius-lg shadow-sm"
                 >
                     <!-- 引擎选择 -->
                     <div class="space-y-1.5">
@@ -181,7 +181,7 @@
                         }}</label>
                         <select
                             v-model="localProfile.subconverter.engineMode"
-                            class="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 misub-radius-md focus-visible:ring-indigo-500 sm:text-sm dark:text-white transition-all font-medium"
+                            class="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 sub-radius-md focus-visible:ring-indigo-500 sm:text-sm dark:text-white transition-all font-medium"
                         >
                             <option value="">{{ t('profileModal.followGlobalConfig') }}</option>
                             <option
@@ -212,7 +212,7 @@
                         }}</label>
                         <select
                             v-model="localProfile.transformConfigMode"
-                            class="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 misub-radius-md focus-visible:ring-indigo-500 sm:text-sm dark:text-white"
+                            class="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 sub-radius-md focus-visible:ring-indigo-500 sm:text-sm dark:text-white"
                         >
                             <option value="global">
                                 {{ t('profileModal.followGlobalScheme') }}
@@ -261,7 +261,7 @@
                             type="text"
                             v-model="localProfile.subconverter.backend"
                             :placeholder="t('profileModal.backendPlaceholder')"
-                            class="block w-full px-3 py-2 bg-orange-50/20 dark:bg-orange-900/10 border border-orange-200/50 dark:border-orange-500/20 misub-radius-md sm:text-sm dark:text-white focus-visible:ring-orange-500"
+                            class="block w-full px-3 py-2 bg-orange-50/20 dark:bg-orange-900/10 border border-orange-200/50 dark:border-orange-500/20 sub-radius-md sm:text-sm dark:text-white focus-visible:ring-orange-500"
                         />
                         <p
                             class="mt-1.5 text-[10px] leading-relaxed text-gray-500 dark:text-gray-400"
@@ -334,7 +334,7 @@
                 </div>
 
                 <div
-                    class="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-white dark:bg-gray-800/40 p-4 border border-gray-100 dark:border-gray-700 misub-radius-lg shadow-sm"
+                    class="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-white dark:bg-gray-800/40 p-4 border border-gray-100 dark:border-gray-700 sub-radius-lg shadow-sm"
                 >
                     <!-- 到期时间 -->
                     <div>
@@ -345,7 +345,7 @@
                         <input
                             type="date"
                             v-model="localProfile.expiresAt"
-                            class="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 misub-radius-md sm:text-sm dark:text-white"
+                            class="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 sub-radius-md sm:text-sm dark:text-white"
                         />
                     </div>
 
@@ -366,7 +366,7 @@
                                     localProfile.transformConfigMode !== 'builtin' &&
                                     localProfile.transformConfigMode !== 'global',
                             }"
-                            class="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 misub-radius-md sm:text-sm dark:text-white transition-all"
+                            class="block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 sub-radius-md sm:text-sm dark:text-white transition-all"
                         >
                             <option value="">{{ t('profileModal.followGlobalLevel') }}</option>
                             <option value="base">{{ t('profileModal.ruleBase') }}</option>
@@ -400,7 +400,7 @@
                                 }}</label>
                                 <select
                                     v-model="localProfile.prefixSettings.enableManualNodes"
-                                    class="w-full px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 misub-radius-md shadow-xs focus-visible:ring-1 focus-visible:ring-indigo-500"
+                                    class="w-full px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 sub-radius-md shadow-xs focus-visible:ring-1 focus-visible:ring-indigo-500"
                                 >
                                     <option
                                         v-for="option in prefixToggleOptions"
@@ -419,7 +419,7 @@
                                 }}</label>
                                 <select
                                     v-model="localProfile.prefixSettings.enableSubscriptions"
-                                    class="w-full px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 misub-radius-md shadow-xs focus-visible:ring-1 focus-visible:ring-indigo-500"
+                                    class="w-full px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 sub-radius-md shadow-xs focus-visible:ring-1 focus-visible:ring-indigo-500"
                                 >
                                     <option
                                         v-for="option in prefixToggleOptions"
@@ -438,7 +438,7 @@
                                 }}</label>
                                 <select
                                     v-model="localProfile.prefixSettings.prependGroupName"
-                                    class="w-full px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 misub-radius-md shadow-xs focus-visible:ring-1 focus-visible:ring-indigo-500"
+                                    class="w-full px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 sub-radius-md shadow-xs focus-visible:ring-1 focus-visible:ring-indigo-500"
                                 >
                                     <option
                                         v-for="option in groupPrefixToggleOptions"
@@ -469,7 +469,7 @@
                                 </div>
                                 <select
                                     v-model="localProfile.subconverter.options[flag.key]"
-                                    class="w-full px-1.5 py-1 text-[11px] bg-white dark:bg-gray-700 border-none misub-radius-md focus-visible:ring-1 focus-visible:ring-indigo-500 dark:text-white"
+                                    class="w-full px-1.5 py-1 text-[11px] bg-white dark:bg-gray-700 border-none sub-radius-md focus-visible:ring-1 focus-visible:ring-indigo-500 dark:text-white"
                                 >
                                     <option :value="null">
                                         {{ t('profileModal.followGlobal') }}

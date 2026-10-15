@@ -1,6 +1,6 @@
-# MiSub External Management API
+# Zzp Sub External Management API
 
-本文档记录 MiSub 当前对外管理接口的真实行为，对应代码位于：
+本文档记录 Zzp Sub 当前对外管理接口的真实行为，对应代码位于：
 
 - `functions/modules/external-api-router.js`
 - `functions/modules/external-api-auth.js`
@@ -13,7 +13,7 @@
 
 ## 1. 目标与边界
 
-External Management API 面向“外部系统受控接入”场景，用于让自动化工具或第三方后台安全地管理 MiSub 的：
+External Management API 面向“外部系统受控接入”场景，用于让自动化工具或第三方后台安全地管理 Zzp Sub 的：
 
 - 远程订阅源（subscriptions）
 - 手动节点（manual-nodes）

@@ -16,7 +16,7 @@ function buildCommit() {
 
 export default defineConfig({
     define: {
-        __MISUB_BUILD_COMMIT__: JSON.stringify(buildCommit()),
+        __ZZP_SUB_BUILD_COMMIT__: JSON.stringify(buildCommit()),
     },
     plugins: [
         vue(),
@@ -68,9 +68,7 @@ export default defineConfig({
             },
         },
         // 压缩配置
-        minify: 'terser',
-
-        // terserOptions removed for debugging
+        minify: 'esbuild',
     },
     // 开发服务器配置
     server: {

@@ -87,7 +87,7 @@
         :disabled="disabled || loading"
         :aria-label="ariaLabel"
         @click="handleClick"
-        class="relative inline-flex items-center justify-center rounded-[var(--misub-radius-md)] font-medium tap-effect disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group tracking-normal transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
+        class="relative inline-flex items-center justify-center rounded-[var(--sub-radius-md)] font-medium tap-effect disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden group tracking-normal transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30"
         :class="[variantClasses, sizeClasses]"
     >
         <svg

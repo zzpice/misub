@@ -78,9 +78,9 @@
         <template #body>
             <div class="flex flex-col items-center gap-6 py-4">
                 <div
-                    class="bg-white p-4 misub-radius-lg shadow-inner border border-gray-100 dark:border-gray-700"
+                    class="bg-white p-4 sub-radius-lg shadow-inner border border-gray-100 dark:border-gray-700"
                 >
-                    <canvas ref="canvasRef" class="w-64 h-64 misub-radius-md"></canvas>
+                    <canvas ref="canvasRef" class="w-64 h-64 sub-radius-md"></canvas>
                 </div>
 
                 <p class="text-sm text-center text-gray-500 max-w-xs break-all">
@@ -89,7 +89,7 @@
 
                 <button
                     @click="downloadQRCode"
-                    class="flex items-center gap-2 px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white misub-radius-lg font-medium transition-colors shadow-lg shadow-primary-500/20 active:scale-95"
+                    class="flex items-center gap-2 px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white sub-radius-lg font-medium transition-colors shadow-lg shadow-primary-500/20 active:scale-95"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"

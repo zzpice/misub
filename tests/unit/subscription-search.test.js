@@ -55,7 +55,12 @@ describe('subscription list search', () => {
         const { paginatedSubscriptions, filteredSubscriptions } = useSubscriptions(vi.fn());
         expect(filteredSubscriptions.value.map((item) => item.id)).toHaveLength(12);
         expect(paginatedSubscriptions.value.map((item) => item.id)).toEqual([
-            'airport-0', 'airport-1', 'airport-2', 'other-0', 'other-1', 'other-2',
+            'airport-0',
+            'airport-1',
+            'airport-2',
+            'other-0',
+            'other-1',
+            'other-2',
         ]);
     });
 

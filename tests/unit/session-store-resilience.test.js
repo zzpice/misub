@@ -25,66 +25,25 @@ describe('session store resilience', () => {
         vi.clearAllMocks();
     });
 
-    it('falls back to the default login entry when login config cannot be fetched', async () => {
+    it('authenticates with a single data request and no obsolete login-path lookup', async () => {
         const { useSessionStore } = await import('../../src/stores/session.js');
         const store = useSessionStore();
-
         apiMocks.fetchInitialData.mockResolvedValue({
-            success: false,
-            error: '认证失败,请重新登录',
-            errorType: 'auth',
-        });
-        apiMocks.fetchLoginConfig.mockResolvedValue({
-            success: false,
-            error: 'HTTP 500',
-            errorType: 'server',
-        });
-
-        await store.checkSession();
-
-        expect(store.sessionState).toBe('loggedOut');
-        expect(store.loginConfig.isLoginPath).toBe(false);
-    });
-
-    it('does not let a failed login config request mask a successful authenticated session', async () => {
-        const { useSessionStore } = await import('../../src/stores/session.js');
-        const store = useSessionStore();
-
-        const data = {
-            config: { password: 'changed', isDefaultPassword: false },
-            misubs: [],
-            profiles: [],
-        };
-
-        apiMocks.fetchInitialData.mockResolvedValue({ success: true, data });
-        apiMocks.fetchLoginConfig.mockResolvedValue({
-            success: false,
-            error: 'HTTP 500',
-            errorType: 'server',
-        });
-
-        await store.checkSession();
-
-        expect(store.sessionState).toBe('loggedIn');
-        expect(store.initialData).toEqual(data);
-        expect(store.loginConfig.isLoginPath).toBe(false);
-    });
-
-    it('preserves the last known login config after a later fetch failure', async () => {
-        const { useSessionStore } = await import('../../src/stores/session.js');
-        const store = useSessionStore();
-        const data = { config: {}, misubs: [], profiles: [] };
-        apiMocks.fetchInitialData.mockResolvedValue({ success: true, data });
-        apiMocks.fetchLoginConfig.mockResolvedValueOnce({
             success: true,
-            data: { isLoginPath: true },
+            data: { misubs: [], profiles: [], config: {} },
         });
         await store.checkSession();
+        expect(store.sessionState).toBe('loggedIn');
+        expect(apiMocks.fetchInitialData).toHaveBeenCalledTimes(1);
+        expect(apiMocks.fetchLoginConfig).not.toHaveBeenCalled();
+    });
 
-        apiMocks.fetchLoginConfig.mockResolvedValueOnce({ success: false, error: 'network down' });
+    it('fails closed when the session is unauthenticated', async () => {
+        const { useSessionStore } = await import('../../src/stores/session.js');
+        const store = useSessionStore();
+        apiMocks.fetchInitialData.mockResolvedValue({ success: false, errorType: 'auth' });
         await store.checkSession();
-
-        expect(store.loginConfig.isLoginPath).toBe(true);
+        expect(store.sessionState).toBe('loggedOut');
     });
 
     it('keeps a failed logout from claiming the session was cleared', async () => {

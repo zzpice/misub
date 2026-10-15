@@ -3,16 +3,11 @@ import { computed, ref } from 'vue';
 import { useToastStore } from './toast';
 import { useSettingsStore } from './settings';
 import { useEditorStore } from './editor';
-import { createStorageCache } from '../utils/cache-helper.js';
 import { DEFAULT_SETTINGS } from '../constants/default-settings.js';
-import { TIMING } from '../constants/timing.js';
 import { api } from '../lib/http.js';
 import { t } from '../i18n/index.js';
 
 const isDev = import.meta.env.DEV;
-
-// Initialize Cache
-const dataCache = createStorageCache('misub_data_cache', TIMING.CACHE_TTL_MS);
 
 export const useDataStore = defineStore('data', () => {
     const { showToast } = useToastStore();
@@ -38,13 +33,6 @@ export const useDataStore = defineStore('data', () => {
     const activeSubscriptions = computed(() => subscriptions.value.filter((sub) => sub.enabled));
     const activeProfiles = computed(() => profiles.value.filter((profile) => profile.enabled));
 
-    // --- Internal: Snapshot for rollback/diffing ---
-    let lastSavedData = {
-        subscriptions: [],
-        profiles: [],
-        ruleTemplates: [],
-    };
-
     // --- Actions ---
 
     // Data Hydration (avoid re-fetching if passed from outside)
@@ -58,9 +46,7 @@ export const useDataStore = defineStore('data', () => {
             ruleTemplates.value = data.ruleTemplates || [];
             settingsStore.setConfig({ ...DEFAULT_SETTINGS, ...data.config });
 
-            updateSnapshot();
             lastUpdated.value = new Date();
-            dataCache.set(data);
             return true;
         } catch (error) {
             console.error('hydrateFromData failed:', error);
@@ -69,6 +55,7 @@ export const useDataStore = defineStore('data', () => {
     }
 
     let fetchDataPromise = null;
+    let generation = 0;
 
     async function fetchData(forceRefresh = false) {
         if (fetchDataPromise) return fetchDataPromise;
@@ -76,19 +63,13 @@ export const useDataStore = defineStore('data', () => {
         // Effective Cache Check
         if (hasDataLoaded.value && !forceRefresh) return true;
 
-        if (!forceRefresh) {
-            const cachedData = dataCache.get();
-            if (cachedData) {
-                hydrateFromData(cachedData);
-                return true;
-            }
-        }
-
+        const requestGeneration = generation;
         fetchDataPromise = (async () => {
             isLoading.value = true;
             try {
                 const data = await api.get('/api/data');
 
+                if (requestGeneration !== generation) return false;
                 if (data.error) {
                     throw new Error(data.error);
                 }
@@ -118,6 +99,8 @@ export const useDataStore = defineStore('data', () => {
             return false;
         }
 
+        const requestGeneration = generation;
+        const revision = editorStore.revision;
         isLoading.value = true;
         saveState.value = 'saving';
 
@@ -143,40 +126,26 @@ export const useDataStore = defineStore('data', () => {
 
             const result = await api.post('/api/misubs', payload);
 
+            if (requestGeneration !== generation) return false;
             if (!result.success) {
                 throw new Error(result.message || t('store.saveFailed'));
             }
 
-            // Update local state with backend response (Source of Truth)
-            if (result.data) {
-                if (result.data.misubs) subscriptions.value = result.data.misubs;
-                if (result.data.profiles) profiles.value = result.data.profiles;
+            // Keep edits made while the save was in flight. The response only
+            // acknowledges the submitted revision, not newer local changes.
+            if (editorStore.revision === revision) {
+                if (result.data?.misubs) subscriptions.value = result.data.misubs;
+                if (result.data?.profiles) profiles.value = result.data.profiles;
+                clearDirty();
+                saveState.value = 'success';
+                setTimeout(() => {
+                    if (saveState.value === 'success') saveState.value = 'idle';
+                }, 2000);
+            } else {
+                saveState.value = 'idle';
             }
-
-            updateSnapshot();
-
             showToast(t('store.dataSaved'), 'success');
             lastUpdated.value = new Date();
-            clearDirty();
-            saveState.value = 'success';
-
-            // Auto reset idle state
-            setTimeout(() => {
-                if (saveState.value === 'success') {
-                    saveState.value = 'idle';
-                }
-            }, 2000);
-
-            // Update cache with the most recent merged data
-            dataCache.set({
-                misubs: subscriptions.value.map((s) => {
-                    const { isUpdating, ...rest } = s;
-                    return rest;
-                }),
-                profiles: profiles.value,
-                ruleTemplates: ruleTemplates.value,
-                config: settingsStore.config,
-            });
 
             return true;
         } catch (error) {
@@ -219,7 +188,6 @@ export const useDataStore = defineStore('data', () => {
             }
 
             settingsStore.updateConfig(newSettings);
-            syncCachedConfig(settingsStore.config);
             if (!silent) showToast(t('store.settingsUpdated'), 'success');
             return true;
         } catch (error) {
@@ -239,7 +207,6 @@ export const useDataStore = defineStore('data', () => {
     async function fetchRuleTemplates() {
         const result = await api.get('/api/rule_templates');
         ruleTemplates.value = Array.isArray(result?.data) ? result.data : [];
-        lastSavedData.ruleTemplates = JSON.parse(JSON.stringify(ruleTemplates.value));
         return ruleTemplates.value;
     }
 
@@ -251,7 +218,6 @@ export const useDataStore = defineStore('data', () => {
                 throw new Error(result.message || t('store.saveRuleTemplatesFailed'));
             }
             ruleTemplates.value = Array.isArray(result.data) ? result.data : [];
-            lastSavedData.ruleTemplates = JSON.parse(JSON.stringify(ruleTemplates.value));
             showToast(t('store.ruleTemplatesSaved'), 'success');
             return ruleTemplates.value;
         } catch (error) {
@@ -268,29 +234,19 @@ export const useDataStore = defineStore('data', () => {
 
     // --- Helpers ---
 
-    function updateSnapshot() {
-        lastSavedData = {
-            subscriptions: JSON.parse(JSON.stringify(subscriptions.value)),
-            profiles: JSON.parse(JSON.stringify(profiles.value)),
-            ruleTemplates: JSON.parse(JSON.stringify(ruleTemplates.value)),
-        };
-    }
-
     function clearCachedData() {
-        dataCache.clear();
+        generation += 1;
+        subscriptions.value = [];
+        profiles.value = [];
+        ruleTemplates.value = [];
+        lastUpdated.value = null;
+        settingsStore.setConfig({ ...DEFAULT_SETTINGS });
+        clearDirty();
+        saveState.value = 'idle';
     }
 
-    function syncCachedConfig(nextConfig) {
-        const cachedData = dataCache.get();
-        if (!cachedData) return;
-
-        dataCache.set({
-            ...cachedData,
-            config: {
-                ...(cachedData.config || {}),
-                ...(nextConfig || {}),
-            },
-        });
+    function applySettings(nextConfig) {
+        settingsStore.updateConfig(nextConfig);
     }
 
     // --- Proxy Actions (Mutators) ---
@@ -469,6 +425,7 @@ export const useDataStore = defineStore('data', () => {
         saveRuleTemplates,
         hydrateFromData,
         clearCachedData,
+        applySettings,
 
         // Helpers
         addSubscription,

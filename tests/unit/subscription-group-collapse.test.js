@@ -29,7 +29,7 @@ const mountPanel = (subscriptions) =>
             stubs: {
                 draggable: true,
                 Card: { template: '<div class="stub-card" />' },
-                MoreActionsMenu: { template: '<div><slot name="menu" /></div>' },
+                MoreActionsMenu: { template: '<div><slot name="menu" :close="() => {}" /></div>' },
                 PanelPagination: true,
                 EmptyState: true,
             },
@@ -126,7 +126,8 @@ describe('订阅源按站点折叠', () => {
         expect(wrapper.findAll('.stub-card')).toHaveLength(3);
         expect(wrapper.html()).toContain('Project a');
         expect(
-            wrapper.find('[aria-expanded="false"]').element.closest('.rounded-xl').textContent
+            wrapper.find('[aria-expanded="false"]').element.closest('.subscription-group')
+                .textContent
         ).toContain('2');
     });
 
@@ -161,11 +162,15 @@ describe('订阅源按站点折叠', () => {
         expect(wrapper.findAll('[aria-expanded="false"]')).toHaveLength(1);
         expect(wrapper.find('[aria-expanded="false"]').text()).toContain('2');
         expect(wrapper.text()).toContain('机场甲');
-        const split = wrapper.findAll('button').find((button) => /拆分机场分组|Split airport group/.test(button.text()));
+        const split = wrapper
+            .findAll('button')
+            .find((button) => /拆分机场分组|Split airport group/.test(button.text()));
         expect(split).toBeTruthy();
         await split.trigger('click');
         expect(wrapper.emitted('split-airport-group')).toHaveLength(2);
-        expect(wrapper.emitted('split-airport-group').map(([ids, identity]) => [ids, identity.groupId])).toEqual([
+        expect(
+            wrapper.emitted('split-airport-group').map(([ids, identity]) => [ids, identity.groupId])
+        ).toEqual([
             [['a'], expect.any(String)],
             [['b'], expect.any(String)],
         ]);
@@ -186,11 +191,19 @@ describe('订阅源按站点折叠', () => {
 
     it('assigns only the selected group ids from the group header editor', async () => {
         const wrapper = mountPanel([
-            { ...makeSub('a', 'one', 'https://one.example.net/sub'), airportIdentity: { groupId: 'existing', name: 'Existing' } },
+            {
+                ...makeSub('a', 'one', 'https://one.example.net/sub'),
+                airportIdentity: { groupId: 'existing', name: 'Existing' },
+            },
             makeSub('b', 'two', 'https://two.example.org/sub'),
             makeSub('c', 'three', 'https://three.example.com/sub'),
         ]);
-        expect(wrapper.findAll('button').filter((button) => /指定机场分组|Assign to airport group/.test(button.text())).length).toBeGreaterThan(0);
+        expect(
+            wrapper
+                .findAll('button')
+                .filter((button) => /指定机场分组|Assign to airport group/.test(button.text()))
+                .length
+        ).toBeGreaterThan(0);
     });
 
     it('单条目站点不折叠，直接平铺', async () => {

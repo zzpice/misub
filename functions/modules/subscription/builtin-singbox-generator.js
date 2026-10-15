@@ -305,7 +305,7 @@ export function generateBuiltinSingboxConfig(nodeList, options = {}) {
     proxyGroups = pruneProxyGroups(proxyGroups, outbounds);
 
     if (levelKey === 'RELAY') {
-        proxyGroups.forEach(group => usedNames.set(group.name, 1));
+        proxyGroups.forEach((group) => usedNames.set(group.name, 1));
         const chainOutbounds = nodeEntries.map(({ tag, outbound }) => ({
             ...outbound,
             tag: getUniqueName(`🔗 链式代理 - ${tag}`, usedNames),

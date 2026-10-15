@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const dashboardSource = () =>
-    readFileSync(resolve(process.cwd(), 'src/components/features/Dashboard/Dashboard.vue'), 'utf8');
+    readFileSync(resolve(process.cwd(), 'src/views/ManualNodesView.vue'), 'utf8');
 
 describe('Dashboard regression coverage for issue #387', () => {
     it('wires manual node speed test state and actions in the dashboard view', () => {
@@ -19,11 +19,13 @@ describe('Dashboard regression coverage for issue #387', () => {
         expect(source).toContain('@ping-all="pingAllNodes"');
     });
 
-    it('keeps profile manual sorting state connected to ProfilePanel', () => {
-        const source = dashboardSource();
-
-        expect(source).toContain('const isSortingProfiles = ref(false);');
-        expect(source).toContain(':is-sorting="isSortingProfiles"');
-        expect(source).toContain('@toggle-sort="isSortingProfiles = !isSortingProfiles"');
+    it('keeps profile manual sorting connected on the dedicated subscriptions page', () => {
+        const source = readFileSync(
+            resolve(process.cwd(), 'src/views/MySubscriptionsView.vue'),
+            'utf8'
+        );
+        expect(source).toContain(':is-sorting="isProfileSorting"');
+        expect(source).toContain('@toggle-sort="toggleProfileSorting"');
+        expect(source).toContain('@reorder="handleProfileReorder"');
     });
 });

@@ -706,7 +706,8 @@ export async function readJsonWithLimit(request, limitBytes = JSON_BODY_LIMITS.n
         try {
             text = new TextDecoder().decode(await readResponseBufferWithLimit(request, limitBytes));
         } catch (error) {
-            if (error.message === 'Response content too large') throw new RequestBodyTooLargeError(limitBytes);
+            if (error.message === 'Response content too large')
+                throw new RequestBodyTooLargeError(limitBytes);
             throw error;
         }
     } else {
@@ -749,25 +750,6 @@ export function createErrorResponse(error, status = 500) {
         },
         status
     );
-}
-
-/**
- * 迁移旧版 profile ID，去除 'profile_' 前缀
- * 旧版 generateProfileId() 使用 generateId('profile') 生成带前缀的 ID，
- * 当前版本已修复为不加前缀，但数据库中可能存留旧数据。
- * @param {Array} profiles - 订阅组列表
- * @returns {boolean} 是否发生了迁移
- */
-export function migrateProfileIds(profiles) {
-    if (!Array.isArray(profiles)) return false;
-    let migrated = false;
-    for (const p of profiles) {
-        if (p.id && p.id.startsWith('profile_')) {
-            p.id = p.id.slice('profile_'.length);
-            migrated = true;
-        }
-    }
-    return migrated;
 }
 
 /**

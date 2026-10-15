@@ -431,7 +431,9 @@
                         <span class="shrink-0 text-gray-500 dark:text-gray-400">
                             {{ t('subscriptions.remainingTraffic') }}
                         </span>
-                        <span class="min-w-0 text-right font-semibold tabular-nums text-gray-700 dark:text-gray-200">
+                        <span
+                            class="min-w-0 text-right font-semibold tabular-nums text-gray-700 dark:text-gray-200"
+                        >
                             {{ trafficInfo.remaining }} / {{ trafficInfo.total }}
                         </span>
                     </div>
@@ -449,7 +451,9 @@
                             :style="{ width: trafficInfo.percentage + '%' }"
                         ></div>
                     </div>
-                    <div class="flex items-center justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                    <div
+                        class="flex items-center justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400"
+                    >
                         <span>{{ t('subscriptions.usedTraffic') }} {{ trafficInfo.used }}</span>
                         <span class="text-right tabular-nums">
                             {{
@@ -465,12 +469,16 @@
                 </div>
                 <div class="text-[11px] text-gray-500 dark:text-gray-400 space-y-0.5">
                     <p>
-                        {{ misub.autoUpdateEnabled === false
-                            ? '手动更新'
-                            : `自动更新 · ${misub.autoUpdateIntervalMinutes || 60} 分钟` }}
+                        {{
+                            misub.autoUpdateEnabled === false
+                                ? '手动更新'
+                                : `自动更新 · ${misub.autoUpdateIntervalMinutes || 60} 分钟`
+                        }}
                     </p>
                     <p v-if="misub.lastSuccessAt || misub.lastUpdate">
-                        上次成功：{{ new Date(misub.lastSuccessAt || misub.lastUpdate).toLocaleString() }}
+                        上次成功：{{
+                            new Date(misub.lastSuccessAt || misub.lastUpdate).toLocaleString()
+                        }}
                     </p>
                 </div>
                 <div class="flex items-center justify-between text-xs">

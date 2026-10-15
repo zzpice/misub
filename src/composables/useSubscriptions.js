@@ -309,11 +309,14 @@ export function useSubscriptions(markDirty) {
                 if (await handleUpdateNodeCount(sub.id)) successes++;
             }
             refreshError.value = successes !== subsToUpdate.length;
-            showToast(t('subscriptions.refreshDone', {
-                success: successes,
-                total: subsToUpdate.length,
-                failed: subsToUpdate.length - successes,
-            }), successes === subsToUpdate.length ? 'success' : 'warning');
+            showToast(
+                t('subscriptions.refreshDone', {
+                    success: successes,
+                    total: subsToUpdate.length,
+                    failed: subsToUpdate.length - successes,
+                }),
+                successes === subsToUpdate.length ? 'success' : 'warning'
+            );
         } finally {
             lastRefreshAt.value = new Date().toISOString();
             isRefreshing.value = false;

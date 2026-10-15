@@ -10,7 +10,9 @@
     import { useBulkImportLogic } from '../composables/useBulkImportLogic.js'; // Added
     import SubscriptionPanel from '../components/subscriptions/SubscriptionPanel.vue';
     import Modal from '../components/forms/Modal.vue';
-    import SubscriptionEditModal from '../components/modals/SubscriptionEditModal.vue';
+    const SubscriptionEditModal = defineAsyncComponent(
+        () => import('../components/modals/SubscriptionEditModal.vue')
+    );
     import { useToastStore } from '../stores/toast.js';
     import { useI18n } from '../i18n/index.js';
     import { createAirportGroupId } from '../utils/airport-identity.js';
@@ -285,6 +287,7 @@
 
         <!-- Dialogs -->
         <SubscriptionEditModal
+            v-if="showSubModal"
             v-model:show="showSubModal"
             :is-new="isNewSubscription"
             :editing-subscription="editingSubscription"
@@ -316,6 +319,7 @@
         />
 
         <NodePreviewModal
+            v-if="showNodePreviewModal"
             :show="showNodePreviewModal"
             :subscription-id="previewSubscriptionId"
             :subscription-name="previewSubscriptionName"
@@ -325,6 +329,11 @@
             @update:show="showNodePreviewModal = $event"
         />
 
-        <QRCodeModal v-model:show="showQRCodeModal" :url="qrCodeUrl" :title="qrCodeTitle" />
+        <QRCodeModal
+            v-if="showQRCodeModal"
+            v-model:show="showQRCodeModal"
+            :url="qrCodeUrl"
+            :title="qrCodeTitle"
+        />
     </div>
 </template>

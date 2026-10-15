@@ -758,8 +758,17 @@ export function getSingboxDnsRuleSet() {
 
 /** Proxy and policy names share a namespace in supported clients. */
 export function createReservedNameMap(proxies = [], options = {}) {
-    const factory = POLICY_GROUPS[String(options.ruleLevel || 'std').toUpperCase()] || POLICY_GROUPS.STD;
-    const reserved = ['DIRECT', 'REJECT', 'REJECT-DROP', 'direct', 'reject', 'block', 'dns-out',
-        ...factory(proxies, options).map(group => group.name)];
-    return new Map(reserved.map(name => [name, 1]));
+    const factory =
+        POLICY_GROUPS[String(options.ruleLevel || 'std').toUpperCase()] || POLICY_GROUPS.STD;
+    const reserved = [
+        'DIRECT',
+        'REJECT',
+        'REJECT-DROP',
+        'direct',
+        'reject',
+        'block',
+        'dns-out',
+        ...factory(proxies, options).map((group) => group.name),
+    ];
+    return new Map(reserved.map((name) => [name, 1]));
 }

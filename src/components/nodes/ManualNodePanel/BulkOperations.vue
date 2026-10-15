@@ -32,7 +32,7 @@
     <Transition name="slide-fade-sm">
         <div
             v-if="isSelectionMode"
-            class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] sm:w-auto max-w-xl bg-white dark:bg-gray-900/70 shadow-xl misub-radius-lg px-4 py-3 sm:px-6 sm:py-3 flex flex-col sm:flex-row items-center justify-between sm:justify-center gap-3 sm:gap-4 z-50 border border-gray-200 dark:border-white/10"
+            class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] sm:w-auto max-w-xl bg-white dark:bg-gray-900/70 shadow-xl sub-radius-lg px-4 py-3 sm:px-6 sm:py-3 flex flex-col sm:flex-row items-center justify-between sm:justify-center gap-3 sm:gap-4 z-50 border border-gray-200 dark:border-white/10"
         >
             <div class="flex items-center justify-between w-full sm:w-auto gap-4">
                 <button
@@ -61,7 +61,7 @@
                     <div class="flex items-center gap-3 sm:gap-2 w-full sm:w-auto">
                         <button
                             @click="handleMoveToGroup"
-                            class="flex-1 sm:flex-none text-xs font-medium px-3 py-2 sm:py-1 bg-indigo-50 text-indigo-600 misub-radius-md border border-indigo-200 hover:bg-indigo-100 hover:text-indigo-800 transition-colors whitespace-nowrap"
+                            class="flex-1 sm:flex-none text-xs font-medium px-3 py-2 sm:py-1 bg-indigo-50 text-indigo-600 sub-radius-md border border-indigo-200 hover:bg-indigo-100 hover:text-indigo-800 transition-colors whitespace-nowrap"
                         >
                             {{ t('manualNodes.moveToGroup') }}
                         </button>
@@ -73,7 +73,7 @@
                 >
                     <button
                         @click="emit('batch-delete')"
-                        class="flex-1 sm:flex-none justify-center text-xs text-red-500 hover:text-red-700 font-medium whitespace-nowrap flex items-center gap-1 px-3 py-2 sm:py-1 bg-red-50 sm:bg-transparent misub-radius-md sm:misub-radius-md"
+                        class="flex-1 sm:flex-none justify-center text-xs text-red-500 hover:text-red-700 font-medium whitespace-nowrap flex items-center gap-1 px-3 py-2 sm:py-1 bg-red-50 sm:bg-transparent sub-radius-md sm:sub-radius-md"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -91,7 +91,7 @@
                     </button>
                     <button
                         @click="emit('exit')"
-                        class="flex-1 sm:flex-none justify-center text-xs sm:text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white whitespace-nowrap px-3 py-2 sm:py-1 bg-gray-100 sm:bg-transparent misub-radius-md sm:misub-radius-md"
+                        class="flex-1 sm:flex-none justify-center text-xs sm:text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white whitespace-nowrap px-3 py-2 sm:py-1 bg-gray-100 sm:bg-transparent sub-radius-md sm:sub-radius-md"
                     >
                         {{ t('actions.exit') }}
                     </button>

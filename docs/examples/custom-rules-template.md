@@ -1,16 +1,16 @@
-# MiSub 自定义分流规则模板 (参考指南)
+# Zzp Sub 自定义分流规则模板 (参考指南)
 
-本模板旨在帮助 MiSub 用户理解并编写自定义分流规则。你可以将此内容作为参考，编写自己的 `.ini` 格式模板或在 MiSub 的内置引擎中使用。
+本模板旨在帮助 Zzp Sub 用户理解并编写自定义分流规则。你可以将此内容作为参考，编写自己的 `.ini` 格式模板或在 Zzp Sub 的内置引擎中使用。
 
 ---
 
 ## 💡 核心概念
 
-MiSub 的内置引擎（Built-in Engine）采用一种**中间格式**，它会自动根据你使用的客户端（Clash, Sing-Box, Surge, Loon, Quantumult X）将规则翻译成对应的语法。
+Zzp Sub 的内置引擎（Built-in Engine）采用一种**中间格式**，它会自动根据你使用的客户端（Clash, Sing-Box, Surge, Loon, Quantumult X）将规则翻译成对应的语法。
 
 ### 1. 策略组 (Policy Groups)
 
-在 MiSub 中，你可以直接使用以下由系统自动生成的策略组名称：
+在 Zzp Sub 中，你可以直接使用以下由系统自动生成的策略组名称：
 
 - `🚀 节点选择`: 主要的手动切换入口。
 - `♻️ 自动选择`: 延迟最低的节点。
@@ -65,7 +65,7 @@ DOMAIN-SUFFIX,github.com,🚀 节点选择
 DOMAIN-SUFFIX,githubusercontent.com,🚀 节点选择
 
 # === 6. 远程规则集引用 (RULE-SET) ===
-# MiSub 支持直接引用内置定义的远程规则集，这可以极大精简你的配置文件。
+# Zzp Sub 支持直接引用内置定义的远程规则集，这可以极大精简你的配置文件。
 # 语法: RULE-SET, 标识符, 策略组
 RULE-SET,ADS,REJECT         # 引用内置广告规则集并拦截
 RULE-SET,AI,🤖 智能 AI        # 引用内置 AI 规则集
@@ -85,7 +85,7 @@ MATCH,🚀 节点选择
 ## 🚀 如何在 GitHub 上使用
 
 1.  将上述规则保存为 `my-rules.list` 或直接集成到你的 `.ini` 模板文件中。
-2.  在 MiSub Web 界面中，选择你的订阅组。
+2.  在 Zzp Sub Web 界面中，选择你的订阅组。
 3.  在 **"外部模板" (External Template)** 选项中，填入你 GitHub 文件的 Raw 链接：
     `https://raw.githubusercontent.com/你的用户名/仓库名/main/my-rules.list`
 
@@ -94,10 +94,10 @@ MATCH,🚀 节点选择
 ## 🔧 常见问题 (FAQ)
 
 **Q: 为什么我写的 `DOMAIN-SUFFIX` 在 Quantumult X 里变成了 `HOST-SUFFIX`？**
-A: 这是 MiSub 内置引擎的特性。它会自动处理跨平台转换，你只需要使用标准语法（如 `DOMAIN-SUFFIX`），它会根据客户端 UA 自动翻译。
+A: 这是 Zzp Sub 内置引擎的特性。它会自动处理跨平台转换，你只需要使用标准语法（如 `DOMAIN-SUFFIX`），它会根据客户端 UA 自动翻译。
 
 **Q: 我需要手动写 DNS 设置吗？**
-A: **不需要。** 针对 Issue #341 的修复，MiSub 会为所有非内置模板自动注入标准的 DNS 模块（包含 Fake-IP 等设置），确保在路由器上直接可用。
+A: **不需要。** 针对 Issue #341 的修复，Zzp Sub 会为所有非内置模板自动注入标准的 DNS 模块（包含 Fake-IP 等设置），确保在路由器上直接可用。
 
 **Q: 策略组名字包含 Emoji 会报错吗？**
-A: 不会。MiSub 完全支持 Emoji。但请确保你引用的策略组名称与 MiSub 生成的名称**完全一致**。
+A: 不会。Zzp Sub 完全支持 Emoji。但请确保你引用的策略组名称与 Zzp Sub 生成的名称**完全一致**。

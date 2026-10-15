@@ -96,7 +96,12 @@ function applyMihomoRelayDialerProxy(proxies, publicProxies, proxyGroups) {
         return { proxies: publicProxies, proxyGroups };
     }
 
-    const usedNames = new Map([...publicProxies.map(proxy => proxy.name), ...proxyGroups.map(group => group.name)].map(name => [name, 1]));
+    const usedNames = new Map(
+        [
+            ...publicProxies.map((proxy) => proxy.name),
+            ...proxyGroups.map((group) => group.name),
+        ].map((name) => [name, 1])
+    );
     const chainProxies = publicProxies.map((proxy) => ({
         ...proxy,
         name: getUniqueName(`🔗 链式代理 - ${proxy.name}`, usedNames),
@@ -136,7 +141,7 @@ function applyMihomoRelayDialerProxy(proxies, publicProxies, proxyGroups) {
  */
 export function generateBuiltinClashConfig(nodeList, options = {}) {
     const {
-        fileName = 'MiSub',
+        fileName = 'Zzp-Sub',
         enableUdp = true,
         enableTfo = false,
         skipCertVerify = false,

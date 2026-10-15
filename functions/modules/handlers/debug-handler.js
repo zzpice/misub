@@ -301,14 +301,18 @@ export async function handleExportDataRequest(request, env) {
         };
 
         if (includeSubscriptions) {
-            const subscriptions = typeof storageAdapter.getAllSubscriptions === 'function'
-                ? await storageAdapter.getAllSubscriptions() : (await storageAdapter.get('misub_subscriptions_v1')) || [];
+            const subscriptions =
+                typeof storageAdapter.getAllSubscriptions === 'function'
+                    ? await storageAdapter.getAllSubscriptions()
+                    : (await storageAdapter.get('misub_subscriptions_v1')) || [];
             exportData.data.subscriptions = redactSensitiveObject(subscriptions);
         }
 
         if (includeProfiles) {
-            const profiles = typeof storageAdapter.getAllProfiles === 'function'
-                ? await storageAdapter.getAllProfiles() : (await storageAdapter.get('misub_profiles_v1')) || [];
+            const profiles =
+                typeof storageAdapter.getAllProfiles === 'function'
+                    ? await storageAdapter.getAllProfiles()
+                    : (await storageAdapter.get('misub_profiles_v1')) || [];
             exportData.data.profiles = redactSensitiveObject(profiles);
         }
 

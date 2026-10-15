@@ -317,7 +317,7 @@
     >
         <template #title>
             <div class="flex items-center gap-3">
-                <div class="p-2 misub-radius-lg bg-indigo-500/10">
+                <div class="p-2 sub-radius-lg bg-indigo-500/10">
                     <!-- Folder Icon for Profile -->
                     <svg
                         xmlns="http://www.w3.org/2000/svg"

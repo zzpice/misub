@@ -39,9 +39,9 @@ export const useThemeStore = defineStore('theme', () => {
         const themeColorMeta = document.querySelector('meta[name="theme-color"]:not([media])');
         if (themeColorMeta) {
             if (theme.value === 'dark') {
-                themeColorMeta.setAttribute('content', '#0f172a'); // 深色模式背景色
+                themeColorMeta.setAttribute('content', '#08090a'); // 深色模式背景色
             } else {
-                themeColorMeta.setAttribute('content', '#f8fafc'); // 浅色模式背景色
+                themeColorMeta.setAttribute('content', '#f7f8f8'); // 浅色模式背景色
             }
         }
 

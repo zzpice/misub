@@ -1,9 +1,5 @@
 import { StorageFactory } from '../../storage-adapter.js';
-import {
-    createJsonResponse,
-    JSON_BODY_LIMITS,
-    readJsonWithLimit,
-} from '../utils.js';
+import { createJsonResponse, JSON_BODY_LIMITS, readJsonWithLimit } from '../utils.js';
 import { handleProfileMode } from './profile-handler.js';
 import { handleSingleSubscriptionMode, handleDirectUrlMode } from './single-subscription.js';
 

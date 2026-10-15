@@ -126,8 +126,16 @@ export async function handleNodeCountRequest(request, env) {
 
             // cf 选项需传给 fetch() 而非 Request()：仅在用户显式启用跳过证书验证时传递
             const cfOptions = await resolveNodeCountFetchCfOptions(env);
-            const trafficRequest = safeFetchNetworkUrl(requestUrl, { ...trafficFetchOptions, ...cfOptions, signal: AbortSignal.timeout(15000) });
-            const nodeCountRequest = safeFetchNetworkUrl(requestUrl, { ...fetchOptions, ...cfOptions, signal: AbortSignal.timeout(15000) });
+            const trafficRequest = safeFetchNetworkUrl(requestUrl, {
+                ...trafficFetchOptions,
+                ...cfOptions,
+                signal: AbortSignal.timeout(15000),
+            });
+            const nodeCountRequest = safeFetchNetworkUrl(requestUrl, {
+                ...fetchOptions,
+                ...cfOptions,
+                signal: AbortSignal.timeout(15000),
+            });
 
             // 使用 Promise.allSettled 替换 Promise.all
             const responses = await Promise.allSettled([trafficRequest, nodeCountRequest]);
@@ -402,9 +410,7 @@ export async function handleNodeCountRequest(request, env) {
                     }
                 }
 
-                console.error(
-                    `[Node Count] Node count update failed: ${errorMessage}`
-                );
+                console.error(`[Node Count] Node count update failed: ${errorMessage}`);
                 return createJsonResponse({
                     success: false,
                     error: errorMessage,
@@ -421,8 +427,10 @@ export async function handleNodeCountRequest(request, env) {
                     env,
                     await StorageFactory.getStorageType(env)
                 );
-                const originalSubs = typeof storageAdapter.getAllSubscriptions === 'function'
-                    ? await storageAdapter.getAllSubscriptions() : (await storageAdapter.get('misub_subscriptions_v1')) || [];
+                const originalSubs =
+                    typeof storageAdapter.getAllSubscriptions === 'function'
+                        ? await storageAdapter.getAllSubscriptions()
+                        : (await storageAdapter.get('misub_subscriptions_v1')) || [];
                 const subToUpdate = originalSubs.find((s) => s.url === subUrl);
 
                 if (subToUpdate) {
@@ -448,14 +456,20 @@ export async function handleNodeCountRequest(request, env) {
                     }
 
                     if (typeof storageAdapter.updateSubscriptionById === 'function') {
-                        await storageAdapter.updateSubscriptionById(subToUpdate.id, (current) => current.url !== subUrl ? current : ({
-                            ...current,
-                            nodeCount: result.count,
-                            ...(result.count >= 10 ? { lastGoodNodeCount: result.count } : {}),
-                            userInfo: result.userInfo,
-                            lastError: null,
-                            lastUpdate: new Date().toISOString(),
-                        }));
+                        await storageAdapter.updateSubscriptionById(subToUpdate.id, (current) =>
+                            current.url !== subUrl
+                                ? current
+                                : {
+                                      ...current,
+                                      nodeCount: result.count,
+                                      ...(result.count >= 10
+                                          ? { lastGoodNodeCount: result.count }
+                                          : {}),
+                                      userInfo: result.userInfo,
+                                      lastError: null,
+                                      lastUpdate: new Date().toISOString(),
+                                  }
+                        );
                     } else {
                         const allSubs = JSON.parse(JSON.stringify(originalSubs));
                         const target = allSubs.find((s) => s.url === subUrl);
@@ -520,8 +534,10 @@ export async function handleBatchUpdateNodesRequest(request, env) {
             env,
             await StorageFactory.getStorageType(env)
         );
-        const allSubscriptions = typeof storageAdapter.getAllSubscriptions === 'function'
-            ? await storageAdapter.getAllSubscriptions() : (await storageAdapter.get('misub_subscriptions_v1')) || [];
+        const allSubscriptions =
+            typeof storageAdapter.getAllSubscriptions === 'function'
+                ? await storageAdapter.getAllSubscriptions()
+                : (await storageAdapter.get('misub_subscriptions_v1')) || [];
 
         // 过滤出要更新的订阅
         const targetSubscriptions = allSubscriptions.filter(
@@ -671,10 +687,14 @@ export async function handleCleanNodesRequest(request, env) {
         if (profileId) {
             // 清理指定订阅组的节点
             const { handleSubscriptionNodesRequest } = await import('../subscription-handler.js');
-            const previewResponse = await handleSubscriptionNodesRequest(new Request(request.url, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profileId }),
-            }), env);
+            const previewResponse = await handleSubscriptionNodesRequest(
+                new Request(request.url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profileId }),
+                }),
+                env
+            );
             const previewResult = await previewResponse.json();
 
             if (!previewResult.success) {

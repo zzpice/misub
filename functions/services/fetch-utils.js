@@ -27,7 +27,10 @@ export async function fetchWithRetry(url, init = {}, options = {}) {
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-            const response = await safeFetchNetworkUrl(url, { ...init, signal: init.signal || AbortSignal.timeout(12000) });
+            const response = await safeFetchNetworkUrl(url, {
+                ...init,
+                signal: init.signal || AbortSignal.timeout(12000),
+            });
 
             if (response.ok) {
                 return response;
